@@ -242,7 +242,7 @@ internal class MacroCompiler(
     private fun ReaderAdapter.readMacroReference(): Macro {
 
         val annotations = getTypeAnnotationSymbols()
-        val isSystemMacro = annotations.size == 1 && SystemSymbols_1_1.ION.text == annotations[0].getText()
+        val isQualifiedSystemMacro = annotations.size == 1 && SystemSymbols_1_1.ION.text == annotations[0].getText()
 
         val macroRef = when (encodingType()) {
             IonType.SYMBOL -> {
@@ -258,7 +258,7 @@ internal class MacroCompiler(
             }
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
-        val m = if (isSystemMacro) SystemMacro.get(macroRef) else getMacro(macroRef)
+        val m = if (isQualifiedSystemMacro) SystemMacro.get(macroRef) else getMacro(macroRef)
         return m ?: throw IonException("Unrecognized macro: $macroRef")
     }
 

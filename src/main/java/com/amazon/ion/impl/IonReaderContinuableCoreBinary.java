@@ -23,6 +23,8 @@ import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.EExpressionArgsReader;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
+import com.amazon.ion.impl.macro.MacroTable;
+import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
 import com.amazon.ion.impl.macro.MacroEvaluator;
@@ -125,7 +127,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
-    private EncodingContext encodingContext = null;
+    private EncodingContext encodingContext = EncodingContext.getDefault();
 
     // Adapts this reader for use in code that supports multiple reader types.
     private final ReaderAdapter readerAdapter = new ReaderAdapterContinuable(this);
@@ -1216,9 +1218,18 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         boolean isMacroTableAppend = false;
         List<String> newSymbols = new ArrayList<>(8);
         Map<MacroRef, Macro> newMacros = new HashMap<>();
-        MacroCompiler macroCompiler = new MacroCompiler(newMacros::get, readerAdapter);
+        MacroCompiler macroCompiler = new MacroCompiler(this::resolveMacro, readerAdapter);
+
         boolean isSymbolTableAlreadyClassified = false;
         boolean isMacroTableAlreadyClassified = false;
+
+        private Macro resolveMacro(MacroRef macroRef) {
+            Macro newMacro = newMacros.get(macroRef);
+            if (newMacro == null) {
+                newMacro = encodingContext.getMacroTable().get(macroRef);
+            }
+            return newMacro;
+        }
 
         private boolean valueUnavailable() {
             if (isEvaluatingEExpression) {
@@ -1305,11 +1316,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Install `newMacros`, initializing a macro evaluator capable of evaluating them.
          */
         private void installMacros() {
-            if (isMacroTableAppend && encodingContext != null) {
-                encodingContext.getMacroTable().putAll(newMacros);
-            } else {
-                encodingContext = new EncodingContext(newMacros);
+            if (!isMacroTableAppend) {
+                encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.empty()));
+            } else if (!encodingContext.isMutable()) { // we need to append, but can't
+                encodingContext = new EncodingContext(new MutableMacroTable(encodingContext.getMacroTable()));
             }
+
+            if (newMacros.isEmpty()) return; // our work is done
+
+            encodingContext.getMacroTable().putAll(newMacros);
         }
 
         /**
@@ -1648,8 +1663,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     throw new IonException("Macro addresses larger than 2147483647 are not supported by this implementation.");
                 }
                 MacroRef address = MacroRef.byId((int) id);
-                Map<MacroRef, Macro> macroTable = encodingContext.getMacroTable();
-                macro = macroTable.get(address);
+                macro = encodingContext.getMacroTable().get(address);
 
                 if (macro == null) {
                     throw new IonException(String.format("Encountered an unknown macro address: %d.", id));
@@ -1776,7 +1790,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = super.nextValue();
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
-                if (encodingContext == null && !isSystemInvocation()) {
+                if (encodingContext == EncodingContext.getDefault() && !isSystemInvocation()) {
                     // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
                     // but allow the user to do a raw read of the parameters if this is a core-level reader.
                     // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove

@@ -33,6 +33,8 @@ import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
+import com.amazon.ion.impl.macro.MacroTable;
+import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
 import com.amazon.ion.impl.macro.SystemMacro;
@@ -44,6 +46,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -70,7 +73,7 @@ class IonReaderTextSystemX
     protected final MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
-    private EncodingContext encodingContext = null;
+    private EncodingContext encodingContext = EncodingContext.getDefault();
 
     // Adapts this reader for use in code that supports multiple reader types.
     private final ReaderAdapter readerAdapter = new ReaderAdapterIonReader(this);
@@ -1180,7 +1183,7 @@ class IonReaderTextSystemX
             encodingDirectiveReader = new EncodingDirectiveReader(this, readerAdapter);
         }
         encodingDirectiveReader.reset();
-        encodingDirectiveReader.readEncodingDirective();
+        encodingDirectiveReader.readEncodingDirective(encodingContext);
         List<String> newSymbols = encodingDirectiveReader.getNewSymbols();
         if (encodingDirectiveReader.isSymbolTableAppend()) {
             SymbolTable current = getSymbolTable();
@@ -1204,11 +1207,21 @@ class IonReaderTextSystemX
                 newSymbols
             ));
         }
-        if (encodingDirectiveReader.isMacroTableAppend() && encodingContext != null) {
-            encodingContext.getMacroTable().putAll(encodingDirectiveReader.getNewMacros());
-        } else {
-            encodingContext = new EncodingContext(encodingDirectiveReader.getNewMacros());
+        installMacros();
+    }
+
+    // This is essentially copied from IonReaderContinuableCoreBinary.EncodingDirectiveReader.installMacros
+    // See the comment for EncodingDirectiveReader.kt
+    private void installMacros() {
+        boolean isMacroTableAppend = encodingDirectiveReader.isMacroTableAppend();
+        Map<MacroRef, Macro> newMacros = encodingDirectiveReader.getNewMacros();
+
+        if (!isMacroTableAppend) {
+            encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.empty()), true);
+        } else if (!encodingContext.isMutable() && !newMacros.isEmpty()){ // we need to append, but can't
+            encodingContext = new EncodingContext(new MutableMacroTable(encodingContext.getMacroTable()), true);
         }
+        if (!newMacros.isEmpty()) encodingContext.getMacroTable().putAll(newMacros);
     }
 
 
@@ -1253,13 +1266,9 @@ class IonReaderTextSystemX
             } else {
                 throw new IonException("E-expressions must begin with an address.");
             }
-            Macro macro;
-            if (encodingContext == null || isSystemMacro) {
-                macro = SystemMacro.get(address);
-                if (macro == null) {
-                    throw new IonException(String.format("Encountered an unknown macro address: %s.", address));
-                }
-            } else if ((macro = encodingContext.getMacroTable().get(address)) == null) {
+
+            Macro macro = isSystemMacro ? SystemMacro.get(address) : encodingContext.getMacroTable().get(address);
+            if (macro == null) {
                 throw new IonException(String.format("Encountered an unknown macro address: %s.", address));
             }
             return macro;

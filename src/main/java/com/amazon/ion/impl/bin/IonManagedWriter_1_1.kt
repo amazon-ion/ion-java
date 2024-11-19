@@ -475,15 +475,16 @@ internal class IonManagedWriter_1_1(
                         val invokedMacro = expression.macro
                         if (invokedMacro is SystemMacro) {
                             stepInTdlSystemMacroInvocation(invokedMacro.systemSymbol)
-                        }
-                        val invokedAddress = macroTable[invokedMacro]
-                            ?: newMacros[invokedMacro]
-                            ?: throw IllegalStateException("A macro in the macro table is missing a dependency")
-                        val invokedName = macroNames[invokedAddress]
-                        if (options.invokeTdlMacrosByName && invokedName != null) {
-                            stepInTdlMacroInvocation(invokedName)
                         } else {
-                            stepInTdlMacroInvocation(invokedAddress)
+                            val invokedAddress = macroTable[invokedMacro]
+                                ?: newMacros[invokedMacro]
+                                ?: throw IllegalStateException("A macro in the macro table is missing a dependency")
+                            val invokedName = macroNames[invokedAddress]
+                            if (options.invokeTdlMacrosByName && invokedName != null) {
+                                stepInTdlMacroInvocation(invokedName)
+                            } else {
+                                stepInTdlMacroInvocation(invokedAddress)
+                            }
                         }
                         numberOfTimesToStepOut[expression.endExclusive]++
                     }
