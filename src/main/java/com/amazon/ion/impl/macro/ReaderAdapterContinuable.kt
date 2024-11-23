@@ -25,6 +25,8 @@ internal class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : 
         return event != IonCursor.Event.NEEDS_DATA && event != IonCursor.Event.END_CONTAINER
     }
 
+    override fun getDepth(): Int = reader.depth
+
     /**
      * Ensures that the value on which the reader is positioned is fully buffered.
      */
@@ -47,6 +49,11 @@ internal class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : 
     }
 
     override fun decimalValue(): BigDecimal {
+        prepareValue()
+        return reader.decimalValue()
+    }
+
+    override fun ionDecimalValue(): Decimal {
         prepareValue()
         return reader.decimalValue()
     }

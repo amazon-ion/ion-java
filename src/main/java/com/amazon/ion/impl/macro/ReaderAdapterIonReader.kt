@@ -20,12 +20,14 @@ internal class ReaderAdapterIonReader(val reader: IonReader) : ReaderAdapter {
     override fun encodingType(): IonType? = reader.type
 
     override fun nextValue(): Boolean = reader.next() != null
+    override fun getDepth(): Int = reader.depth
 
     override fun stringValue(): String = reader.stringValue()
 
     override fun intValue(): Int = reader.intValue()
 
     override fun decimalValue(): BigDecimal = reader.bigDecimalValue()
+    override fun ionDecimalValue(): Decimal = reader.decimalValue()
 
     override fun doubleValue(): Double = reader.doubleValue()
 

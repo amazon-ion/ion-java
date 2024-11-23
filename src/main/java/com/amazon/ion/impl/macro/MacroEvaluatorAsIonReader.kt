@@ -2,14 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.Decimal
-import com.amazon.ion.IntegerSize
-import com.amazon.ion.IonReader
-import com.amazon.ion.IonType
-import com.amazon.ion.SymbolTable
-import com.amazon.ion.SymbolToken
-import com.amazon.ion.Timestamp
-import com.amazon.ion.impl._Private_RecyclingStack
+import com.amazon.ion.*
+import com.amazon.ion.impl.*
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -64,6 +58,53 @@ class MacroEvaluatorAsIonReader(
         currentFieldName = queuedFieldName
         queuedValueExpression = null
         return getType()
+    }
+
+    /**
+     * Transcodes the e-expression argument expressions provided to this MacroEvaluator
+     * without evaluation.
+     * @param writer the writer to which the expressions will be transcoded.
+     */
+    fun transcodeArgumentsTo(writer: MacroAwareIonWriter) {
+        var index = 0
+        val arguments: List<Expression> = evaluator.getArguments()
+        val numberOfContainerEndsAtExpressionIndex = IntArray(arguments.size + 1)
+
+        while (index < arguments.size) {
+            for (i in 0 until numberOfContainerEndsAtExpressionIndex[index]) {
+                writer.stepOut()
+            }
+            when (val argument = arguments[index]) {
+                is Expression.DataModelContainer -> {
+                    if (hasAnnotations()) {
+                        writer.setTypeAnnotationSymbols(*typeAnnotationSymbols!!)
+                    }
+                    writer.stepIn(argument.type)
+                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
+                }
+                is Expression.DataModelValue -> {
+                    currentValueExpression = argument
+                    writer.writeValue(this)
+                }
+                is Expression.FieldName -> {
+                    queuedFieldName = argument
+                    writer.setFieldNameSymbol(argument.value)
+                }
+                is Expression.EExpression -> {
+                    writer.startMacro(argument.macro)
+                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
+                }
+                is Expression.ExpressionGroup -> {
+                    writer.startExpressionGroup()
+                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
+                }
+                else -> throw IllegalStateException("Unexpected branch")
+            }
+            index++
+        }
+        for (i in 0 until numberOfContainerEndsAtExpressionIndex[index]) {
+            writer.stepOut()
+        }
     }
 
     override fun stepIn() {
