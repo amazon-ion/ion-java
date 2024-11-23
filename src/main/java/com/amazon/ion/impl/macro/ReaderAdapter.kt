@@ -19,9 +19,11 @@ internal interface ReaderAdapter {
 
     /** Returns true if positioned on a value; false if at container or stream end. */
     fun nextValue(): Boolean
+    fun getDepth(): Int
     fun stringValue(): String
     fun intValue(): Int
     fun decimalValue(): BigDecimal
+    fun ionDecimalValue(): Decimal
     fun doubleValue(): Double
     fun stepIntoContainer()
     fun stepOutOfContainer()

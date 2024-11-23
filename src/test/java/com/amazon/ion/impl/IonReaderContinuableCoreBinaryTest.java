@@ -4,10 +4,15 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonCursor;
+import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonEncodingVersion;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.TestUtils;
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -1145,5 +1150,58 @@ public class IonReaderContinuableCoreBinaryTest {
             assertEquals("a", systemReader.stringValue());
             assertNull(systemReader.next());
         }
+    }
+
+    /**
+     * Performs a macro-aware transcode of the given data, verifying that the resulting stream is data-model equivalent
+     * to the source data.
+     * @param data the source data.
+     * @param constructFromBytes true if the reader is to be backed by a byte array; otherwise, the reader will be
+     *                           be backed by an InputStream.
+     */
+    private void assertMacroAwareTranscribeProducesEquivalentStream(byte[] data, boolean constructFromBytes) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data);
+            MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.textWriterBuilder().build(sb);
+        ) {
+            reader.transcodeTo(writer);
+        }
+        IonSystem system = IonSystemBuilder.standard().build();
+        IonDatagram actual = system.getLoader().load(sb.toString());
+        IonDatagram expected = system.getLoader().load(data);
+        assertEquals(expected, actual);
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void encodingLevelTranscribeOfSystemMacroInvocation(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, bytes(
+            0xEF, 0x0C, // system macro add_symbols
+            0x02, // AEB: 0b------aa; a=10, expression group
+            0x01, // FlexInt 0, a delimited expression group
+            0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
+            0xF0, // delimited end...  of expression group
+            0xE1, // SID single byte
+            0x42  // SID $66
+        ));
+        assertMacroAwareTranscribeProducesEquivalentStream(data, constructFromBytes);
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void encodingLevelTranscribeOfIon10SymbolTable(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(0, bytes(
+            0xEA, 0x81, 0x83, // $ion_symbol_table
+            0xD7, // {
+            0x87, // symbols:
+            0xB5, // [
+            0x84, 'a', 'b', 'c', 'd', // "abcd" -> $10
+                  // ]}
+            0xC4, // (
+            0xE3, 0x81, 0x8A, // abcd::
+            0x20 // 0
+        ));
+        assertMacroAwareTranscribeProducesEquivalentStream(data, constructFromBytes);
     }
 }

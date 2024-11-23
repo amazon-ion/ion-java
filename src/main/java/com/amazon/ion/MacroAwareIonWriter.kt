@@ -14,6 +14,35 @@ import com.amazon.ion.impl.macro.*
 interface MacroAwareIonWriter : IonWriter {
 
     /**
+     * Starts a new encoding segment with an Ion version marker, flushing
+     * the previous segment (if any) and resetting the encoding context.
+     */
+    fun startEncodingSegmentWithIonVersionMarker()
+
+    /**
+     * Starts a new encoding segment with an encoding directive, flushing
+     * the previous segment (if any).
+     * @param macros the macros added in the new segment.
+     * @param isMacroTableAppend true if the macros from the previous segment
+     *  are to remain available.
+     * @param symbols the symbols added in the new segment.
+     * @param isSymbolTableAppend true if the macros from the previous
+     *  segment are to remain available.
+     * @param encodingDirectiveAlreadyWritten true if the encoding directive
+     *  that begins the new segment has already been written to this writer.
+     *  If false, the writer will write an encoding directive consistent
+     *  with the arguments provided to this method, using verbose
+     *  s-expression syntax.
+     */
+    fun startEncodingSegmentWithEncodingDirective(
+        macros: Map<MacroRef, Macro>,
+        isMacroTableAppend: Boolean,
+        symbols: List<String>,
+        isSymbolTableAppend: Boolean,
+        encodingDirectiveAlreadyWritten: Boolean
+    )
+
+    /**
      * Starts writing a macro invocation, adding it to the macro table, if needed.
      */
     fun startMacro(macro: Macro)

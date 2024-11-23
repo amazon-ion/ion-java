@@ -4,6 +4,7 @@ package com.amazon.ion
 
 import com.amazon.ion.IonEncodingVersion.*
 import com.amazon.ion.TestUtils.*
+import com.amazon.ion.impl._Private_IonReaderBuilder
 import com.amazon.ion.impl._Private_IonSystem
 import com.amazon.ion.impl._Private_IonWriter
 import com.amazon.ion.impl.bin.*
@@ -243,194 +244,176 @@ class Ion_1_1_RoundTripTest {
         override val writerFn: (OutputStream) -> IonWriter = WRITER_INTERNED_DELIMITED
         override val readerFn: (ByteArray) -> IonReader = READER_NON_CONTINUABLE_STREAM_16
     }
-}
 
-/**
- * Base class that contains text-specific cases
- */
-abstract class Ion_1_1_RoundTripTextBase : Ion_1_1_RoundTripBase() {
-    abstract val newWriterForAppendable: (Appendable) -> IonWriter
-    override val readerFn: (ByteArray) -> IonReader = IonReaderBuilder.standard()::build
+    // Macro-aware Ion 1.1 transcode
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    fun testUserValuesSurviveRoundTripWrittenToAppendable(name: String, ion: ByteArray) {
-        val data: List<IonValue> = ION.loader.load(ion)
-        val appendable = StringBuilder()
-        val writer = newWriterForAppendable(appendable)
-        data.forEach { it.writeTo(writer) }
-        writer.close()
-        val actual = appendable.toString()
+    @Nested
+    inner class BinaryMacroAwareTranscode_ReaderNonContinuableBufferDefault {
 
-        if (DEBUG_MODE) {
-            println("Expected:")
-            ion.printDisplayString()
-            println("Actual:")
-            println(actual)
-        }
-
-        assertReadersHaveEquivalentValues(
-            ION.newReader(ion),
-            ION.newReader(actual)
-        )
-    }
-}
-
-@OptIn(ExperimentalStdlibApi::class)
-abstract class Ion_1_1_RoundTripBase {
-
-    abstract val writerFn: (OutputStream) -> IonWriter
-    abstract val readerFn: (ByteArray) -> IonReader
-    val systemReaderFn: (ByteArray) -> IonReader = ION::newSystemReader
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    fun testUserValuesArePreservedWhenTransferringUserValues(name: String, ion: ByteArray) {
-
-        // Read and compare the data.
-        val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { it.writeTo(w) } }
-
-        printDebugInfo(ion, actual)
-
-        assertReadersHaveEquivalentValues(
-            readerFn(ion),
-            readerFn(actual)
-        )
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForReader(name: String, ion: ByteArray) {
-
-        // Read and compare the data.
-        val actual = roundTripToByteArray { w -> newReader(ion).let { r -> while (r.next() != null) w.writeValue(r) } }
-
-        printDebugInfo(ion, actual)
-
-        assertReadersHaveEquivalentValues(
-            readerFn(ion),
-            readerFn(actual)
-        )
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForIonValue(name: String, ion: ByteArray) {
-        // Read and compare the data.
-        val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { w.writeValue(it) } }
-
-        printDebugInfo(ion, actual)
-
-        assertReadersHaveEquivalentValues(
-            readerFn(ion),
-            readerFn(actual)
-        )
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    @Disabled("Re-interpreting system directives is not supported yet.")
-    open fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
-
-        // Read and compare the data.
-        val actual = roundTripToByteArray { w ->
-            w as _Private_IonWriter
-            w.writeValues(newSystemReader(ion)) { x -> x - 9 }
-        }
-
-        printDebugInfo(ion, actual)
-
-        // Check the user values
-        assertReadersHaveEquivalentValues(
-            readerFn(ion),
-            readerFn(actual)
-        )
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("testData")
-    @Disabled("Re-interpreting system directives is not supported yet.")
-    open fun testSystemValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
-
-        // Read and compare the data.
-        val actual = roundTripToByteArray { w ->
-            w as _Private_IonWriter
-            w.writeValues(newSystemReader(ion)) { x -> x - 9 }
-        }
-
-        printDebugInfo(ion, actual)
-
-        // Check the system values
-        assertReadersHaveEquivalentValues(
-            systemReaderFn(ion),
-            // Skip the initial IVM since it ends up being doubled when we're copying.
-            systemReaderFn(actual).apply { next() }
-        )
-    }
-
-    private fun roundTripToByteArray(block: _Private_IonSystem.(IonWriter) -> Unit): ByteArray {
-        // Create a new copy of the data in Ion 1.1
-        val baos = object : ByteArrayOutputStream() {
-            var closed = false
-            override fun close() {
-                assertFalse(closed)
-                closed = true
-                super.close()
+        // TODO refactor the following method into a base class and add nested inner class implementations to exercise
+        //  all combinations of reading from [ByteArray, InputStream] in [Text, Binary], and to [Text, Binary].
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        fun testEncodingDirectivesAndMacroInvocationsArePreservedWhenPerformingLowLevelTranscode(name: String, ion: ByteArray) {
+            if (!ion.isIonBinary()) {
+                return
             }
+            val actual = StringBuilder()
+            val reader: MacroAwareIonReader = (IonReaderBuilder.standard() as _Private_IonReaderBuilder).buildMacroAware(ion)
+            val writer: MacroAwareIonWriter = ION_1_1.textWriterBuilder().build(actual) as MacroAwareIonWriter
+
+            reader.transcodeTo(writer)
+
+            reader.close()
+            writer.close()
+
+            assertReadersHaveEquivalentValues(
+                ION.newReader(ion),
+                ION.newReader(actual.toString())
+            )
         }
-        val writer = writerFn(baos)
-        block(ION, writer)
-        writer.close()
-        return baos.toByteArray()
     }
 
-    fun assertReadersHaveEquivalentValues(expectedDataReader: IonReader, actualDataReader: IonReader) {
-        // Read and compare the data.
-        val expectedData: Iterator<IonValue> = ION.iterate(expectedDataReader)
-        val actualData: Iterator<IonValue> = ION.iterate(actualDataReader)
+    /**
+     * Base class that contains text-specific cases
+     */
+    abstract class Ion_1_1_RoundTripTextBase : Ion_1_1_RoundTripBase() {
+        abstract val newWriterForAppendable: (Appendable) -> IonWriter
+        override val readerFn: (ByteArray) -> IonReader = IonReaderBuilder.standard()::build
 
-        var ie = 0
-        while (expectedData.hasNext() && actualData.hasNext()) {
-            val expected = expectedData.next()
-            try {
-                val actual = actualData.next()
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        fun testUserValuesSurviveRoundTripWrittenToAppendable(name: String, ion: ByteArray) {
+            val data: List<IonValue> = ION.loader.load(ion)
+            val appendable = StringBuilder()
+            val writer = newWriterForAppendable(appendable)
+            data.forEach { it.writeTo(writer) }
+            writer.close()
+            val actual = appendable.toString()
 
-                if (expected is IonSymbol && actual is IonSymbol) {
-                    if (expected.typeAnnotationSymbols.isEmpty() &&
-                        isIonVersionMarker(expected.symbolValue()) &&
-                        actual.typeAnnotationSymbols.isEmpty() &&
-                        isIonVersionMarker(actual.symbolValue())
-                    ) {
-                        // Both are IVMs. We won't actually compare them because we
-                        // could be comparing data from different Ion versions
-                        continue
-                    }
+            if (DEBUG_MODE) {
+                println("Expected:")
+                ion.printDisplayString()
+                println("Actual:")
+                println(actual)
+            }
+
+            assertReadersHaveEquivalentValues(
+                ION.newReader(ion),
+                ION.newReader(actual)
+            )
+        }
+    }
+
+    abstract class Ion_1_1_RoundTripBase {
+
+        abstract val writerFn: (OutputStream) -> IonWriter
+        abstract val readerFn: (ByteArray) -> IonReader
+        val systemReaderFn: (ByteArray) -> IonReader = ION::newSystemReader
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        fun testUserValuesArePreservedWhenTransferringUserValues(name: String, ion: ByteArray) {
+
+            // Read and compare the data.
+            val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { it.writeTo(w) } }
+
+            printDebugInfo(ion, actual)
+
+            assertReadersHaveEquivalentValues(
+                readerFn(ion),
+                readerFn(actual)
+            )
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForReader(name: String, ion: ByteArray) {
+
+            // Read and compare the data.
+            val actual = roundTripToByteArray { w -> newReader(ion).let { r -> while (r.next() != null) w.writeValue(r) } }
+
+            printDebugInfo(ion, actual)
+
+            assertReadersHaveEquivalentValues(
+                readerFn(ion),
+                readerFn(actual)
+            )
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        fun testUserValuesArePreservedWhenTransferringUserValuesUsingWriteValueForIonValue(name: String, ion: ByteArray) {
+            // Read and compare the data.
+            val actual = roundTripToByteArray { w -> newReader(ion).let(::iterate).forEach { w.writeValue(it) } }
+
+            printDebugInfo(ion, actual)
+
+            assertReadersHaveEquivalentValues(
+                readerFn(ion),
+                readerFn(actual)
+            )
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        @Disabled("Re-interpreting system directives is not supported yet.")
+        open fun testUserValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
+
+            // Read and compare the data.
+            val actual = roundTripToByteArray { w ->
+                w as _Private_IonWriter
+                w.writeValues(newSystemReader(ion)) { x -> x - 9 }
+            }
+
+            printDebugInfo(ion, actual)
+
+            // Check the user values
+            assertReadersHaveEquivalentValues(
+                readerFn(ion),
+                readerFn(actual)
+            )
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("com.amazon.ion.Ion_1_1_RoundTripTest#testData")
+        @Disabled("Re-interpreting system directives is not supported yet.")
+        open fun testSystemValuesArePreservedWhenTransferringSystemValues(name: String, ion: ByteArray) {
+
+            // Read and compare the data.
+            val actual = roundTripToByteArray { w ->
+                w as _Private_IonWriter
+                w.writeValues(newSystemReader(ion)) { x -> x - 9 }
+            }
+
+            printDebugInfo(ion, actual)
+
+            // Check the system values
+            assertReadersHaveEquivalentValues(
+                systemReaderFn(ion),
+                // Skip the initial IVM since it ends up being doubled when we're copying.
+                systemReaderFn(actual).apply { next() }
+            )
+        }
+
+        private fun roundTripToByteArray(block: _Private_IonSystem.(IonWriter) -> Unit): ByteArray {
+            // Create a new copy of the data in Ion 1.1
+            val baos = object : ByteArrayOutputStream() {
+                var closed = false
+                override fun close() {
+                    assertFalse(closed)
+                    closed = true
+                    super.close()
                 }
-
-                assertEquals(expected, actual, "value $ie is different")
-            } catch (e: IonException) {
-                throw AssertionError("Encountered IonException when reading the transcribed version of value #$ie\nExpected: $expected", e)
             }
-            ie++
+            val writer = writerFn(baos)
+            block(ION, writer)
+            writer.close()
+            return baos.toByteArray()
         }
-
-        // Make sure that both are fully consumed.
-        var ia = ie
-        while (expectedData.hasNext()) { expectedData.next(); ie++ }
-        while (actualData.hasNext()) { actualData.next(); ia++ }
-
-        assertEquals(ie, ia, "Data is unequal length")
-        expectedDataReader.close()
-        actualDataReader.close()
     }
 
-    private fun isIonVersionMarker(symbol: SymbolToken?): Boolean {
-        symbol ?: return false
-        if (symbol.sid == 2) return true
-        symbol.text ?: return false
-        return ION_VERSION_MARKER_REGEX.matches(symbol.assumeText())
-    }
-
+    @OptIn(ExperimentalStdlibApi::class)
     companion object {
 
         @JvmStatic
@@ -442,20 +425,28 @@ abstract class Ion_1_1_RoundTripBase {
 
         @JvmStatic
         private val BUFFER_CONFIGURATION_INITIAL_SIZE_16: IonBufferConfiguration = IonBufferConfiguration.Builder.standard().withInitialBufferSize(16).build()
+
         @JvmStatic
         protected val READER_NON_CONTINUABLE_BUFFER_DEFAULT: (ByteArray) -> IonReader = IonReaderBuilder.standard()::build
+
         @JvmStatic
         protected val READER_NON_CONTINUABLE_STREAM_DEFAULT: (ByteArray) -> IonReader = { IonReaderBuilder.standard().build(ByteArrayInputStream(it)) }
+
         @JvmStatic
         protected val READER_NON_CONTINUABLE_BUFFER_16: (ByteArray) -> IonReader = IonReaderBuilder.standard().withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16)::build
+
         @JvmStatic
         protected val READER_NON_CONTINUABLE_STREAM_16: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16).build(ByteArrayInputStream(it)) }
+
         @JvmStatic
         protected val READER_CONTINUABLE_BUFFER_DEFAULT: (ByteArray) -> IonReader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true)::build
+
         @JvmStatic
         protected val READER_CONTINUABLE_STREAM_DEFAULT: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withIncrementalReadingEnabled(true).build(ByteArrayInputStream(it)) }
+
         @JvmStatic
         protected val READER_CONTINUABLE_BUFFER_16: (ByteArray) -> IonReader = IonReaderBuilder.standard().withIncrementalReadingEnabled(true).withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16)::build
+
         @JvmStatic
         protected val READER_CONTINUABLE_STREAM_16: (ByteArray) -> IonReader = { IonReaderBuilder.standard().withIncrementalReadingEnabled(true).withBufferConfiguration(BUFFER_CONFIGURATION_INITIAL_SIZE_16).build(ByteArrayInputStream(it)) }
 
@@ -463,23 +454,79 @@ abstract class Ion_1_1_RoundTripBase {
         protected val WRITER_INTERNED_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
             .withLengthPrefixStrategy(LengthPrefixStrategy.ALWAYS_PREFIXED)::build
+
         @JvmStatic
         protected val WRITER_INLINE_PREFIXED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
             .withLengthPrefixStrategy(LengthPrefixStrategy.ALWAYS_PREFIXED)::build
+
         @JvmStatic
         protected val WRITER_INTERNED_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE)
             .withLengthPrefixStrategy(LengthPrefixStrategy.NEVER_PREFIXED)::build
+
         @JvmStatic
         protected val WRITER_INLINE_DELIMITED: (OutputStream) -> IonWriter = ION_1_1.binaryWriterBuilder()
             .withSymbolInliningStrategy(SymbolInliningStrategy.ALWAYS_INLINE)
             .withLengthPrefixStrategy(LengthPrefixStrategy.NEVER_PREFIXED)::build
 
+        @JvmStatic
+        fun assertReadersHaveEquivalentValues(expectedDataReader: IonReader, actualDataReader: IonReader) {
+            // Read and compare the data.
+            val expectedData: Iterator<IonValue> = ION.iterate(expectedDataReader)
+            val actualData: Iterator<IonValue> = ION.iterate(actualDataReader)
+
+            var ie = 0
+            while (expectedData.hasNext() && actualData.hasNext()) {
+                val expected = expectedData.next()
+                try {
+                    val actual = actualData.next()
+
+                    if (expected is IonSymbol && actual is IonSymbol) {
+                        if (expected.typeAnnotationSymbols.isEmpty() &&
+                            isIonVersionMarker(expected.symbolValue()) &&
+                            actual.typeAnnotationSymbols.isEmpty() &&
+                            isIonVersionMarker(actual.symbolValue())
+                        ) {
+                            // Both are IVMs. We won't actually compare them because we
+                            // could be comparing data from different Ion versions
+                            continue
+                        }
+                    }
+
+                    assertEquals(expected, actual, "value $ie is different")
+                } catch (e: IonException) {
+                    throw AssertionError("Encountered IonException when reading the transcribed version of value #$ie\nExpected: $expected", e)
+                }
+                ie++
+            }
+
+            // Make sure that both are fully consumed.
+            var ia = ie
+            while (expectedData.hasNext()) {
+                expectedData.next(); ie++
+            }
+            while (actualData.hasNext()) {
+                actualData.next(); ia++
+            }
+
+            assertEquals(ie, ia, "Data is unequal length")
+            expectedDataReader.close()
+            actualDataReader.close()
+        }
+
+        @JvmStatic
+        fun isIonVersionMarker(symbol: SymbolToken?): Boolean {
+            symbol ?: return false
+            if (symbol.sid == 2) return true
+            symbol.text ?: return false
+            return ION_VERSION_MARKER_REGEX.matches(symbol.assumeText())
+        }
+
         /**
          * Checks if this ByteArray contains Ion Binary.
          */
-        private fun ByteArray.isIonBinary(): Boolean {
+        fun ByteArray.isIonBinary(): Boolean {
             return get(0) == 0xE0.toByte() &&
                 get(1) == 0x01.toByte() &&
                 get(2) in setOf<Byte>(0, 1) &&
