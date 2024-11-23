@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
@@ -8,6 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.MacroAwareIonReader;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
@@ -352,4 +352,16 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         return makeReaderText(validateCatalog(), ionText, lstFactory);
     }
 
+    /**
+     * Creates a new {@link MacroAwareIonReader} over the given data.
+     * @param ionData the data to read.
+     * @return a new MacroAwareIonReader instance.
+     */
+    public MacroAwareIonReader buildMacroAware(byte[] ionData) {
+        // TODO make this work for text too.
+        if (!IonStreamUtils.isIonBinary(ionData)) {
+            throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
+        }
+        return new IonReaderContinuableCoreBinary(getBufferConfiguration(), ionData, 0, ionData.length);
+    }
 }
