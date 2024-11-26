@@ -62,6 +62,7 @@ class SimpleIonCli {
             return CommandLine.ExitCode.USAGE;
         }
 
+        //TODO: Handle stream cutoff- java.io.IOException: Broken pipe
         //TODO: This is not resilient to problems with a single file. Should it be?
         try (InputStream in = getInputStream(files);
              IonReader reader = IonReaderBuilder.standard().build(in);
