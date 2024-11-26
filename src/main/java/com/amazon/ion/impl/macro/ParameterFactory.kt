@@ -16,6 +16,4 @@ object ParameterFactory {
     fun oneToManyTagged(name: String) = Parameter(name, ParameterEncoding.Tagged, ParameterCardinality.OneOrMore)
     @JvmStatic
     fun exactlyOneTagged(name: String) = Parameter(name, ParameterEncoding.Tagged, ParameterCardinality.ExactlyOne)
-    @JvmStatic
-    fun exactlyOneFlexInt(name: String) = Parameter(name, ParameterEncoding.FlexInt, ParameterCardinality.ExactlyOne)
 }

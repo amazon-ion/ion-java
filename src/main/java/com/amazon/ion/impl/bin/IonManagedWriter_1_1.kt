@@ -34,6 +34,8 @@ internal class IonManagedWriter_1_1(
     private val onClose: () -> Unit,
 ) : _Private_IonWriter, MacroAwareIonWriter {
 
+    internal fun getRawUserWriter(): IonRawWriter_1_1 = userData
+
     companion object {
         private val ION_VERSION_MARKER_REGEX = Regex("^\\\$ion_\\d+_\\d+$")
 

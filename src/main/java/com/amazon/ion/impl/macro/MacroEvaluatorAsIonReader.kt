@@ -109,7 +109,7 @@ class MacroEvaluatorAsIonReader(
             ?: return Collections.emptyIterator()
     }
 
-    override fun isInStruct(): Boolean = TODO("Not yet implemented")
+    override fun isInStruct(): Boolean = containerStack.peek().container is Expression.StructValue
 
     override fun getFieldId(): Int = currentFieldName?.value?.sid ?: 0
     override fun getFieldName(): String? = currentFieldName?.value?.text

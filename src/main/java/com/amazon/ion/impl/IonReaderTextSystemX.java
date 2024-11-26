@@ -1237,6 +1237,9 @@ class IonReaderTextSystemX
         @Override
         protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing) {
             if (IonReaderTextSystemX.this.nextRaw() == null) {
+                // Add an empty expression group if nothing present.
+                int index = expressions.size() + 1;
+                expressions.add(new Expression.ExpressionGroup(index, index));
                 return;
             }
             readValueAsExpression(isTrailing && parameter.getCardinality().canBeMulti, expressions);

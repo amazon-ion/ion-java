@@ -1625,8 +1625,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 case OneOrMore:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
                         readSingleExpression(parameter, expressions);
-                    }
-                    if (parameterPresence == PresenceBitmap.GROUP) {
+                    } else if (parameterPresence == PresenceBitmap.GROUP) {
                         readGroupExpression(parameter, expressions, false);
                     } else {
                         throw new IonException(String.format(

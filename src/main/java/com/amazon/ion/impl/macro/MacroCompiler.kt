@@ -92,8 +92,7 @@ internal class MacroCompiler(
                     val encodingText = annotations[0].text
                     val encoding = Macro.ParameterEncoding.entries.singleOrNull { it.ionTextName == encodingText }
                     if (encoding == null) {
-                        // TODO: Check for macro-shaped parameter encodings, and only if it's still null, we throw.
-                        throw IonException("unsupported parameter encoding $annotations")
+                        TODO("Check for macro-shaped parameter encodings, and only if it's still null, we throw.")
                     }
                     encoding
                 }
@@ -258,7 +257,7 @@ internal class MacroCompiler(
             }
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
-        val m = if (isQualifiedSystemMacro) SystemMacro.get(macroRef) else getMacro(macroRef)
+        val m = if (isQualifiedSystemMacro) SystemMacro.getMacroOrSpecialForm(macroRef) else getMacro(macroRef)
         return m ?: throw IonException("Unrecognized macro: $macroRef")
     }
 

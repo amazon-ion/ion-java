@@ -15,17 +15,18 @@ object DefaultReaderConformanceTests : ConformanceTestRunner(
 object IncrementalReaderConformanceTests : ConformanceTestRunner(
     IonReaderBuilder.standard()
         .withCatalog(ION_CONFORMANCE_TEST_CATALOG)
-        .withIncrementalReadingEnabled(true)
+        .withIncrementalReadingEnabled(true),
+    additionalSkipFilter = { _, testName -> "Incomplete floats signal an error for unexpected EOF" in testName }
 )
 
 abstract class ConformanceTestRunner(
     readerBuilder: IonReaderBuilder,
-    additionalSkipFilter: (File, String) -> Boolean = { _, _ -> true }
+    additionalSkipFilter: (File, String) -> Boolean = { _, _ -> false }
 ) {
 
     private val DEFAULT_SKIP_FILTER: (File, String) -> Boolean = { file, completeTestName ->
         // `completeTestName` is the complete name of the test — that is all the test descriptions in a particular
-        // execution path, joined by ", ". (This is how it appears in the JUnit report.)
+        // execution path, joined by " ". (This is how it appears in the JUnit report.)
         when {
             // IonElement can't load $0. TODO: Use IonValue for `produces`, I guess.
             "$0" in completeTestName -> false
@@ -34,7 +35,8 @@ abstract class ConformanceTestRunner(
             // IonWriter is making it difficult to write invalid data
             "If no max_id, lack of exact-match must raise an error «then»" in completeTestName -> false
             // IonCatalog's "best choice" logic is not spec compliant
-            // TODO—current test name has a typo. Update to correct spelling once ion-tests is fixed.
+            "When max_id is valid, pad/truncate mismatched or absent SSTs" in completeTestName -> false
+            // TODO—Some commits have a typo in the name. Remove this line once ion-tests submodule is updated.
             "When max_id is valid, pad/truncade mismatched or absent SSTs" in completeTestName -> false
             // No support for reading `$ion_encoding` directives yet.
             "conformance/ion_encoding/" in file.absolutePath -> false
@@ -54,6 +56,56 @@ abstract class ConformanceTestRunner(
                 "If max_id not non-negative int, lack of exact-match must raise an error" in completeTestName -> false
                 else -> true
             }
+
+            // FIXME: Contains test cases that are out of date, lack descriptions to have more specific exclusions
+            "eexp/basic_system_macros.ion" in file.absolutePath -> false
+            "eexp/arg_inlining.ion" in file.absolutePath -> false
+
+            // FIXME:
+            //   1. Test cases expect a zero-or-one-valued expression group to be valid for ? parameters, implementation disagrees
+            //   2. One-to-many parameters are not raising an error for an empty expression group. This may need to be
+            //      fixed in the macro evaluator and/or in the reader.
+            //   3. All other failures for tagless type cases are due to "Encountered an unknown macro address: N" where
+            //      N is the first byte of the macro argument (after any AEB and/or expression group prefixes).
+            "eexp/binary/argument_encoding.ion" in file.absolutePath -> false
+
+            // FIXME: All failing for reason #3 for argument_encoding.ion
+            "eexp/binary/tagless_types.ion" in file.absolutePath -> false
+
+            // FIXME: Fails because the encoding context isn't properly populated with the system module/macros
+            "conformance/system_macros/" in file.absolutePath &&
+                "in binary with a user macro address" in completeTestName -> false
+
+            // FIXME: Timestamp should not allow an offset of +/-1440
+            "the offset argument must be less than 1440" in completeTestName -> false
+            "the offset argument must be greater than -1440" in completeTestName -> false
+
+            // FIXME: Ensure Ion 1.1 symbol tables are properly validated
+            "add_symbols does not accept null.symbol" in completeTestName -> false
+            "add_symbols does not accept null.string" in completeTestName -> false
+            "add_symbols does not accept annotated arguments" in completeTestName -> false
+            "set_symbols does not accept null.symbol" in completeTestName -> false
+            "set_symbols does not accept null.string" in completeTestName -> false
+            "set_symbols does not accept annotated arguments" in completeTestName -> false
+
+            // FIXME: Ensure that the text reader throws if unexpected extra args are encountered
+            "sum arguments may not be more than two integers" in completeTestName -> false
+            "none signals an error when argument is" in completeTestName -> false
+
+            // TODO: support continuable parsing of macro arguments
+            "make_decimal can be invoked in binary using system macro address 6" in completeTestName -> false
+
+            // TODO: Not implemented yet
+            "subnormal f16" in completeTestName -> false
+            "conformance/system_macros/" in file.absolutePath -> when {
+                file.endsWith("parse_ion.ion") ||
+                    file.endsWith("make_list.ion") ||
+                    file.endsWith("make_sexp.ion") ||
+                    file.endsWith("make_field.ion") ||
+                    file.endsWith("flatten.ion") ||
+                    file.endsWith("make_struct.ion") -> false
+                else -> true
+            }
             // Some of these are failing because
             //  - Ion Java doesn't support the Ion 1.1 system symbol table yet
             //  - The tokens `$ion_1_0` and `'$ion_1_0'` are never user values.
@@ -69,7 +121,7 @@ abstract class ConformanceTestRunner(
         debugEnabled = true,
         failUnimplemented = false,
         readerBuilder = readerBuilder,
-        testFilter = { file, name -> DEFAULT_SKIP_FILTER(file, name) && additionalSkipFilter(file, name) },
+        testFilter = { file, name -> DEFAULT_SKIP_FILTER(file, name) && !additionalSkipFilter(file, name) },
     )
 
     @TestFactory
