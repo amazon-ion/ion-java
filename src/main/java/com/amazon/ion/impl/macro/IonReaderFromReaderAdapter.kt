@@ -35,9 +35,7 @@ internal class IonReaderFromReaderAdapter(val reader: ReaderAdapter) : IonReader
 
     override fun decimalValue(): Decimal = reader.ionDecimalValue()
 
-    override fun dateValue(): Date {
-        TODO("Not yet implemented")
-    }
+    override fun dateValue(): Date = TODO("Not yet implemented")
 
     override fun doubleValue(): Double = reader.doubleValue()
 
@@ -47,25 +45,17 @@ internal class IonReaderFromReaderAdapter(val reader: ReaderAdapter) : IonReader
 
     override fun getDepth(): Int = reader.getDepth()
 
-    override fun getSymbolTable(): SymbolTable {
-        TODO("Not yet implemented")
-    }
+    override fun getSymbolTable(): SymbolTable = TODO("Not yet implemented")
 
     override fun getType(): IonType? = reader.encodingType()
 
     override fun getTypeAnnotationSymbols(): Array<SymbolToken> = reader.getTypeAnnotationSymbols().toTypedArray()
 
-    override fun iterateTypeAnnotations(): MutableIterator<String> {
-        TODO("Not yet implemented")
-    }
+    override fun iterateTypeAnnotations(): MutableIterator<String> = TODO("Not yet implemented")
 
-    override fun getFieldId(): Int {
-        TODO("Not yet implemented")
-    }
+    override fun getFieldId(): Int = TODO("Not yet implemented")
 
-    override fun getFieldName(): String {
-        TODO("Not yet implemented")
-    }
+    override fun getFieldName(): String = TODO("Not yet implemented")
 
     override fun booleanValue(): Boolean = reader.booleanValue()
 
@@ -79,21 +69,15 @@ internal class IonReaderFromReaderAdapter(val reader: ReaderAdapter) : IonReader
 
     override fun newBytes(): ByteArray = reader.newBytes()
 
-    override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
-        TODO("Not yet implemented")
-    }
+    override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int = TODO("Not yet implemented")
 
     override fun symbolValue(): SymbolToken = reader.symbolValue()
 
-    override fun byteSize(): Int {
-        TODO("Not yet implemented")
-    }
+    override fun byteSize(): Int = TODO("Not yet implemented")
 
     override fun getIntegerSize(): IntegerSize = reader.getIntegerSize()
 
-    override fun getTypeAnnotations(): Array<String> {
-        TODO("Not yet implemented")
-    }
+    override fun getTypeAnnotations(): Array<String> = TODO("Not yet implemented")
 
     override fun getFieldNameSymbol(): SymbolToken = reader.getFieldNameSymbol()
 

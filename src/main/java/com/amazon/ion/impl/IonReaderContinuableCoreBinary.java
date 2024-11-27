@@ -1365,10 +1365,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         /**
          * Read an encoding directive. If the stream ends before the encoding directive finishes, `event` will be
          * `NEEDS_DATA` and this method can be called again when more data is available.
-         * @param preserveMacroNames true if new macros should be referred to by name. If false, new macros will be
-         *                           referred to by integer ID.
          */
-        void readEncodingDirective(boolean preserveMacroNames) {
+        void readEncodingDirective() {
             Event event;
             while (true) {
                 switch (state) {
@@ -1502,7 +1500,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         Macro newMacro = macroCompiler.compileMacro();
                         newMacros.put(MacroRef.byId(++localMacroMaxOffset), newMacro);
                         String macroName = macroCompiler.getMacroName();
-                        if (preserveMacroNames && macroName != null) {
+                        if (macroName != null) {
                             newMacros.put(MacroRef.byName(macroName), newMacro);
                         }
                         state = State.IN_MACRO_TABLE_SEXP;
@@ -1802,8 +1800,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     @Override
     public void transcodeTo(MacroAwareIonWriter writer) throws IOException {
-        registerIvmNotificationConsumer((x, y) -> {
+        registerIvmNotificationConsumer((major, minor) -> {
             resetEncodingContext();
+            // Which IVM to write is inherent to the writer implementation.
+            // We don't have a single implementation that writes both formats.
             writer.startEncodingSegmentWithIonVersionMarker();
         });
         while (transcodeNextTo(writer) != Event.NEEDS_DATA);
@@ -1825,7 +1825,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (parent == null || state != State.READING_VALUE) {
                 if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
                     boolean isEncodingDirectiveFromEExpression = isEvaluatingEExpression;
-                    encodingDirectiveReader.readEncodingDirective(true);
+                    encodingDirectiveReader.readEncodingDirective();
                     if (state != State.READING_VALUE) {
                         throw new IonException("Unexpected EOF when writing encoding-level value.");
                     }
@@ -1895,7 +1895,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         while (true) {
             if (parent == null || state != State.READING_VALUE) {
                 if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
-                    encodingDirectiveReader.readEncodingDirective(false);
+                    encodingDirectiveReader.readEncodingDirective();
                     if (state != State.READING_VALUE) {
                         event = Event.NEEDS_DATA;
                         break;
