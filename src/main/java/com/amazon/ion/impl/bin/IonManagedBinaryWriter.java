@@ -1,23 +1,11 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import static com.amazon.ion.IonType.LIST;
 import static com.amazon.ion.IonType.STRUCT;
 import static com.amazon.ion.SystemSymbols.IMPORTS_SID;
+import static com.amazon.ion.SystemSymbols.ION_1_0;
 import static com.amazon.ion.SystemSymbols.ION_1_0_MAX_ID;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
@@ -1033,8 +1021,14 @@ import java.util.Map;
         writeSymbolToken(intern(content));
     }
 
-    private boolean handleIVM(int sid) throws IOException {
-        if (user.isIVM(sid))
+    private boolean handleIVM(SymbolToken symbol) throws IOException {
+        if (getDepth() != 0 || user.hasAnnotations()) {
+            return false;
+        }
+        // A symbol's text always takes precedence over its symbol ID. Only symbols with unknown text are compared
+        // against SID 2.
+        String text = symbol.getText();
+        if (ION_1_0.equals(text) || (text == null && user.isIVM(symbol.getSid())))
         {
             if (user.hasWrittenValuesSinceFinished())
             {
@@ -1054,7 +1048,7 @@ import java.util.Map;
 
     public void writeSymbolToken(SymbolToken token) throws IOException
     {
-        if (token != null && handleIVM(token.getSid()))
+        if (token != null && handleIVM(token))
         {
             return;
         }

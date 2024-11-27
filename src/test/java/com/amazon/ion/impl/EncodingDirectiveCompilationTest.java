@@ -6,6 +6,7 @@ import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonEncodingVersion;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
@@ -44,10 +45,12 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
+import static com.amazon.ion.BitUtils.bytes;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -1682,6 +1685,28 @@ public class EncodingDirectiveCompilationTest {
             0,
             0
         );
+    }
+
+    @Test // TODO finalize handling of Ion 1.0-style symbol tables in Ion 1.1: https://github.com/amazon-ion/ion-java/issues/1002
+    public void ion10SymbolTableMacroAwareTranscode() throws Exception {
+        byte[] data = bytes(
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xE4, 0x07, // $ion_symbol_table::
+            0xD4, // {
+            0x0F, // symbols:
+            0xB2, // [
+            0x91, 'a', // "a"
+                  // ]}
+            0xE1, 0x01
+        );
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (
+            MacroAwareIonReader reader = InputType.BYTE_ARRAY.newMacroAwareReader(data);
+            MacroAwareIonWriter rewriter = StreamType.BINARY.newMacroAwareWriter(out);
+        ) {
+            // This may at some point be supported.
+            assertThrows(IonException.class, () -> reader.transcodeTo(rewriter));
+        }
     }
 
     // TODO cover every Ion type
