@@ -6086,5 +6086,28 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void readIon11SymbolTableWithFlexUIntFieldNames(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(
+            bytes(
+                0xE7, 0x01, 0x63, // One FlexSym annotation, with opcode, opcode 63 = system symbol 3 = $ion_symbol_table
+                0xD7, // {
+                0x0D, // FlexUInt 6 = imports
+                0xEE, 0x03, // System symbol value 3 = $ion_symbol_table (denoting symbol table append)
+                0x0F, // FlexUInt 7 = symbols
+                0xB2, 0x91, 'a', // ["a"]
+                0xE1, SystemSymbols_1_1.size() + 1 // first user symbol = a
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.SYMBOL),
+            stringValue("a"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }

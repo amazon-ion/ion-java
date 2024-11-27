@@ -53,6 +53,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.amazon.ion.SystemSymbols.ION_ENCODING;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.IonReaderContinuableApplicationBinary.SYMBOLS_LIST_INITIAL_CAPACITY;
 import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
@@ -1748,6 +1749,33 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * @return true if current value has a sequence of annotations that begins with `$ion_symbol_table`; otherwise,
+     *  false.
+     */
+    protected boolean startsWithIonSymbolTable() {
+        if (minorVersion == 0 && annotationSequenceMarker.startIndex >= 0) {
+            long savedPeekIndex = peekIndex;
+            peekIndex = annotationSequenceMarker.startIndex;
+            int sid = readVarUInt_1_0();
+            peekIndex = savedPeekIndex;
+            return ION_SYMBOL_TABLE_SID == sid;
+        } else if (minorVersion == 1) {
+            Marker marker = annotationTokenMarkers.get(0);
+            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_SYMBOL_TABLE);
+        }
+        return false;
+    }
+
+    /**
+     * @return true if the reader is positioned on a symbol table; otherwise, false.
+     */
+    protected boolean isPositionedOnSymbolTable() {
+        return hasAnnotations &&
+            getEncodingType() == IonType.STRUCT &&
+            startsWithIonSymbolTable();
+    }
+
+    /**
      * Consumes the next value (if any) from the MacroEvaluator, setting `event` based on the result.
      * @return true if evaluation of the current invocation has completed; otherwise, false.
      */
@@ -1851,6 +1879,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             break;
         }
         if (event != Event.NEEDS_DATA) {
+            if (minorVersion > 0 && isPositionedOnSymbolTable()) {
+                // TODO finalize handling of Ion 1.0-style symbol tables in Ion 1.1: https://github.com/amazon-ion/ion-java/issues/1002
+                throw new IonException("Macro-aware transcoding of Ion 1.1 data containing Ion 1.0-style symbol tables not yet supported.");
+            }
             // The reader is now positioned on an actual encoding value. Write the value.
             writer.writeValue(asIonReader);
         }

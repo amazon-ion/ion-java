@@ -1444,6 +1444,8 @@ class IonCursorBinary implements IonCursor {
                 fieldSid = (int) uncheckedReadFlexSym_1_1(fieldTextMarker);
             } else {
                 fieldSid = (int) uncheckedReadFlexUInt_1_1();
+                fieldTextMarker.startIndex = -1;
+                fieldTextMarker.endIndex = fieldSid;
             }
         }
     }
@@ -1794,6 +1796,8 @@ class IonCursorBinary implements IonCursor {
                 return slowReadFieldNameFlexSym_1_1();
             } else {
                 fieldSid = (int) slowReadFlexUInt_1_1();
+                fieldTextMarker.startIndex = -1;
+                fieldTextMarker.endIndex = fieldSid;
                 return fieldSid < 0;
             }
         }

@@ -1175,7 +1175,7 @@ public class IonReaderContinuableCoreBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
-    public void encodingLevelTranscribeOfSystemMacroInvocation(boolean constructFromBytes) throws Exception {
+    public void encodingLevelTranscodeOfSystemMacroInvocation(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(1, bytes(
             0xEF, 0x0C, // system macro add_symbols
             0x02, // AEB: 0b------aa; a=10, expression group
@@ -1190,7 +1190,7 @@ public class IonReaderContinuableCoreBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
-    public void encodingLevelTranscribeOfIon10SymbolTable(boolean constructFromBytes) throws Exception {
+    public void encodingLevelTranscodeOfIon10SymbolTable(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(0, bytes(
             0xEA, 0x81, 0x83, // $ion_symbol_table
             0xD7, // {
