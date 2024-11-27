@@ -943,33 +943,6 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // The current state.
     private State state = State.READING_VALUE;
 
-    /**
-     * @return true if current value has a sequence of annotations that begins with `$ion_symbol_table`; otherwise,
-     *  false.
-     */
-    boolean startsWithIonSymbolTable() {
-        if (minorVersion == 0 && annotationSequenceMarker.startIndex >= 0) {
-            long savedPeekIndex = peekIndex;
-            peekIndex = annotationSequenceMarker.startIndex;
-            int sid = readVarUInt_1_0();
-            peekIndex = savedPeekIndex;
-            return ION_SYMBOL_TABLE_SID == sid;
-        } else if (minorVersion == 1) {
-            Marker marker = annotationTokenMarkers.get(0);
-            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_SYMBOL_TABLE);
-        }
-        return false;
-    }
-
-    /**
-     * @return true if the reader is positioned on a symbol table; otherwise, false.
-     */
-    private boolean isPositionedOnSymbolTable() {
-        return hasAnnotations &&
-            super.getType() == IonType.STRUCT &&
-            startsWithIonSymbolTable();
-    }
-
     @Override
     public Event nextValue() {
         Event event;
