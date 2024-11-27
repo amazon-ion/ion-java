@@ -26,6 +26,9 @@ import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -46,6 +49,8 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 
 import static com.amazon.ion.BitUtils.bytes;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -900,23 +905,51 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    /**
-     * Counts the number of times the given substring occurs in the given string.
-     * @param string the string.
-     * @param substring the substring.
-     * @return the number of occurrences.
-     */
-    private static int countOccurrencesOfSubstring(String string, String substring) {
-        int lastMatchIndex = 0;
-        int count = 0;
-        while (lastMatchIndex >= 0) {
-            lastMatchIndex = string.indexOf(substring, lastMatchIndex);
-            if (lastMatchIndex >= 0) {
-                lastMatchIndex += substring.length();
-                count++;
-            }
+    public static class SubstringCountMatcher extends TypeSafeMatcher<String> {
+        int expectedCount;
+        String substring;
+
+        private SubstringCountMatcher(String substring, int expectedCount) {
+            this.expectedCount = expectedCount;
+            this.substring = substring;
         }
-        return count;
+
+        @Override
+        protected boolean matchesSafely(String s) {
+            return countOccurrencesOfSubstring(s, substring) == expectedCount;
+        }
+
+        @Override
+        public void describeTo(Description description) {
+            description.appendText("a String including " + expectedCount + " occurrences of " + substring);
+        }
+
+        /**
+         * Counts the number of times the given substring occurs in the given string (non-overlapping).
+         * @param string the string.
+         * @param substring the substring.
+         * @return the number of occurrences.
+         */
+        private static int countOccurrencesOfSubstring(String string, String substring) {
+            int lastMatchIndex = 0;
+            int count = 0;
+            while (lastMatchIndex >= 0) {
+                lastMatchIndex = string.indexOf(substring, lastMatchIndex);
+                if (lastMatchIndex >= 0) {
+                    lastMatchIndex += substring.length();
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
+    static SubstringCountMatcher substringCount(String sub, int count) {
+        return new SubstringCountMatcher(sub, count);
+    }
+
+    static SubstringCountMatcher substringCount(SystemSymbols_1_1 sub, int count) {
+        return new SubstringCountMatcher(sub.getText(), count);
     }
 
     /**
@@ -926,23 +959,13 @@ public class EncodingDirectiveCompilationTest {
      * @param data the source data.
      * @param inputType the InputType to test.
      * @param streamType the StreamType to which the source data will be transcoded.
-     * @param expectedNumberOfIonVersionMarkers the expected number of Ion version markers in the transcoded stream (text only).
-     * @param expectedNumberOfAddSymbolsInvocations the expected number of add_symbols invocations in the transcoded stream (text only).
-     * @param expectedNumberOfAddMacrosInvocations the expected number of add_macros invocations in the transcoded stream (text only).
-     * @param expectedNumberOfSetSymbolsInvocations the expected number of set_symbols invocations in the transcoded stream (text only).
-     * @param expectedNumberOfSetMacrosInvocations the expected number of set_macros invocations in the transcoded stream (text only).
-     * @param expectedNumberOfExplicitEncodingDirectives the expected number of $ion_encoding occurrences in the transcoded stream (text only).
+     * @param expectations a list of expectations for the text representation of the transcoded data.
      */
     private void verifyMacroAwareTranscode(
         byte[] data,
         InputType inputType,
         StreamType streamType,
-        int expectedNumberOfIonVersionMarkers,
-        int expectedNumberOfAddSymbolsInvocations,
-        int expectedNumberOfAddMacrosInvocations,
-        int expectedNumberOfSetSymbolsInvocations,
-        int expectedNumberOfSetMacrosInvocations,
-        int expectedNumberOfExplicitEncodingDirectives
+        Matcher<String>... expectations
     ) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (
@@ -953,12 +976,7 @@ public class EncodingDirectiveCompilationTest {
         }
         if (streamType == StreamType.TEXT) {
             String rewritten = out.toString(StandardCharsets.UTF_8.name());
-            assertEquals(expectedNumberOfIonVersionMarkers, countOccurrencesOfSubstring(rewritten, "$ion_1_1"));
-            assertEquals(expectedNumberOfAddSymbolsInvocations, countOccurrencesOfSubstring(rewritten, SystemSymbols_1_1.ADD_SYMBOLS.getText()));
-            assertEquals(expectedNumberOfAddMacrosInvocations, countOccurrencesOfSubstring(rewritten, SystemSymbols_1_1.ADD_MACROS.getText()));
-            assertEquals(expectedNumberOfSetSymbolsInvocations, countOccurrencesOfSubstring(rewritten, SystemSymbols_1_1.SET_SYMBOLS.getText()));
-            assertEquals(expectedNumberOfSetMacrosInvocations, countOccurrencesOfSubstring(rewritten, SystemSymbols_1_1.SET_MACROS.getText()));
-            assertEquals(expectedNumberOfExplicitEncodingDirectives, countOccurrencesOfSubstring(rewritten, SystemSymbols_1_1.ION_ENCODING.getText()));
+            assertThat(rewritten, allOf(expectations));
         }
         IonSystem system = IonSystemBuilder.standard().build();
         IonDatagram actual = system.getLoader().load(out.toByteArray());
@@ -969,16 +987,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void macroInvocationsNestedWithinParameterMacroAwareTranscode() throws Exception {
         byte[] data = macroInvocationsNestedWithinParameter(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            0,
-            0,
-            0,
-            0,
-            2
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 2)
         );
     }
 
@@ -1139,16 +1154,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void macroInvocationInMacroDefinitionMacroAwareTranscode() throws Exception {
         byte[] data = macroInvocationInMacroDefinition(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            0,
-            0,
-            0,
-            0,
-            2
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 2)
         );
     }
 
@@ -1350,16 +1362,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void macroInvocationsProduceEncodingDirectivesThatModifySymbolTableMacroAwareTranscode() throws Exception {
         byte[] data = macroInvocationsProduceEncodingDirectivesThatModifySymbolTable(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            1,
-            0,
-            2,
-            0,
-            0
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 1),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 2),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
         );
     }
 
@@ -1452,16 +1461,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void macroInvocationsProduceEncodingDirectivesThatModifyMacroTableMacroAwareTranscode() throws Exception {
         byte[] data = macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            1,
-            2,
-            1,
-            1,
-            0
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 1),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 2),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 1),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 1),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
         );
     }
 
@@ -1524,16 +1530,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void emptyMacroAppendToEmptyTableMacroAwareTranscode() throws Exception {
         byte[] data = emptyMacroAppendToEmptyTable(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0 // The empty append to an empty table has no effect, and it is not transcoded. This is a known limitation. TODO document the limitations
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 0) // The empty append to an empty table has no effect, and it is not transcoded. This is a known limitation.
         );
     }
 
@@ -1586,16 +1589,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void emptyMacroAppendToNonEmptyTableMacroAwareTranscode() throws Exception {
         byte[] data = emptyMacroAppendToNonEmptyTable(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            0,
-            0,
-            0,
-            0,
-            3 // Two encoding directives, plus one $ion_encoding symbol to denote the macro table append.
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 3) // Two encoding directives, plus one $ion_encoding symbol to denote the macro table append.
         );
     }
 
@@ -1649,16 +1649,13 @@ public class EncodingDirectiveCompilationTest {
     @Test // TODO parameterize for all combinations once support for macro-aware text reading is added
     public void invokeUnqualifiedSystemMacroInTDLMacroAwareTranscode() throws Exception {
         byte[] data = invokeUnqualifiedSystemMacroInTDL(StreamType.BINARY);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            1,
-            0,
-            0,
-            0,
-            0,
-            1
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 1)
         );
     }
 
@@ -1674,16 +1671,13 @@ public class EncodingDirectiveCompilationTest {
         writeSymbolTableAppendEExpression(writer, symbols, "bar"); // bar
         writer.writeSymbol(SystemSymbols_1_1.size() + FIRST_LOCAL_SYMBOL_ID);
         byte[] data = getBytes(writer, out);
-        verifyMacroAwareTranscode(
-            data,
-            InputType.BYTE_ARRAY,
-            StreamType.TEXT,
-            2,
-            2,
-            0,
-            0,
-            0,
-            0
+        verifyMacroAwareTranscode(data, InputType.BYTE_ARRAY, StreamType.TEXT,
+            substringCount("$ion_1_1", 2),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 2),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
         );
     }
 
