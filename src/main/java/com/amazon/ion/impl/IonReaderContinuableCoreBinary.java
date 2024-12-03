@@ -160,6 +160,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // Indicates whether the reader is currently evaluating an e-expression.
     protected boolean isEvaluatingEExpression = false;
 
+    // The writer that will perform a macro-aware transcode, if requested.
+    private MacroAwareIonWriter macroAwareTranscoder = null;
+
     /**
      * Constructs a new reader from the given byte array.
      * @param configuration the configuration to use. The buffer size and oversized value configuration are unused, as
@@ -1799,30 +1802,34 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
-    public void transcodeTo(MacroAwareIonWriter writer) throws IOException {
+    public void transcodeAllTo(MacroAwareIonWriter writer) throws IOException {
+        prepareTranscodeTo(writer);
+        while (transcodeNext());
+    }
+
+    @Override
+    public void prepareTranscodeTo(MacroAwareIonWriter writer) {
         registerIvmNotificationConsumer((major, minor) -> {
             resetEncodingContext();
             // Which IVM to write is inherent to the writer implementation.
             // We don't have a single implementation that writes both formats.
             writer.startEncodingSegmentWithIonVersionMarker();
         });
-        while (transcodeNextTo(writer) != Event.NEEDS_DATA);
+        macroAwareTranscoder = writer;
     }
 
-    /**
-     * Transcodes the next value, and any encoding directives that may precede it,
-     * to the given writer.
-     * @param writer the writer to which the value will be transcoded.
-     * @return the result of the operation.
-     * @throws IOException if thrown during writing.
-     */
-    Event transcodeNextTo(MacroAwareIonWriter writer) throws IOException {
+    @Override
+    public boolean transcodeNext() throws IOException {
+        if (macroAwareTranscoder == null) {
+            throw new IllegalArgumentException("prepareTranscodeTo must be called before transcodeNext.");
+        }
         // NOTE: this method is structured very similarly to nextValue(). During performance analysis, we should
         // see if the methods can be unified without sacrificing hot path performance. Performance of this method
         // is not considered critical.
         lobBytesRead = 0;
         while (true) {
             if (parent == null || state != State.READING_VALUE) {
+                boolean isEncodingDirective = false;
                 if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
                     boolean isEncodingDirectiveFromEExpression = isEvaluatingEExpression;
                     encodingDirectiveReader.readEncodingDirective();
@@ -1832,17 +1839,22 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     // If the encoding directive was expanded from an e-expression, that expression has already been
                     // written. In that case, just make sure the writer is using the new context. Otherwise, also write
                     // the encoding directive.
-                    writer.startEncodingSegmentWithEncodingDirective(
+                    macroAwareTranscoder.startEncodingSegmentWithEncodingDirective(
                         encodingDirectiveReader.newMacros,
                         encodingDirectiveReader.isMacroTableAppend,
                         encodingDirectiveReader.newSymbols,
                         encodingDirectiveReader.isSymbolTableAppend,
                         isEncodingDirectiveFromEExpression
                     );
+                    isEncodingDirective = true;
                 }
                 if (isEvaluatingEExpression) {
                     if (evaluateNext()) {
-                        continue;
+                        if (isEncodingDirective) {
+                            continue;
+                        }
+                        // This is the end of a top-level macro invocation that expanded to a user value.
+                        return true;
                     }
                 } else {
                     event = super.nextValue();
@@ -1854,6 +1866,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 }
             } else if (isEvaluatingEExpression) {
                 if (evaluateNext()) {
+                    // This is the end of a contained macro invocation; continue iterating through the parent container.
                     continue;
                 }
             } else {
@@ -1861,9 +1874,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
                 expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
-                macroEvaluatorIonReader.transcodeArgumentsTo(writer);
+                macroEvaluatorIonReader.transcodeArgumentsTo(macroAwareTranscoder);
                 isEvaluatingEExpression = true;
                 if (evaluateNext()) {
+                    // This macro invocation expands to nothing; continue iterating until a user value is found.
                     continue;
                 }
                 if (parent == null && isPositionedOnEvaluatedEncodingDirective()) {
@@ -1878,15 +1892,44 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             break;
         }
-        if (event != Event.NEEDS_DATA) {
-            if (minorVersion > 0 && isPositionedOnSymbolTable()) {
+        if (event == Event.NEEDS_DATA || event == Event.END_CONTAINER) {
+            return false;
+        }
+        transcodeValueLiteral();
+        return true;
+    }
+
+    /**
+     * Transcodes a value literal to the macroAwareTranscoder. The caller must ensure that the reader is positioned
+     * on a value literal (i.e. a scalar or container value not expanded from an e-expression) before calling this
+     * method.
+     * @throws IOException if thrown by the writer during transcoding.
+     */
+    private void transcodeValueLiteral() throws IOException {
+        if (parent == null && isPositionedOnSymbolTable()) {
+            if (minorVersion > 0) {
                 // TODO finalize handling of Ion 1.0-style symbol tables in Ion 1.1: https://github.com/amazon-ion/ion-java/issues/1002
                 throw new IonException("Macro-aware transcoding of Ion 1.1 data containing Ion 1.0-style symbol tables not yet supported.");
             }
-            // The reader is now positioned on an actual encoding value. Write the value.
-            writer.writeValue(asIonReader);
+            // Ion 1.0 symbol tables are transcoded verbatim for now; this may change depending on the resolution to
+            // https://github.com/amazon-ion/ion-java/issues/1002.
+            macroAwareTranscoder.writeValue(asIonReader);
+        } else if (event == Event.START_CONTAINER && !isNullValue()) {
+            // Containers need to be transcoded recursively to avoid expanding macro invocations at any depth.
+            if (isInStruct()) {
+                macroAwareTranscoder.setFieldNameSymbol(getFieldNameSymbol());
+            }
+            macroAwareTranscoder.setTypeAnnotationSymbols(asIonReader.getTypeAnnotationSymbols());
+            macroAwareTranscoder.stepIn(getEncodingType());
+            super.stepIntoContainer();
+            while (transcodeNext()); // TODO make this iterative.
+            super.stepOutOfContainer();
+            macroAwareTranscoder.stepOut();
+        } else {
+            // The reader is now positioned on a scalar literal. Write the value.
+            // Note: writeValue will include any field name and/or annotations on the scalar.
+            macroAwareTranscoder.writeValue(asIonReader);
         }
-        return event;
     }
 
     @Override
