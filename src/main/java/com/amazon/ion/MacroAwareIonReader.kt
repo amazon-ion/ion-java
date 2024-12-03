@@ -11,9 +11,27 @@ import java.io.IOException
 interface MacroAwareIonReader : Closeable {
 
     /**
-     * Performs a macro-aware transcode of the stream being read by this reader.
+     * Performs a macro-aware transcode of all values in the stream. This is
+     * shorthand for calling [prepareTranscodeTo], then calling [transcodeNext]
+     * repetitively until it returns `false`.
+     * @param writer the writer to which the reader's stream will be transcoded.
+     */
+    @Throws(IOException::class)
+    fun transcodeAllTo(writer: MacroAwareIonWriter)
+
+    /**
+     * Prepares the reader to perform a macro-aware transcode to the given
+     * writer. This must be called before calling [transcodeNext], but is not
+     * necessary if calling [transcodeAllTo].
+     * @param writer the writer to which the reader's stream will be transcoded.
+     */
+    fun prepareTranscodeTo(writer: MacroAwareIonWriter)
+
+    /**
+     * Performs a macro-aware transcode of the next value read by this reader
+     * to the writer previously provided to a call to [prepareTranscodeTo].
      * For Ion 1.0 streams, this functions similarly to providing a system-level
-     * [IonReader] to [IonWriter.writeValues]. For Ion 1.1 streams, the transcoded
+     * [IonReader] to [IonWriter.writeValue]. For Ion 1.1 streams, the transcoded
      * stream will include the same symbol tables, encoding directives, and
      * e-expression invocations as the source stream. In both cases, the
      * transcoded stream will be data-model equivalent to the source stream.
@@ -34,8 +52,9 @@ interface MacroAwareIonReader : Closeable {
      * To get a [MacroAwareIonReader] use `_Private_IonReaderBuilder.buildMacroAware`.
      * To get a [MacroAwareIonWriter] use [IonEncodingVersion.textWriterBuilder] or
      * [IonEncodingVersion.binaryWriterBuilder].
-     * @param writer the writer to which the reader's stream will be transcoded.
+     * @return true if a value was transcoded; false if the end of the stream was reached.
+     * @throws IOException if thrown during writing.
      */
     @Throws(IOException::class)
-    fun transcodeTo(writer: MacroAwareIonWriter)
+    fun transcodeNext(): Boolean
 }
