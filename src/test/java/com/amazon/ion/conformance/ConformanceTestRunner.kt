@@ -21,6 +21,7 @@ object IncrementalReaderConformanceTests : ConformanceTestRunner(
 
 abstract class ConformanceTestRunner(
     readerBuilder: IonReaderBuilder,
+    /** A predicate that returns `true` iff the test case should be skipped. */
     additionalSkipFilter: (File, String) -> Boolean = { _, _ -> false }
 ) {
 
@@ -36,8 +37,6 @@ abstract class ConformanceTestRunner(
             "If no max_id, lack of exact-match must raise an error «then»" in completeTestName -> false
             // IonCatalog's "best choice" logic is not spec compliant
             "When max_id is valid, pad/truncate mismatched or absent SSTs" in completeTestName -> false
-            // TODO—Some commits have a typo in the name. Remove this line once ion-tests submodule is updated.
-            "When max_id is valid, pad/truncade mismatched or absent SSTs" in completeTestName -> false
             // No support for reading `$ion_encoding` directives yet.
             "conformance/ion_encoding/" in file.absolutePath -> false
             file.endsWith("local_symtab_imports.ion") -> when {
@@ -96,7 +95,7 @@ abstract class ConformanceTestRunner(
             "make_decimal can be invoked in binary using system macro address 6" in completeTestName -> false
 
             // TODO: Macro-shaped parameters not implemented yet
-            "a macro that can create a monomorphized variant of the values macro for a macro-shape when invoked in Ion text" in completeTestName -> false
+            "macro-shape" in completeTestName -> false
 
             // TODO: Not implemented yet
             "subnormal f16" in completeTestName -> false

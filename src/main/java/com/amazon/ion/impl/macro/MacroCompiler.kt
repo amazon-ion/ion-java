@@ -93,7 +93,7 @@ internal class MacroCompiler(
                     val encoding = Macro.ParameterEncoding.entries.singleOrNull { it.ionTextName == encodingText }
                     if (encoding == null) {
                         // TODO: Check for macro-shaped parameter encodings, and only if it's still null, we throw.
-                        throw IonException("Unknown parameter encoding: $encodingText")
+                        throw IonException("unsupported parameter encoding $annotations")
                     }
                     encoding
                 }
