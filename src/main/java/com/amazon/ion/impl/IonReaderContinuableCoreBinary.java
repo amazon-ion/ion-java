@@ -1245,7 +1245,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         private void classifyDirective() {
-            errorIf(getEncodingType() != IonType.SYMBOL, () -> "Ion encoding directives must start with a directive keyword.");
+            errorIf(getEncodingType() != IonType.SYMBOL, "Ion encoding directives must start with a directive keyword.");
             String name = getSymbolText();
             // TODO: Add support for `import` and `encoding` directives
             if (SystemSymbols_1_1.MODULE.getText().equals(name)) {
