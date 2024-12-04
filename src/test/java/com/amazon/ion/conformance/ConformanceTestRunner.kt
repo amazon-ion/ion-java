@@ -95,6 +95,9 @@ abstract class ConformanceTestRunner(
             // TODO: support continuable parsing of macro arguments
             "make_decimal can be invoked in binary using system macro address 6" in completeTestName -> false
 
+            // TODO: Macro-shaped parameters not implemented yet
+            "a macro that can create a monomorphized variant of the values macro for a macro-shape when invoked in Ion text" in completeTestName -> false
+
             // TODO: Not implemented yet
             "subnormal f16" in completeTestName -> false
             "conformance/system_macros/" in file.absolutePath -> when {
