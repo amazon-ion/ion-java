@@ -554,6 +554,13 @@ class MacroEvaluator {
     }
 
     /**
+     * Returns the e-expression argument expressions that this MacroEvaluator would evaluate.
+     */
+    fun getArguments(): List<Expression> {
+        return expansionStack.peek().expressions!!
+    }
+
+    /**
      * Evaluate the macro expansion until the next [DataModelExpression] can be returned.
      * Returns null if at the end of a container or at the end of the expansion.
      */

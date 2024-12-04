@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
+import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonInt;
 import com.amazon.ion.IonLoader;
@@ -13,7 +14,9 @@ import com.amazon.ion.IonWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
+import com.amazon.ion.TestUtils;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Before;
@@ -457,15 +460,41 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
         assertValue("{bar: foo::[]}");
     }
 
+    @Test
+    public void testSymbolWithKnownTextAndSid2IsNotConsideredIvm() throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
+        writer.writeSymbol("foo");
+        // Should not be an IVM even though SID 2 is present because known text always takes precedence.
+        writer.writeSymbolToken(new FakeSymbolToken("abc", 2));
+        // If the previous symbol were interpreted as an IVM, then the following symbol IDs would be out of range.
+        writer.writeSymbolToken(new FakeSymbolToken(null, 10));
+        writer.writeSymbolToken(new FakeSymbolToken(null, 11));
+        writer.close();
+        assertEquivalentDataModel(
+            out.toByteArray(),
+            TestUtils.ensureBinary(system(), "foo abc foo abc".getBytes(StandardCharsets.UTF_8))
+        );
+    }
+
     /**
      * Asserts equivalence of ion data model between two provided data streams.
-     * @param actual represents the serialized data streams when auto-flush is enabled.
-     * @param expected represents the expected data streams.
+     * @param actual represents the actual data stream.
+     * @param expected represents the expected data stream.
      */
     private void assertEquivalentDataModel(ByteArrayOutputStream actual, ByteArrayOutputStream expected) {
+        assertEquivalentDataModel(actual.toByteArray(), expected.toByteArray());
+    }
+
+    /**
+     * Asserts equivalence of ion data model between two provided data streams.
+     * @param actual represents the actual data stream.
+     * @param expected represents the expected data stream.
+     */
+    private void assertEquivalentDataModel(byte[] actual, byte[] expected) {
         IonLoader loader = IonSystemBuilder.standard().build().newLoader();
-        IonDatagram actualDatagram = loader.load(actual.toByteArray());
-        IonDatagram expectedDatagram = loader.load(expected.toByteArray());
+        IonDatagram actualDatagram = loader.load(actual);
+        IonDatagram expectedDatagram = loader.load(expected);
         assertEquals(expectedDatagram, actualDatagram);
     }
 }

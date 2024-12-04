@@ -7,7 +7,10 @@ import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
+import com.amazon.ion.MacroAwareIonReader;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
@@ -21,6 +24,7 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.EExpressionArgsReader;
+import com.amazon.ion.impl.macro.IonReaderFromReaderAdapter;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
 import com.amazon.ion.impl.macro.MacroTable;
@@ -32,6 +36,7 @@ import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
 import com.amazon.ion.impl.macro.SystemMacro;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -41,13 +46,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.amazon.ion.SystemSymbols.ION_ENCODING;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl.IonReaderContinuableApplicationBinary.SYMBOLS_LIST_INITIAL_CAPACITY;
 import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
@@ -55,7 +61,7 @@ import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
 /**
  * An IonCursor capable of raw parsing of binary Ion streams.
  */
-class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReaderContinuableCore {
+class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReaderContinuableCore, MacroAwareIonReader {
 
     // The UTF-8 bytes that represent the text "$ion_encoding" for quick byte-by-byte comparisons.
     private static final byte[] ION_ENCODING_UTF8 = ION_ENCODING.getBytes(StandardCharsets.UTF_8);
@@ -131,6 +137,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     // Adapts this reader for use in code that supports multiple reader types.
     private final ReaderAdapter readerAdapter = new ReaderAdapterContinuable(this);
+
+    // Adapts this reader for use in code that supports IonReader.
+    private final IonReader asIonReader = new IonReaderFromReaderAdapter(readerAdapter);
 
     // Reads encoding directives from the stream.
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
@@ -1105,7 +1114,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     public String getSymbol(int sid) {
         // Only symbol IDs declared in Ion 1.1 encoding directives (not Ion 1.0 symbol tables) are resolved by the
         // core reader. In Ion 1.0, 'symbols' is never populated by the core reader.
-        if (sid - 1 <= localSymbolMaxOffset) {
+        if (sid > 0 && sid - 1 <= localSymbolMaxOffset) {
             return symbols[sid - 1];
         }
         return null;
@@ -1217,7 +1226,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         boolean isSymbolTableAppend = false;
         boolean isMacroTableAppend = false;
         List<String> newSymbols = new ArrayList<>(8);
-        Map<MacroRef, Macro> newMacros = new HashMap<>();
+        Map<MacroRef, Macro> newMacros = new LinkedHashMap<>();
         MacroCompiler macroCompiler = new MacroCompiler(this::resolveMacro, readerAdapter);
 
         boolean isSymbolTableAlreadyClassified = false;
@@ -1490,6 +1499,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         state = State.COMPILING_MACRO;
                         Macro newMacro = macroCompiler.compileMacro();
                         newMacros.put(MacroRef.byId(++localMacroMaxOffset), newMacro);
+                        String macroName = macroCompiler.getMacroName();
+                        if (macroName != null) {
+                            newMacros.put(MacroRef.byName(macroName), newMacro);
+                        }
                         state = State.IN_MACRO_TABLE_SEXP;
                         break;
                     default:
@@ -1733,6 +1746,33 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
+     * @return true if current value has a sequence of annotations that begins with `$ion_symbol_table`; otherwise,
+     *  false.
+     */
+    protected boolean startsWithIonSymbolTable() {
+        if (minorVersion == 0 && annotationSequenceMarker.startIndex >= 0) {
+            long savedPeekIndex = peekIndex;
+            peekIndex = annotationSequenceMarker.startIndex;
+            int sid = readVarUInt_1_0();
+            peekIndex = savedPeekIndex;
+            return ION_SYMBOL_TABLE_SID == sid;
+        } else if (minorVersion == 1) {
+            Marker marker = annotationTokenMarkers.get(0);
+            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_SYMBOL_TABLE);
+        }
+        return false;
+    }
+
+    /**
+     * @return true if the reader is positioned on a symbol table; otherwise, false.
+     */
+    protected boolean isPositionedOnSymbolTable() {
+        return hasAnnotations &&
+            getEncodingType() == IonType.STRUCT &&
+            startsWithIonSymbolTable();
+    }
+
+    /**
      * Consumes the next value (if any) from the MacroEvaluator, setting `event` based on the result.
      * @return true if evaluation of the current invocation has completed; otherwise, false.
      */
@@ -1755,6 +1795,97 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
         }
         return false;
+    }
+
+    @Override
+    public void transcodeTo(MacroAwareIonWriter writer) throws IOException {
+        registerIvmNotificationConsumer((major, minor) -> {
+            resetEncodingContext();
+            // Which IVM to write is inherent to the writer implementation.
+            // We don't have a single implementation that writes both formats.
+            writer.startEncodingSegmentWithIonVersionMarker();
+        });
+        while (transcodeNextTo(writer) != Event.NEEDS_DATA);
+    }
+
+    /**
+     * Transcodes the next value, and any encoding directives that may precede it,
+     * to the given writer.
+     * @param writer the writer to which the value will be transcoded.
+     * @return the result of the operation.
+     * @throws IOException if thrown during writing.
+     */
+    Event transcodeNextTo(MacroAwareIonWriter writer) throws IOException {
+        // NOTE: this method is structured very similarly to nextValue(). During performance analysis, we should
+        // see if the methods can be unified without sacrificing hot path performance. Performance of this method
+        // is not considered critical.
+        lobBytesRead = 0;
+        while (true) {
+            if (parent == null || state != State.READING_VALUE) {
+                if (state != State.READING_VALUE && state != State.COMPILING_MACRO) {
+                    boolean isEncodingDirectiveFromEExpression = isEvaluatingEExpression;
+                    encodingDirectiveReader.readEncodingDirective();
+                    if (state != State.READING_VALUE) {
+                        throw new IonException("Unexpected EOF when writing encoding-level value.");
+                    }
+                    // If the encoding directive was expanded from an e-expression, that expression has already been
+                    // written. In that case, just make sure the writer is using the new context. Otherwise, also write
+                    // the encoding directive.
+                    writer.startEncodingSegmentWithEncodingDirective(
+                        encodingDirectiveReader.newMacros,
+                        encodingDirectiveReader.isMacroTableAppend,
+                        encodingDirectiveReader.newSymbols,
+                        encodingDirectiveReader.isSymbolTableAppend,
+                        isEncodingDirectiveFromEExpression
+                    );
+                }
+                if (isEvaluatingEExpression) {
+                    if (evaluateNext()) {
+                        continue;
+                    }
+                } else {
+                    event = super.nextValue();
+                }
+                if (minorVersion == 1 && parent == null && isPositionedOnEncodingDirective()) {
+                    encodingDirectiveReader.resetState();
+                    state = State.ON_ION_ENCODING_SEXP;
+                    continue;
+                }
+            } else if (isEvaluatingEExpression) {
+                if (evaluateNext()) {
+                    continue;
+                }
+            } else {
+                event = super.nextValue();
+            }
+            if (valueTid != null && valueTid.isMacroInvocation) {
+                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                macroEvaluatorIonReader.transcodeArgumentsTo(writer);
+                isEvaluatingEExpression = true;
+                if (evaluateNext()) {
+                    continue;
+                }
+                if (parent == null && isPositionedOnEvaluatedEncodingDirective()) {
+                    encodingDirectiveReader.resetState();
+                    state = State.ON_ION_ENCODING_SEXP;
+                    continue;
+                }
+            }
+            if (isEvaluatingEExpression) {
+                // EExpressions are not expanded and provided to the writer; only the raw encoding is transferred.
+                continue;
+            }
+            break;
+        }
+        if (event != Event.NEEDS_DATA) {
+            if (minorVersion > 0 && isPositionedOnSymbolTable()) {
+                // TODO finalize handling of Ion 1.0-style symbol tables in Ion 1.1: https://github.com/amazon-ion/ion-java/issues/1002
+                throw new IonException("Macro-aware transcoding of Ion 1.1 data containing Ion 1.0-style symbol tables not yet supported.");
+            }
+            // The reader is now positioned on an actual encoding value. Write the value.
+            writer.writeValue(asIonReader);
+        }
+        return event;
     }
 
     @Override
@@ -2510,7 +2641,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return a SymbolToken.
      */
     protected SymbolToken getSymbolToken(int sid) {
-        return new SymbolTokenImpl(sid);
+        return new SymbolTokenImpl(getSymbol(sid), sid);
     }
 
     protected final SymbolToken getSystemSymbolToken(Marker marker) {

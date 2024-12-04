@@ -126,6 +126,10 @@ internal class IonManagedWriter_1_1(
     private var macroNames = ArrayList<String?>()
     /** Macro definitions by user-space address, including new macros. */
     private var macrosById = ArrayList<Macro>()
+    /** The first symbol ID in the current encoding context. */
+    private var firstLocalSid: Int = 0
+    /** True if the current encoding context contains the system symbols. */
+    private var areSystemSymbolsInScope = true
 
     /**
      * Transformer for symbol IDs encountered during writeValues. Can be used to upgrade Ion 1.0 symbol IDs to the
@@ -148,7 +152,7 @@ internal class IonManagedWriter_1_1(
         sid = newSymbols[text]
         if (sid != null) return sid
         // Add to the to-be-appended symbols
-        sid = symbolTable.size + newSymbols.size + 1
+        sid = firstLocalSid + symbolTable.size + newSymbols.size + 1
         newSymbols[text] = sid
         return sid
     }
@@ -246,6 +250,60 @@ internal class IonManagedWriter_1_1(
         return assignMacroAddress(macro)
     }
 
+    override fun startEncodingSegmentWithIonVersionMarker() {
+        if (!newSymbols.isEmpty() || !newMacros.isEmpty()) {
+            throw IonException("Cannot start a new encoding segment while the previous segment is active.")
+        }
+        needsIVM = false
+        flush()
+        systemData.writeIVM()
+        resetEncodingContext()
+    }
+
+    override fun startEncodingSegmentWithEncodingDirective(
+        macros: Map<MacroRef, Macro>,
+        isMacroTableAppend: Boolean,
+        symbols: List<String>,
+        isSymbolTableAppend: Boolean,
+        encodingDirectiveAlreadyWritten: Boolean
+    ) {
+        // It is assumed that the IVM is written manually when using endEncodingSegment.
+        needsIVM = false
+        // First, flush the previous segment. This method begins a new segment.
+        flush()
+        firstLocalSid = if (isSymbolTableAppend) {
+            if (areSystemSymbolsInScope) SystemSymbols_1_1.size() else 0
+        } else {
+            symbolTable.clear()
+            areSystemSymbolsInScope = false
+            0
+        }
+        for (symbol in symbols) {
+            intern(symbol)
+        }
+        if (!isMacroTableAppend) {
+            macroNames.clear()
+            macrosById.clear()
+            macroTable.clear()
+            newMacros.clear()
+        }
+        for (entry in macros.entries) {
+            when (entry.key) {
+                is MacroRef.ByName -> getOrAssignMacroAddressAndName((entry.key as MacroRef.ByName).name, entry.value)
+                is MacroRef.ById -> getOrAssignMacroAddress(entry.value)
+            }
+        }
+        if (encodingDirectiveAlreadyWritten) {
+            // This prevents another encoding directive from being written for this context.
+            symbolTable.putAll(newSymbols)
+            newSymbols.clear()
+            macroTable.putAll(newMacros)
+            newMacros.clear()
+        } else {
+            writeVerboseEncodingDirective()
+        }
+    }
+
     /** Unconditionally adds a macro to the macro table data structures and returns the new address. */
     private fun assignMacroAddress(macro: Macro): Int {
         val address = macrosById.size
@@ -265,6 +323,8 @@ internal class IonManagedWriter_1_1(
         newMacros.clear()
 
         needsIVM = true
+        firstLocalSid = 0
+        areSystemSymbolsInScope = true
     }
 
     /** Helper function for writing encoding directives */
@@ -301,7 +361,27 @@ internal class IonManagedWriter_1_1(
     }
 
     /**
-     * Writes the `(symbol_table ...)` clause into the encoding expression.
+     * Writes an encoding directive for the current encoding context using the verbose `$ion_encoding::(...)` syntax,
+     * and updates internal state accordingly. This always appends to the current encoding context. If there is nothing
+     * to append, calling this function is a no-op.
+     */
+    private fun writeVerboseEncodingDirective() {
+        if (newSymbols.isEmpty() && newMacros.isEmpty()) return
+
+        systemData.writeAnnotations(SystemSymbols_1_1.ION_ENCODING)
+        writeSystemSexp {
+            writeVerboseSymbolTableClause()
+            writeVerboseMacroTableClause()
+        }
+        symbolTable.putAll(newSymbols)
+        newSymbols.clear()
+        macroTable.putAll(newMacros)
+        newMacros.clear()
+    }
+
+    /**
+     * Writes the `(symbol_table ...)` clause into the encoding expression by invoking
+     * the `add_symbols` or `set_symbols` system macro.
      * If the symbol table would be empty, writes nothing, which is equivalent
      * to an empty symbol table.
      */
@@ -323,7 +403,41 @@ internal class IonManagedWriter_1_1(
     }
 
     /**
-     * Writes the `(macro_table ...)` clause into the encoding expression.
+     * Writes the `(symbol_table ...)` clause into the encoding expression using the
+     * verbose s-expression syntax.
+     * If the symbol table would be empty, writes nothing, which is equivalent
+     * to an empty symbol table.
+     */
+    private fun writeVerboseSymbolTableClause() {
+        val hasSymbolsToAdd = newSymbols.isNotEmpty()
+        val hasSymbolsToRetain = symbolTable.isNotEmpty()
+        if (!hasSymbolsToAdd && !hasSymbolsToRetain) return
+
+        writeSystemSexp {
+            forceNoNewlines(true)
+            systemData.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE)
+
+            // Add previous symbol table
+            if (hasSymbolsToRetain) {
+                if (newSymbols.size > 0) forceNoNewlines(false)
+                writeSymbol(SystemSymbols_1_1.ION_ENCODING)
+            }
+
+            // Add new symbols
+            if (hasSymbolsToAdd) {
+                stepInList(usingLengthPrefix = false)
+                if (newSymbols.size <= MAX_SYMBOLS_IN_SINGLE_LINE_SYMBOL_TABLE) forceNoNewlines(true)
+                newSymbols.forEach { (text, _) -> writeString(text) }
+                stepOut()
+            }
+            forceNoNewlines(true)
+        }
+        systemData.forceNoNewlines(false)
+    }
+
+    /**
+     * Writes the `(macro_table ...)` clause into the encoding expression by invoking
+     * the `add_macros` or `set_macros` system macro.
      * If the macro table would be empty, writes nothing, which is equivalent
      * to an empty macro table.
      */
@@ -350,6 +464,42 @@ internal class IonManagedWriter_1_1(
                 }
             }
             stepOut()
+        }
+        systemData.forceNoNewlines(false)
+    }
+
+    /**
+     * Writes the `(macro_table ...)` clause into the encoding expression using the
+     * verbose s-expression syntax.
+     * If the macro table would be empty, writes nothing, which is equivalent
+     * to an empty macro table.
+     */
+    private fun writeVerboseMacroTableClause() {
+        val hasMacrosToAdd = newMacros.isNotEmpty()
+        val hasMacrosToRetain = macroTable.isNotEmpty()
+        if (!hasMacrosToAdd && !hasMacrosToRetain) return
+
+        writeSystemSexp {
+            forceNoNewlines(true)
+            writeSymbol(SystemSymbols_1_1.MACRO_TABLE)
+            if (newMacros.size > 0) forceNoNewlines(false)
+            if (hasMacrosToRetain) {
+                writeSymbol(SystemSymbols_1_1.ION_ENCODING)
+            }
+            forceNoNewlines(false)
+            newMacros.forEach { (macro, address) ->
+                val name = macroNames[address]
+                when (macro) {
+                    is TemplateMacro -> writeMacroDefinition(name, macro)
+                    is SystemMacro -> {
+                        if (name != macro.macroName) {
+                            exportSystemMacro(macro, name)
+                        }
+                        // Else, no need to export the macro since it's already known by the desired name
+                    }
+                }
+            }
+            forceNoNewlines(true)
         }
         systemData.forceNoNewlines(false)
     }
@@ -743,7 +893,13 @@ internal class IonManagedWriter_1_1(
             // TODO: Can't use reader.fieldId, reader.fieldName because it will throw UnknownSymbolException.
             //       However, this might mean we're unnecessarily constructing `SymbolToken` instances.
             val fieldName = reader.fieldNameSymbol
-            handleSymbolToken(fieldName.sid, fieldName.text, SymbolKind.FIELD_NAME, userData, preserveEncoding = true)
+            // If there is no field name, it still may have been set externally, e.g.
+            // writer.setFieldName(...); writer.writeValue(reader);
+            // This occurs when serializing a sequence of Expressions, which hold field names separate from
+            // values.
+            if (fieldName != null) {
+                handleSymbolToken(fieldName.sid, fieldName.text, SymbolKind.FIELD_NAME, userData, preserveEncoding = true)
+            }
         }
 
         if (reader.isNullValue) {
@@ -796,8 +952,11 @@ internal class IonManagedWriter_1_1(
     private fun IonReader.isCurrentValueAnIvm(): Boolean {
         if (depth != 0 || type != IonType.SYMBOL || typeAnnotationSymbols.isNotEmpty()) return false
         val symbol = symbolValue() ?: return false
-        if (symbol.sid == 2) return true
-        symbol.text ?: return false
+        if (symbol.text == null) {
+            // TODO FIX: Ion 1.1 system symbols can be removed from the encoding context, so an IVM may not always
+            //  have symbol ID 2.
+            return symbol.sid == 2
+        }
         return ION_VERSION_MARKER_REGEX.matches(symbol.assumeText())
     }
 
@@ -830,7 +989,8 @@ internal class IonManagedWriter_1_1(
             startSystemMacro(macro)
         } else {
             val address = getOrAssignMacroAddress(macro)
-            startMacro(null, address, macro)
+            // Note: macroNames[address] will be null if the macro is unnamed.
+            startMacro(macroNames[address], address, macro)
         }
     }
 
