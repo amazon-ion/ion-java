@@ -258,7 +258,7 @@ internal class MacroCompiler(
             }
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
-        val m = if (isQualifiedSystemMacro) SystemMacro.get(macroRef) else getMacro(macroRef)
+        val m = if (isQualifiedSystemMacro) SystemMacro.getMacroOrSpecialForm(macroRef) else getMacro(macroRef)
         return m ?: throw IonException("Unrecognized macro: $macroRef")
     }
 

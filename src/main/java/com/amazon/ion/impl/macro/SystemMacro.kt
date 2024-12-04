@@ -5,9 +5,7 @@ package com.amazon.ion.impl.macro
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.SystemSymbols_1_1.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
-import com.amazon.ion.impl.macro.ParameterFactory.exactlyOneFlexInt
 import com.amazon.ion.impl.macro.ParameterFactory.exactlyOneTagged
-import com.amazon.ion.impl.macro.ParameterFactory.oneToManyTagged
 import com.amazon.ion.impl.macro.ParameterFactory.zeroOrOneTagged
 import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
 
@@ -34,7 +32,22 @@ enum class SystemMacro(
     MakeString(3, MAKE_STRING, listOf(zeroToManyTagged("text"))),
     MakeSymbol(4, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
     MakeBlob(5, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
-    MakeDecimal(6, MAKE_DECIMAL, listOf(exactlyOneFlexInt("coefficient"), exactlyOneFlexInt("exponent"))),
+    MakeDecimal(6, MAKE_DECIMAL, listOf(exactlyOneTagged("coefficient"), exactlyOneTagged("exponent"))),
+    MakeTimestamp(
+        7, MAKE_TIMESTAMP,
+        listOf(
+            exactlyOneTagged("year"),
+            zeroOrOneTagged("month"),
+            zeroOrOneTagged("day"),
+            zeroOrOneTagged("hour"),
+            zeroOrOneTagged("minute"),
+            zeroOrOneTagged("second"),
+            zeroOrOneTagged("offset_minutes"),
+        )
+    ),
+    // TODO: make_list
+    // TODO: make_sexp
+    // TODO: make_struct
 
     /**
      * ```ion
@@ -176,8 +189,11 @@ enum class SystemMacro(
             }
         }
     ),
-
-    Repeat(17, REPEAT, listOf(exactlyOneTagged("n"), oneToManyTagged("value"))),
+    // TODO: parse_ion
+    Repeat(17, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
+    Delta(18, DELTA, listOf(zeroToManyTagged("deltas"))),
+    // TODO: flatten
+    Sum(20, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
     Comment(21, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
     MakeField(
         22, MAKE_FIELD,
@@ -196,8 +212,6 @@ enum class SystemMacro(
             }
         }
     ),
-
-    // TODO: Other system macros
     ;
 
     val macroName: String get() = this.systemSymbol.text
@@ -239,7 +253,12 @@ enum class SystemMacro(
 
         /** Gets a [SystemMacro] by name, including those which are not in the system table (i.e. special forms) */
         @JvmStatic
-        fun getMacroOrSpecialForm(name: String): SystemMacro? = MACROS_BY_NAME[name]
+        fun getMacroOrSpecialForm(ref: MacroRef): SystemMacro? {
+            return when (ref) {
+                is MacroRef.ById -> get(ref.id)
+                is MacroRef.ByName -> MACROS_BY_NAME[ref.name]
+            }
+        }
 
         @JvmStatic
         val SYSTEM_MACRO_TABLE = this

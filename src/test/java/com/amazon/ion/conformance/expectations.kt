@@ -122,7 +122,7 @@ fun TestCaseSupport.assertDenotes(modelValues: List<AnyElement>, reader: IonRead
  */
 private fun TestCaseSupport.denotesModelValue(expectation: AnyElement, reader: IonReader) {
     if (reader.type == null) fail(expectation, "no more values; expected $expectation")
-    if (expectation is SexpElement && expectation.head == "Annot") {
+    if (expectation is SexpElement && expectation.head == "annot") {
         val actualAnnotations = reader.typeAnnotationSymbols
         expectation.tailFrom(2)
             .forEachIndexed { i, it -> denotesSymtok(it, actualAnnotations[i]) }
@@ -356,7 +356,7 @@ private fun TestCaseSupport.denotesStruct(expectation: SeqElement, reader: IonRe
 private fun TestCaseSupport.denotesSymtok(expectation: AnyElement, actual: SymbolToken) {
     when (expectation) {
         is TextElement -> assertEquals(expectation.textValue, actual.text, createFailureMessage(expectation))
-        is IntElement -> assertEquals(expectation.longValue, actual.sid, createFailureMessage(expectation))
+        is IntElement -> assertEquals(expectation.longValue.toInt(), actual.sid, createFailureMessage(expectation))
         is SeqElement -> when (expectation.head) {
             "absent" -> {
                 if (actual.text != null) fail(expectation, "Expected unknown text; was '${actual.text}'")

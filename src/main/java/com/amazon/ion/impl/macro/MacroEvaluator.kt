@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.IonException
-import com.amazon.ion.SymbolToken
+import com.amazon.ion.*
 import com.amazon.ion.impl._Private_RecyclingStack
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -209,6 +209,119 @@ class MacroEvaluator {
         }
     }
 
+    private object MakeTimestampExpander : Expander {
+        private fun readOptionalIntArg(
+            signatureIndex: Int,
+            expansionInfo: ExpansionInfo,
+            macroEvaluator: MacroEvaluator
+        ): Int? {
+            if (expansionInfo.i == expansionInfo.endExclusive) return null
+            val parameterName = SystemMacro.MakeTimestamp.signature[signatureIndex].variableName
+            val arg = readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, parameterName)
+            return arg?.let {
+                it as? IntValue ?: throw IonException("$parameterName must be an integer")
+                it.longValue.toInt()
+            }
+        }
+
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val year = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeTimestamp.signature[0].variableName)
+                .let { it as? IntValue ?: throw IonException("year must be an integer") }
+                .longValue.toInt()
+            val month = readOptionalIntArg(1, expansionInfo, macroEvaluator)
+            val day = readOptionalIntArg(2, expansionInfo, macroEvaluator)
+            val hour = readOptionalIntArg(3, expansionInfo, macroEvaluator)
+            val minute = readOptionalIntArg(4, expansionInfo, macroEvaluator)
+            val second = if (expansionInfo.i == expansionInfo.endExclusive) {
+                null
+            } else when (val arg = readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, SystemMacro.MakeTimestamp.signature[5].variableName)) {
+                null -> null
+                is DecimalValue -> arg.value
+                is IntValue -> arg.longValue.toBigDecimal()
+                else -> throw IonException("second must be a decimal")
+            }
+            val offsetMinutes = readOptionalIntArg(6, expansionInfo, macroEvaluator)
+
+            try {
+                val ts = if (second != null) {
+                    month ?: throw IonException("make_timestamp: month is required when second is present")
+                    day ?: throw IonException("make_timestamp: day is required when second is present")
+                    hour ?: throw IonException("make_timestamp: hour is required when second is present")
+                    minute ?: throw IonException("make_timestamp: minute is required when second is present")
+                    Timestamp.forSecond(year, month, day, hour, minute, second, offsetMinutes)
+                } else if (minute != null) {
+                    month ?: throw IonException("make_timestamp: month is required when minute is present")
+                    day ?: throw IonException("make_timestamp: day is required when minute is present")
+                    hour ?: throw IonException("make_timestamp: hour is required when minute is present")
+                    Timestamp.forMinute(year, month, day, hour, minute, offsetMinutes)
+                } else if (hour != null) {
+                    throw IonException("make_timestamp: minute is required when hour is present")
+                } else {
+                    if (offsetMinutes != null) throw IonException("make_timestamp: offset_minutes is prohibited when hours and minute are not present")
+                    if (day != null) {
+                        month ?: throw IonException("make_timestamp: month is required when day is present")
+                        Timestamp.forDay(year, month, day)
+                    } else if (month != null) {
+                        Timestamp.forMonth(year, month)
+                    } else {
+                        Timestamp.forYear(year)
+                    }
+                }
+                return TimestampValue(value = ts)
+            } catch (e: IllegalArgumentException) {
+                throw IonException(e.message)
+            }
+        }
+    }
+
+    private object SumExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            val a = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "a")
+            val b = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "b")
+            if (a !is IntValue || b !is IntValue) throw IonException("operands of sum must be integers")
+            // TODO: Use LongIntValue when possible.
+            return BigIntValue(value = a.bigIntegerValue + b.bigIntegerValue)
+        }
+    }
+
+    private object DeltaExpander : Expander {
+        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
+            // TODO: Optimize to use Long and only fallback to BigInteger if needed.
+            // TODO: Optimize for lazy evaluation
+            if (expansionInfo.additionalState == null) {
+                val position = expansionInfo.i
+                var runningTotal = BigInteger.ZERO
+                val values = ArrayDeque<BigInteger>()
+                readExpandedArgumentValues(expansionInfo, macroEvaluator) {
+                    when (it) {
+                        is IntValue -> {
+                            runningTotal += it.bigIntegerValue
+                            values += runningTotal
+                        }
+                        is DataModelValue -> throw IonException("Invalid argument type for 'delta': ${it.type}")
+                        is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
+                    }
+                    true // continue expansion
+                }
+
+                if (values.isEmpty()) {
+                    // Return fake, empty expression group
+                    return ExpressionGroup(position, position)
+                }
+
+                expansionInfo.additionalState = values
+                expansionInfo.i = position
+            }
+
+            val valueQueue = expansionInfo.additionalState as ArrayDeque<BigInteger>
+            val nextValue = valueQueue.removeFirst()
+            if (valueQueue.isEmpty()) {
+                expansionInfo.i = expansionInfo.endExclusive
+            }
+            return BigIntValue(value = nextValue)
+        }
+    }
+
     private enum class IfExpander(private val minInclusive: Int, private val maxExclusive: Int) : Expander {
         IF_NONE(0, 1),
         IF_SOME(1, -1),
@@ -254,11 +367,10 @@ class MacroEvaluator {
                     }
                     nExpression.value.intValueExact()
                 }
-                else -> throw IonException("The first argument of repeat must be a positive integer")
+                else -> throw IonException("The first argument of repeat must be a non-negative integer")
             }
-            if (iterationsRemaining <= 0) {
-                // TODO: Confirm https://github.com/amazon-ion/ion-docs/issues/350
-                throw IonException("The first argument of repeat must be a positive integer")
+            if (iterationsRemaining < 0) {
+                throw IonException("The first argument of repeat must be a non-negative integer")
             }
             // Decrement because we're starting the first iteration right away.
             iterationsRemaining--
@@ -267,14 +379,19 @@ class MacroEvaluator {
         }
 
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val repeatsRemaining = expansionInfo.additionalState as? Int
+            val repeatsRemainingAfterTheCurrentOne = expansionInfo.additionalState as? Int
                 ?: init(expansionInfo, macroEvaluator)
+
+            if (repeatsRemainingAfterTheCurrentOne < 0) {
+                expansionInfo.nextSourceExpression()
+                return ExpressionGroup(0, 0)
+            }
 
             val repeatedExpressionIndex = expansionInfo.i
             val next = readFirstExpandedArgumentValue(expansionInfo, macroEvaluator)
-            next ?: throw IonException("repeat macro requires at least one value for value parameter")
-            if (repeatsRemaining > 0) {
-                expansionInfo.additionalState = repeatsRemaining - 1
+            next ?: return ExpressionGroup(0, 0)
+            if (repeatsRemainingAfterTheCurrentOne > 0) {
+                expansionInfo.additionalState = repeatsRemainingAfterTheCurrentOne - 1
                 expansionInfo.i = repeatedExpressionIndex
             }
             return next
@@ -282,6 +399,7 @@ class MacroEvaluator {
     }
 
     private object MakeFieldExpander : Expander {
+        // This is wrong!
         override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
             /**
              * Uses [ExpansionInfo.additionalState] to track whether the expansion is on the field name or value.
@@ -317,7 +435,10 @@ class MacroEvaluator {
         MakeSymbol(MakeSymbolExpander),
         MakeBlob(MakeBlobExpander),
         MakeDecimal(MakeDecimalExpander),
+        MakeTimestamp(MakeTimestampExpander),
         MakeField(MakeFieldExpander),
+        Sum(SumExpander),
+        Delta(DeltaExpander),
         IfNone(IfExpander.IF_NONE),
         IfSome(IfExpander.IF_SOME),
         IfSingle(IfExpander.IF_SINGLE),
@@ -328,9 +449,7 @@ class MacroEvaluator {
         companion object {
             @JvmStatic
             fun forSystemMacro(macro: SystemMacro): ExpansionKind {
-                return if (macro.body != null) {
-                    TemplateBody
-                } else when (macro) {
+                return when (macro) {
                     SystemMacro.None -> Values // "none" takes no args, so we can treat it as an empty "values" expansion
                     SystemMacro.Values -> Values
                     SystemMacro.Annotate -> Annotate
@@ -338,13 +457,20 @@ class MacroEvaluator {
                     SystemMacro.MakeSymbol -> MakeSymbol
                     SystemMacro.MakeBlob -> MakeBlob
                     SystemMacro.MakeDecimal -> MakeDecimal
+                    SystemMacro.MakeTimestamp -> MakeTimestamp
                     SystemMacro.IfNone -> IfNone
                     SystemMacro.IfSome -> IfSome
                     SystemMacro.IfSingle -> IfSingle
                     SystemMacro.IfMulti -> IfMulti
                     SystemMacro.Repeat -> Repeat
                     SystemMacro.MakeField -> MakeField
-                    else -> throw IllegalStateException("Unreachable. All other macros have a template body.")
+                    SystemMacro.Sum -> Sum
+                    SystemMacro.Delta -> Delta
+                    else -> if (macro.body != null) {
+                        TemplateBody
+                    } else {
+                        TODO("System macro ${macro.macroName} needs either a template body or a hard-coded expander.")
+                    }
                 }
             }
         }
