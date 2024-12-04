@@ -50,7 +50,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.SystemSymbols.DEFAULT_MODULE;
@@ -1378,11 +1377,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         /**
          * Utility function to make error cases more concise.
          * @param condition the condition under which an IonException should be thrown
-         * @param lazyErrorMessage the message to use in the exception
+         * @param errorMessage the message to use in the exception
          */
-        private void errorIf(boolean condition, Supplier<String> lazyErrorMessage) {
+        private void errorIf(boolean condition, String errorMessage) {
             if (condition) {
-                throw new IonException(lazyErrorMessage.get());
+                throw new IonException(errorMessage);
             }
         }
 
@@ -1405,7 +1404,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
-                        errorIf(event == Event.END_CONTAINER, () -> "invalid Ion directive; missing directive keyword");
+                        errorIf(event == Event.END_CONTAINER, "invalid Ion directive; missing directive keyword");
                         classifyDirective();
                         break;
                     case IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME:
@@ -1413,10 +1412,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                         if (event == Event.NEEDS_DATA) {
                             return;
                         }
-                        errorIf(event == Event.END_CONTAINER, () -> "invalid module definition; missing module name");
-                        errorIf(getEncodingType() != IonType.SYMBOL, () -> "invalid module definition; module name must be a symbol");
+                        errorIf(event == Event.END_CONTAINER, "invalid module definition; missing module name");
+                        errorIf(getEncodingType() != IonType.SYMBOL, "invalid module definition; module name must be a symbol");
                         // TODO: Support other module names
-                        errorIf(!DEFAULT_MODULE.equals(getSymbolText()), () -> "IonJava currently supports only the default module");
+                        errorIf(!DEFAULT_MODULE.equals(getSymbolText()), "IonJava currently supports only the default module");
                         state = State.IN_MODULE_DIRECTIVE_SEXP_BODY;
                         break;
                     case IN_MODULE_DIRECTIVE_SEXP_BODY:

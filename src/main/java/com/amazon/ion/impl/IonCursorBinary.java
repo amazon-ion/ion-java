@@ -2115,7 +2115,7 @@ class IonCursorBinary implements IonCursor {
      */
     private void setMarker(long endIndex, Marker markerToSet) {
         if (parent != null && endIndex > parent.endIndex && parent.endIndex > DELIMITED_MARKER) {
-            throw new IonException(String.format("Value [%s:%s] exceeds the length of its parent container [%s:%s].", peekIndex, endIndex, parent.startIndex, parent.endIndex));
+            throw new IonException(String.format("Value [%d:%d] exceeds the length of its parent container [%d:%d].", peekIndex, endIndex, parent.startIndex, parent.endIndex));
         }
         markerToSet.startIndex = peekIndex;
         markerToSet.endIndex = endIndex;

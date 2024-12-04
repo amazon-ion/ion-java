@@ -53,7 +53,7 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro set_symbols (symbols*)
-     *        $ion::(
+     *        $ion::(module _
      *          (symbol_table [(%symbols)])
      *          (macro_table _)
      *        ))
@@ -80,7 +80,7 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro add_symbols (symbols*)
-     *        $ion::(
+     *        $ion::(module _
      *          (symbol_table _ [(%symbols)])
      *          (macro_table _)
      *        ))
