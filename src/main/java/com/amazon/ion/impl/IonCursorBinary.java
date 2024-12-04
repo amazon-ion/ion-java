@@ -2348,7 +2348,7 @@ class IonCursorBinary implements IonCursor {
     private boolean uncheckedReadHeader(final int typeIdByte, final boolean isAnnotated, final Marker markerToSet) {
         IonTypeID valueTid = typeIds[typeIdByte];
         if (!valueTid.isValid) {
-            throw new IonException("Invalid type ID.");
+            throw new IonException("Invalid type ID: " + valueTid.theByte);
         } else if (valueTid.type == IonTypeID.ION_TYPE_ANNOTATION_WRAPPER) {
             if (isAnnotated) {
                 throw new IonException("Nested annotation wrappers are invalid.");

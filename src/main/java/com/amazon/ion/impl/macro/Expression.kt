@@ -95,18 +95,21 @@ sealed interface Expression {
 
     sealed interface IntValue : DataModelValue {
         val bigIntegerValue: BigInteger
+        val longValue: Long
     }
 
     data class LongIntValue(override val annotations: List<SymbolToken> = emptyList(), val value: Long) : IntValue {
         override val type: IonType get() = IonType.INT
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
         override val bigIntegerValue: BigInteger get() = BigInteger.valueOf(value)
+        override val longValue: Long get() = value
     }
 
     data class BigIntValue(override val annotations: List<SymbolToken> = emptyList(), val value: BigInteger) : IntValue {
         override val type: IonType get() = IonType.INT
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
         override val bigIntegerValue: BigInteger get() = value
+        override val longValue: Long get() = value.longValueExact()
     }
 
     data class FloatValue(override val annotations: List<SymbolToken> = emptyList(), val value: Double) : DataModelValue {

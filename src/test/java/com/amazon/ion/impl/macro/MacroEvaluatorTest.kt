@@ -1070,15 +1070,15 @@ class MacroEvaluatorTest {
     @Test
     fun `invoke repeat with invalid 'n' argument`() {
         // Given:
-        //   (macro (x) (.make_string (.repeat (%x) "na ") "batman!"))
+        //   <system macros>
         // When:
-        //   (:repeat 0 "a")
+        //   (:repeat -1 "a")
         // Then:
         //   <IonException>
 
         evaluator.initExpansion {
             eexp(Repeat) {
-                int(0)
+                int(-1)
                 string("a")
             }
         }
@@ -1087,13 +1087,13 @@ class MacroEvaluatorTest {
     }
 
     @Test
-    fun `invoke repeat with invalid 'value' argument`() {
+    fun `invoke repeat with empty 'value' argument`() {
         // Given:
-        //   (macro (x) (.make_string (.repeat (%x) "na ") "batman!"))
+        //   <system macros>
         // When:
         //   (:repeat 3 (:values))
         // Then:
-        //   <IonException>
+        //   <nothing>
 
         evaluator.initExpansion {
             eexp(Repeat) {
@@ -1102,7 +1102,7 @@ class MacroEvaluatorTest {
             }
         }
 
-        assertThrows<IonException> { evaluator.expandNext() }
+        assertNull(evaluator.expandNext())
     }
 
     @Test

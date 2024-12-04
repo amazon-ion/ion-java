@@ -8,7 +8,8 @@ import com.amazon.ion.TestUtils.*
 import com.amazon.ion.conformance.ConformanceTestBuilder.*
 import com.amazon.ion.conformance.Encoding.*
 import com.amazon.ion.impl.*
-import com.amazon.ion.impl.bin.SymbolInliningStrategy
+import com.amazon.ion.impl.bin.*
+import com.amazon.ion.impl.macro.*
 import com.amazon.ion.system.*
 import com.amazon.ion.util.*
 import com.amazon.ionelement.api.AnyElement
@@ -21,6 +22,7 @@ import com.amazon.ionelement.api.TextElement
 import com.amazon.ionelement.api.ionInt
 import com.amazon.ionelement.api.ionSexpOf
 import com.amazon.ionelement.api.ionSymbol
+import com.amazon.ionelement.api.loadSingleElement
 import java.io.ByteArrayOutputStream
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -153,7 +155,7 @@ private fun TestCaseSupport.readFragment(fragment: SeqElement, encoding: Encodin
         //       we need to remove "bytes" from this when expression
         "bytes" -> readBytesFragment(fragment, encoding)
         "toplevel" -> readTopLevelFragment(fragment, encoding)
-        "mactab" -> TODO("mactab")
+        "mactab" -> readMactabFragment(fragment, encoding)
         "encoding" -> TODO("encoding")
         else -> reportSyntaxError(fragment, "not a valid fragment")
     }
@@ -240,6 +242,31 @@ private fun TestCaseSupport.readTopLevelFragment(fragment: SeqElement, encoding:
     return bytes to currentEncoding
 }
 
+private fun TestCaseSupport.readMactabFragment(fragment: SeqElement, encoding: Encoding): Pair<ByteArray, Encoding> {
+    val baos = ByteArrayOutputStream()
+    var currentEncoding = encoding
+    var currentWriter = encoding.writerBuilder.build(baos)
+
+    // TODO: Consider replacing this to use literal values instead of the `set_macros` macro to
+    //       minimize dependencies in tests.
+
+    // Can't have a mactab for an Ion 1.0 segment, so this should be safe
+    currentWriter as MacroAwareIonWriter
+    currentWriter.startMacro(SystemMacro.SetMacros)
+    currentWriter.startExpressionGroup()
+    fragment.tail.forEach {
+        it.writeTo(currentWriter)
+    }
+    currentWriter.endExpressionGroup()
+    currentWriter.endMacro()
+    currentWriter.close()
+    val bytes = baos.toByteArray()
+        // Drop the initial IVM
+        .let { if (encoding is Binary) it.drop(4).toByteArray() else it }
+        .let { if (encoding is Text11) it.drop("\$ion_1_1".length).toByteArray() else it }
+    return bytes to currentEncoding
+}
+
 /**
  * Writes this [AnyElement] to an [IonWriter], applying the de-mangling logic described at
  * [Conformance – Abstract Syntax Forms](https://github.com/amazon-ion/ion-tests/tree/master/conformance#abstract-syntax-forms).
@@ -264,12 +291,25 @@ private fun AnyElement.demangledWriteTo(writer: IonWriter) {
             writer.stepOut()
         }
         ElementType.SEXP -> {
-            if (sexpValues.firstOrNull().let { it is TextElement && it.textValue.startsWith("#$:") }) {
-                TODO("demangled e-expressions")
+            val head = sexpValues.firstOrNull()
+            if (head is TextElement && head.textValue.startsWith("#$:")) {
+                val tail = sexpValues.drop(1)
+                if (head.textValue == "#$::") {
+                    // Write an expression group
+                    writer as IonManagedWriter_1_1
+                    val rawWriter = writer.getRawUserWriter()
+                    rawWriter.stepInExpressionGroup(usingLengthPrefix = true)
+                    tail.forEach { it.demangledWriteTo(writer) }
+                    rawWriter.stepOut()
+                } else {
+                    // Write an e-expression
+                    writer.writeDemangledEExpression(head, tail)
+                }
+            } else {
+                writer.stepIn(IonType.SEXP)
+                sexpValues.forEach { it.demangledWriteTo(writer) }
+                writer.stepOut()
             }
-            writer.stepIn(IonType.SEXP)
-            sexpValues.forEach { it.demangledWriteTo(writer) }
-            writer.stepOut()
         }
         ElementType.STRUCT -> {
             writer.stepIn(IonType.STRUCT)
@@ -283,13 +323,56 @@ private fun AnyElement.demangledWriteTo(writer: IonWriter) {
     }
 }
 
+private fun IonWriter.writeDemangledEExpression(head: TextElement, tail: List<AnyElement>) {
+    this as IonManagedWriter_1_1
+    val rawWriter = this.getRawUserWriter()
+
+    // Drop the first 3 characters (the `#$:`) and then parse as Ion
+    val macroReference = loadSingleElement(head.textValue.drop(3))
+    val annotations = macroReference.annotations
+    if (annotations.isNotEmpty()) {
+        if (annotations.singleOrNull() == "\$ion") {
+            val systemMacro = when (macroReference) {
+                is SymbolElement -> SystemMacro[macroReference.textValue]!!
+                is IntElement -> SystemMacro[macroReference.longValue.toInt()]!!
+                else -> throw IllegalArgumentException("Not a valid macro reference: $head")
+            }
+            rawWriter.stepInEExp(systemMacro)
+            tail.forEach { it.demangledWriteTo(this) }
+            rawWriter.stepOut()
+        } else {
+            TODO("demangled, non-system, qualified e-expressions")
+        }
+    } else if (macroReference is IntElement) {
+        val macro = if (rawWriter is IonRawBinaryWriter_1_1) {
+            // For this to work in binary, we need to look up the signature.
+            TODO("For Ion binary, we need to look up the macro definition")
+        } else {
+            // For Ion Text, we can cheat and use a placeholder because the macro arg isn't used.
+            SystemMacro.None
+        }
+        rawWriter.stepInEExp(macroReference.longValue.toInt(), usingLengthPrefix = false, macro)
+        tail.forEach { it.demangledWriteTo(this) }
+        rawWriter.stepOut()
+    } else if (macroReference is SymbolElement) {
+        if (rawWriter is IonRawBinaryWriter_1_1) {
+            TODO("For Ion binary, we need to look up the address for the macro and invoke by ID")
+        }
+        rawWriter.stepInEExp(macroReference.textValue)
+        tail.forEach { it.demangledWriteTo(this) }
+        rawWriter.stepOut()
+    } else {
+        throw IllegalArgumentException("Not a valid macro reference: $head")
+    }
+}
+
 private fun demangleSymbolToken(text: String): SymbolToken {
     return if (text.startsWith("#\$ion_")) {
         // Escaped IVM or system symbol
         FakeSymbolToken(text.drop(1), -1)
     } else if (text.startsWith("#$:")) {
-        // E-Expression macro id
-        TODO("demangled e-expressions - $text")
+        // E-Expression macro id -- Should be unreachable; handled elsewhere
+        TODO("Should be unreachable! demangled e-expressions - $text")
     } else if (text.startsWith("#$")) {
         // Escaped SID
         val id = text.drop(2).toInt()
