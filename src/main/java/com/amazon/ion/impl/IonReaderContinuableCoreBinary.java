@@ -41,7 +41,6 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,9 +50,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-import static com.amazon.ion.SystemSymbols.ION_ENCODING;
 import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
+import static com.amazon.ion.SystemSymbols.DEFAULT_MODULE;
 import static com.amazon.ion.impl.IonReaderContinuableApplicationBinary.SYMBOLS_LIST_INITIAL_CAPACITY;
 import static com.amazon.ion.impl.IonTypeID.SYSTEM_SYMBOL_VALUE;
 import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
@@ -62,9 +62,6 @@ import static com.amazon.ion.impl.bin.Ion_1_1_Constants.*;
  * An IonCursor capable of raw parsing of binary Ion streams.
  */
 class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReaderContinuableCore, MacroAwareIonReader {
-
-    // The UTF-8 bytes that represent the text "$ion_encoding" for quick byte-by-byte comparisons.
-    private static final byte[] ION_ENCODING_UTF8 = ION_ENCODING.getBytes(StandardCharsets.UTF_8);
 
     // Isolates the highest bit in a byte.
     private static final int HIGHEST_BIT_BITMASK = 0x80;
@@ -1100,12 +1097,12 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     /**
-     * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
+     * @return true if current value has a sequence of annotations that begins with `$ion`; otherwise, false.
      */
-    boolean startsWithIonEncoding() {
+    boolean startsWithIonAnnotation() {
         if (minorVersion > 0) {
             Marker marker = annotationTokenMarkers.get(0);
-            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION_ENCODING);
+            return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION);
         }
         return false;
     }
@@ -1147,7 +1144,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             && hasAnnotations
             && valueTid.type == IonType.SEXP
             && parent == null
-            && startsWithIonEncoding();
+            && startsWithIonAnnotation();
     }
 
     /**
@@ -1159,7 +1156,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
         Iterator<String> annotations = macroEvaluatorIonReader.iterateTypeAnnotations();
         return annotations.hasNext()
-            && annotations.next().equals(SystemSymbols_1_1.ION_ENCODING.getText());
+            && annotations.next().equals(SystemSymbols_1_1.ION.getText());
     }
 
     /**
@@ -1248,14 +1245,30 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
-        private void classifySexpWithinEncodingDirective() {
+        private void classifyDirective() {
+            errorIf(getEncodingType() != IonType.SYMBOL, () -> "Ion encoding directives must start with a directive keyword.");
+            String name = getSymbolText();
+            // TODO: Add support for `import` and `encoding` directives
+            if (SystemSymbols_1_1.MODULE.getText().equals(name)) {
+                state = State.IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME;
+            } else if (SystemSymbols_1_1.IMPORT.getText().equals(name)) {
+                throw new IonException("'import' directive not yet supported");
+            } else if (SystemSymbols_1_1.ENCODING.getText().equals(name)) {
+                throw new IonException("'encoding' directive not yet supported");
+            } else {
+                throw new IonException(String.format("'%s' is not a valid directive keyword", name));
+            }
+        }
+
+        private void classifySexpWithinModuleDirective() {
             String name = getSymbolText();
             if (SystemSymbols_1_1.SYMBOL_TABLE.getText().equals(name)) {
                 state = State.IN_SYMBOL_TABLE_SEXP;
             } else if (SystemSymbols_1_1.MACRO_TABLE.getText().equals(name)) {
                 state = State.IN_MACRO_TABLE_SEXP;
             } else {
-                throw new IonException(String.format("$ion_encoding expressions '%s' not supported.", name));
+                // TODO: add support for 'module' and 'import' clauses
+                throw new IonException(String.format("'%s' clause not supported in module definition", name));
             }
         }
 
@@ -1275,15 +1288,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             isSymbolTableAlreadyClassified = true;
             if (IonType.isText(type)) {
-                if (ION_ENCODING.equals(stringValue()) && !isSymbolTableAppend) {
+                if (DEFAULT_MODULE.equals(stringValue()) && !isSymbolTableAppend) {
                     state = State.IN_APPENDED_SYMBOL_TABLE;
                 } else {
-                    throw new IonException("symbol_table s-expression must begin with either $ion_encoding or a list.");
+                    throw new IonException("symbol_table s-expression must begin with either '_' or a list.");
                 }
             } else if (type == IonType.LIST) {
                 state = State.ON_SYMBOL_TABLE_LIST;
             } else {
-                throw new IonException("symbol_table s-expression must begin with either $ion_encoding or a list.");
+                throw new IonException("symbol_table s-expression must begin with either '_' or a list.");
             }
         }
 
@@ -1303,10 +1316,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             isMacroTableAlreadyClassified = true;
             if (IonType.isText(type)) {
-                if (ION_ENCODING.equals(stringValue()) && !isMacroTableAppend) {
+                if (DEFAULT_MODULE.equals(stringValue()) && !isMacroTableAppend) {
                     state = State.IN_APPENDED_MACRO_TABLE;
                 } else {
-                    throw new IonException("macro_table s-expression must begin with either $ion_encoding or s-expression(s).");
+                    throw new IonException("macro_table s-expression must begin with either '_' or s-expression(s).");
                 }
             } else if (type == IonType.SEXP) {
                 localMacroMaxOffset = -1;
@@ -1318,7 +1331,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         private void stepOutOfSexpWithinEncodingDirective() {
             stepOutOfContainer();
-            state = State.IN_ION_ENCODING_SEXP;
+            state = State.IN_MODULE_DIRECTIVE_SEXP_BODY;
         }
 
         /**
@@ -1363,6 +1376,17 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         /**
+         * Utility function to make error cases more concise.
+         * @param condition the condition under which an IonException should be thrown
+         * @param lazyErrorMessage the message to use in the exception
+         */
+        private void errorIf(boolean condition, Supplier<String> lazyErrorMessage) {
+            if (condition) {
+                throw new IonException(lazyErrorMessage.get());
+            }
+        }
+
+        /**
          * Read an encoding directive. If the stream ends before the encoding directive finishes, `event` will be
          * `NEEDS_DATA` and this method can be called again when more data is available.
          */
@@ -1370,13 +1394,32 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             Event event;
             while (true) {
                 switch (state) {
-                    case ON_ION_ENCODING_SEXP:
+                    case ON_DIRECTIVE_SEXP:
                         if (Event.NEEDS_DATA == stepIntoContainer()) {
                             return;
                         }
-                        state = State.IN_ION_ENCODING_SEXP;
+                        state = State.IN_DIRECTIVE_SEXP;
                         break;
-                    case IN_ION_ENCODING_SEXP:
+                    case IN_DIRECTIVE_SEXP:
+                        event = coreNextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        errorIf(event == Event.END_CONTAINER, () -> "invalid Ion directive; missing directive keyword");
+                        classifyDirective();
+                        break;
+                    case IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME:
+                        event = coreNextValue();
+                        if (event == Event.NEEDS_DATA) {
+                            return;
+                        }
+                        errorIf(event == Event.END_CONTAINER, () -> "invalid module definition; missing module name");
+                        errorIf(getEncodingType() != IonType.SYMBOL, () -> "invalid module definition; module name must be a symbol");
+                        // TODO: Support other module names
+                        errorIf(!DEFAULT_MODULE.equals(getSymbolText()), () -> "IonJava currently supports only the default module");
+                        state = State.IN_MODULE_DIRECTIVE_SEXP_BODY;
+                        break;
+                    case IN_MODULE_DIRECTIVE_SEXP_BODY:
                         event = coreNextValue();
                         if (event == Event.NEEDS_DATA) {
                             return;
@@ -1386,30 +1429,30 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                             return;
                         }
                         if (getEncodingType() != IonType.SEXP) {
-                            throw new IonException("Ion encoding directives must contain only s-expressions.");
+                            throw new IonException("module definitions must contain only s-expressions.");
                         }
-                        state = State.ON_SEXP_IN_ION_ENCODING;
+                        state = State.ON_SEXP_IN_MODULE_DIRECTIVE;
                         break;
-                    case ON_SEXP_IN_ION_ENCODING:
+                    case ON_SEXP_IN_MODULE_DIRECTIVE:
                         if (Event.NEEDS_DATA == stepIntoContainer()) {
                             return;
                         }
-                        state = State.IN_SEXP_IN_ION_ENCODING;
+                        state = State.IN_SEXP_IN_MODULE_DIRECTIVE;
                         break;
-                    case IN_SEXP_IN_ION_ENCODING:
+                    case IN_SEXP_IN_MODULE_DIRECTIVE:
                         if (Event.NEEDS_DATA == coreNextValue()) {
                             return;
                         }
                         if (!IonType.isText(getEncodingType())) {
-                            throw new IonException("S-expressions within encoding directives must begin with a text token.");
+                            throw new IonException("S-expressions within module definitions must begin with a text token.");
                         }
-                        state = State.CLASSIFYING_SEXP_IN_ION_ENCODING;
+                        state = State.CLASSIFYING_SEXP_IN_MODULE_DIRECTIVE;
                         break;
-                    case CLASSIFYING_SEXP_IN_ION_ENCODING:
+                    case CLASSIFYING_SEXP_IN_MODULE_DIRECTIVE:
                         if (valueUnavailable()) {
                             return;
                         }
-                        classifySexpWithinEncodingDirective();
+                        classifySexpWithinModuleDirective();
                         break;
                     case IN_SYMBOL_TABLE_SEXP:
                         event = coreNextValue();
@@ -1526,11 +1569,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * indicate that the reader is in the middle of reading an encoding directive.
      */
     private enum State {
-        ON_ION_ENCODING_SEXP,
-        IN_ION_ENCODING_SEXP,
-        ON_SEXP_IN_ION_ENCODING,
-        IN_SEXP_IN_ION_ENCODING,
-        CLASSIFYING_SEXP_IN_ION_ENCODING,
+        ON_DIRECTIVE_SEXP,
+        IN_DIRECTIVE_SEXP,
+        IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME,
+        IN_MODULE_DIRECTIVE_SEXP_BODY,
+        ON_SEXP_IN_MODULE_DIRECTIVE,
+        IN_SEXP_IN_MODULE_DIRECTIVE,
+        CLASSIFYING_SEXP_IN_MODULE_DIRECTIVE,
         IN_SYMBOL_TABLE_SEXP,
         IN_APPENDED_SYMBOL_TABLE,
         ON_SYMBOL_TABLE_LIST,
@@ -1848,7 +1893,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 }
                 if (minorVersion == 1 && parent == null && isPositionedOnEncodingDirective()) {
                     encodingDirectiveReader.resetState();
-                    state = State.ON_ION_ENCODING_SEXP;
+                    state = State.ON_DIRECTIVE_SEXP;
                     continue;
                 }
             } else if (isEvaluatingEExpression) {
@@ -1867,7 +1912,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 }
                 if (parent == null && isPositionedOnEvaluatedEncodingDirective()) {
                     encodingDirectiveReader.resetState();
-                    state = State.ON_ION_ENCODING_SEXP;
+                    state = State.ON_DIRECTIVE_SEXP;
                     continue;
                 }
             }
@@ -1909,7 +1954,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 }
                 if (minorVersion == 1 && parent == null && isPositionedOnEncodingDirective()) {
                     encodingDirectiveReader.resetState();
-                    state = State.ON_ION_ENCODING_SEXP;
+                    state = State.ON_DIRECTIVE_SEXP;
                     continue;
                 }
             } else if (isEvaluatingEExpression) {
@@ -1936,7 +1981,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     }
                     if (parent == null && isPositionedOnEvaluatedEncodingDirective()) {
                         encodingDirectiveReader.resetState();
-                        state = State.ON_ION_ENCODING_SEXP;
+                        state = State.ON_DIRECTIVE_SEXP;
                         continue;
                     }
                 }

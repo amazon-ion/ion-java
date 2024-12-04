@@ -121,17 +121,7 @@ public final class SystemSymbols
     // Ion 1.1 Symbols
 
     /**
-     * The annotation that denotes an Ion encoding directive in Ion 1.1+.
+     * The name of the default module in Ion 1.1
      */
-    public static final String ION_ENCODING = "$ion_encoding";
-
-    /**
-     * The name of the symbol table s-expression within an Ion encoding directive.
-     */
-    public static final String SYMBOL_TABLE = "symbol_table";
-
-    /**
-     * The name of the macro table s-expression within an Ion encoding directive.
-     */
-    public static final String MACRO_TABLE = "macro_table";
+    public static final String DEFAULT_MODULE = "_";
 }

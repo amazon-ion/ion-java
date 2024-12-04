@@ -1108,8 +1108,10 @@ public class IonReaderContinuableCoreBinaryTest {
     @ValueSource(booleans = {true, false})
     public void systemReaderWrapperReadsEncodingDirective(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(1, bytes(
-            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
-            0xC6, // (
+            0xE7, 0x01, 0x61, // One FlexSym annotation, with opcode, opcode 61 = system symbol 1 = $ion
+            0xCA, // (
+            0xEE, 0x10, // module
+            0xA1, '_', // _
             0xC5, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
             0xB2, 0x91, 'a', // ["a"]
             0xE1, 0x01 // $1 = a
@@ -1134,10 +1136,12 @@ public class IonReaderContinuableCoreBinaryTest {
     @ValueSource(booleans = {true, false})
     public void systemReaderWrapperReadsEncodingDirectiveWithAppend(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(1, bytes(
-            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
-            0xC8, // (
+            0xE7, 0x01, 0x61, // One FlexSym annotation, with opcode, opcode 61 = system symbol 1 = $ion
+            0xCC, // (
+            0xEE, 0x10, // module
+            0xA1, '_', // Inline symbol '_'
             0xC7, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
-            0xEE, 0x0A, // System symbol value, ID 10 = $ion_encoding, denoting append
+            0xA1, '_', // Inline symbol '_'
             0xB2, 0x91, 'a', // ["a"]
             0xE1, SystemSymbols_1_1.size() + 1 // first local symbol = a
         ));

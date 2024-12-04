@@ -201,13 +201,17 @@ public class IonReaderContinuableApplicationBinaryTest {
         IonReaderContinuableApplicationBinary reader = initializeReader(
             constructFromBytes,
             0xE0, 0x01, 0x01, 0xEA,
-            0xE7, 0xE7, '$', 'i', 'o', 'n', '_', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', // $ion_encoding::
-            0xFC, 0x27, // s-expression, length 19
-            0xFC, 0x23, // s-expression, length 17
+            0xE7, 0xF9, '$', 'i', 'o', 'n', // $ion::
+            0xCD, // s-expression, length 13
+            0xEE, 0x10, // 'module' (encoded as system symbol ID 16)
+            0xA1, '_', // Inline symbol '_'
+            0xC8, // s-expression, length 8
             0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
-            0xBE, 0x9D, '$', 'i', 'o', 'n', '_', 'e', 'n', 'c', 'o', 'd', 'i', 'n', 'g', // ["$ion_encoding"]
-            0xE4, 0x03, // $1::, where $1 is a local SID that points to the text "$ion_encoding"
-            0xC6, // s-expression, length 6
+            0xB5, 0x94, '$', 'i', 'o', 'n', // ["$ion"]
+            0xE4, 0x03, // $1::, where $1 is a local SID that points to the text "$ion"
+            0xCA, // s-expression, length 10
+            0xEE, 0x10, // 'module' (encoded as system symbol ID 16)
+            0xA1, '_', // Inline symbol '_'
             0xC5, // s-expression, length 5
             0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
             0xB2, 0x91, 'a', // ["a"]

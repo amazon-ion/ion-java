@@ -417,7 +417,7 @@ class Ion_1_1_RoundTripTest {
     companion object {
 
         @JvmStatic
-        protected val DEBUG_MODE = false
+        protected val DEBUG_MODE = true
 
         @JvmStatic
         protected val ION = IonSystemBuilder.standard().build() as _Private_IonSystem

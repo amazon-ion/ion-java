@@ -6046,8 +6046,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void readIon11EncodingDirectiveUsingSystemSymbolAnnotation(boolean constructFromBytes) throws Exception {
         reader = readerForIon11(
             bytes(
-            0xE7, 0x01, 0x6A, // One FlexSym annotation, with opcode, opcode 6A = system symbol A = $ion_encoding
-                0xC6, // (
+            0xE7, 0x01, 0x61, // One FlexSym annotation, with opcode, opcode 61 = system symbol 1 = $ion
+                0xCA, // (
+                0xEE, 0x10, // module
+                0xA1, '_', // _
                 0xC5, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
                 0xB2, 0x91, 'a', // ["a"]
                 0xE1, 0x01 // $1 = a

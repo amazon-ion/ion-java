@@ -65,6 +65,8 @@ public class EncodingDirectiveCompilationTest {
 
     private static final int FIRST_LOCAL_SYMBOL_ID = 1;
 
+    private static final String DEFAULT_MODULE_DIRECTIVE_PREFIX = "$ion::(module _";
+
     private static void assertMacroTablesContainsExpectedMappings(IonReader reader, StreamType streamType, SortedMap<String, Macro> expected) {
         Map<MacroRef, Macro> expectedByRef = streamType.newMacroTableByMacroRef(expected);
 
@@ -73,9 +75,11 @@ public class EncodingDirectiveCompilationTest {
         expectedByRef.forEach((k,v) -> assertEquals(v, actual.get(k)));
     }
 
-    private static void startEncodingDirective(IonRawWriter_1_1 writer) {
-        writer.writeAnnotations(SystemSymbols_1_1.ION_ENCODING);
+    private static void startModuleDirectiveForDefaultModule(IonRawWriter_1_1 writer) {
+        writer.writeAnnotations(SystemSymbols_1_1.ION);
         writer.stepInSExp(false);
+        writer.writeSymbol(SystemSymbols_1_1.MODULE);
+        writer.writeSymbol(SystemSymbols.DEFAULT_MODULE);
     }
 
     private static void endEncodingDirective(IonRawWriter_1_1 writer) {
@@ -84,9 +88,9 @@ public class EncodingDirectiveCompilationTest {
 
     private static void writeEncodingDirectiveSymbolTable(IonRawWriter_1_1 writer, boolean append, String... userSymbols) {
         writer.stepInSExp(false);
-        writer.writeSymbol(SystemSymbols.SYMBOL_TABLE);
+        writer.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE);
         if (append) {
-            writer.writeSymbol(SystemSymbols.ION_ENCODING);
+            writer.writeSymbol(SystemSymbols.DEFAULT_MODULE);
         }
         writer.stepInList(false);
         for (String userSymbol : userSymbols) {
@@ -110,7 +114,7 @@ public class EncodingDirectiveCompilationTest {
     }
 
     private static Map<String, Integer> initializeSymbolTable(IonRawWriter_1_1 writer, String... userSymbols) {
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, userSymbols);
         endEncodingDirective(writer);
         return makeSymbolsMap(FIRST_LOCAL_SYMBOL_ID, userSymbols);
@@ -343,7 +347,7 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo", "bar");
         endEncodingDirective(writer);
         writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
@@ -364,10 +368,10 @@ public class EncodingDirectiveCompilationTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo", "bar");
         endEncodingDirective(writer);
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, true, "baz");
         endEncodingDirective(writer);
         writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID);
@@ -397,7 +401,7 @@ public class EncodingDirectiveCompilationTest {
         } else {
             symbols = Collections.emptyMap();
         }
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
@@ -448,7 +452,7 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Pi");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "Pi");
@@ -480,7 +484,7 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
         startMacro(writer, symbols, "People");
         writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
@@ -571,7 +575,7 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "People");
@@ -645,7 +649,7 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "People");
@@ -723,7 +727,7 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Pi");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "Pi");
@@ -758,7 +762,7 @@ public class EncodingDirectiveCompilationTest {
     private Macro writeSimonSaysMacro(IonRawWriter_1_1 writer) {
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "SimonSays", "anything");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
@@ -993,7 +997,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 2)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 2)
         );
     }
 
@@ -1029,7 +1033,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "Groups", "these", "those", "*", "+");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "Groups");
@@ -1100,7 +1104,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "SimonSays", "anything", "Echo");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writeEncodingDirectiveSymbolTable(writer, "foo");
         startMacroTable(writer);
         startMacro(writer, symbols, "SimonSays");
@@ -1160,7 +1164,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 2)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 2)
         );
     }
 
@@ -1174,7 +1178,7 @@ public class EncodingDirectiveCompilationTest {
         byte[] clobContents = new byte[] {3};
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "lobs", "a");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
         startMacro(writer, symbols, "lobs");
         writeMacroSignature(writer, symbols, "a");
@@ -1221,7 +1225,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "value");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
         startMacro(writer, symbols, "foo");
         writeMacroSignature(writer, symbols, "value", "*");
@@ -1262,7 +1266,7 @@ public class EncodingDirectiveCompilationTest {
 
         writer.writeIVM();
         Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "value");
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
         startMacro(writer, symbols, "foo");
         writeMacroSignatureFromDatagram(writer, symbols, LOADER.load("uint8::value '*'"));
@@ -1368,7 +1372,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 2),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0)
         );
     }
 
@@ -1467,7 +1471,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 2),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 1),
             substringCount(SystemSymbols_1_1.SET_MACROS, 1),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0)
         );
     }
 
@@ -1478,9 +1482,9 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
 
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         writer.stepInSExp(false);
-        writer.writeSymbol(SystemSymbols.SYMBOL_TABLE);
+        writer.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE);
         writer.stepInList(false);
         writer.writeString("foo");
         writer.stepOut();
@@ -1509,9 +1513,9 @@ public class EncodingDirectiveCompilationTest {
         IonRawWriter_1_1 writer = streamType.newWriter(out);
         writer.writeIVM();
 
-        startEncodingDirective(writer);
+        startModuleDirectiveForDefaultModule(writer);
         startMacroTable(writer);
-        writer.writeSymbol(SystemSymbols_1_1.ION_ENCODING);
+        writer.writeSymbol(SystemSymbols.DEFAULT_MODULE);
         endMacroTable(writer);
         endEncodingDirective(writer);
 
@@ -1536,7 +1540,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 0) // The empty append to an empty table has no effect, and it is not transcoded. This is a known limitation.
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0) // The empty append to an empty table has no effect, and it is not transcoded. This is a known limitation.
         );
     }
 
@@ -1552,7 +1556,7 @@ public class EncodingDirectiveCompilationTest {
         ));
         Map<String, Integer> symbols = Collections.emptyMap();
 
-        startEncodingDirective(writer); {
+        startModuleDirectiveForDefaultModule(writer); {
             startMacroTable(writer); {
                 startMacro(writer, symbols, "foo"); {
                     writeMacroSignature(writer, symbols, "x");
@@ -1562,9 +1566,9 @@ public class EncodingDirectiveCompilationTest {
         } endEncodingDirective(writer);
 
 
-        startEncodingDirective(writer); {
+        startModuleDirectiveForDefaultModule(writer); {
             startMacroTable(writer); {
-                writer.writeSymbol(SystemSymbols_1_1.ION_ENCODING);
+                writer.writeSymbol(SystemSymbols.DEFAULT_MODULE);
             } endMacroTable(writer);
             writeEncodingDirectiveSymbolTable(writer, true, "bar");
         } endEncodingDirective(writer);
@@ -1595,7 +1599,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 3) // Two encoding directives, plus one $ion_encoding symbol to denote the macro table append.
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 2) // Two encoding directives
         );
     }
 
@@ -1616,7 +1620,7 @@ public class EncodingDirectiveCompilationTest {
         Map<String, Integer> symbols = Collections.emptyMap();
 
 
-        startEncodingDirective(writer); {
+        startModuleDirectiveForDefaultModule(writer); {
             startMacroTable(writer); {
                 // Define our macro (macro foo (x) (.default (%x) "hello world"))
                 startMacro(writer, symbols, "foo"); {
@@ -1655,7 +1659,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 1)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 1)
         );
     }
 
@@ -1677,7 +1681,7 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(SystemSymbols_1_1.ION_ENCODING, 0)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0)
         );
     }
 

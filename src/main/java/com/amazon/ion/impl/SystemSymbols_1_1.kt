@@ -17,7 +17,7 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
     SYMBOLS( /*                 */ 7, "symbols"),
     MAX_ID( /*                  */ 8, "max_id"),
     ION_SHARED_SYMBOL_TABLE( /* */ 9, "\$ion_shared_symbol_table"),
-    ION_ENCODING( /*            */ 10, "\$ion_encoding"),
+    ENCODING( /*                */ 10, "encoding"),
     ION_LITERAL( /*             */ 11, "\$ion_literal"),
     ION_SHARED_MODULE( /*       */ 12, "\$ion_shared_module"),
     MACRO( /*                   */ 13, "macro"),

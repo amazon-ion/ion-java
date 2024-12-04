@@ -1146,14 +1146,14 @@ class IonReaderTextSystemX
     }
 
     /**
-     * @return true if current value has a sequence of annotations that begins with `$ion_encoding`; otherwise, false.
+     * @return true if current value has a sequence of annotations that begins with `$ion`; otherwise, false.
      */
-    boolean startsWithIonEncoding() {
+    boolean startsWithIonAnnotation() {
         if (isEvaluatingEExpression) {
-            return SystemSymbols_1_1.ION_ENCODING.getText().equals(macroEvaluatorIonReader.iterateTypeAnnotations().next());
+            return SystemSymbols_1_1.ION.getText().equals(macroEvaluatorIonReader.iterateTypeAnnotations().next());
         }
-        // TODO also resolve symbol identifiers and compare against text that looks like $ion_encoding
-        return SystemSymbols_1_1.ION_ENCODING.getText().equals(_annotations[0].getText());
+        // TODO also resolve symbol identifiers and compare against text that looks like $ion
+        return SystemSymbols_1_1.ION.getText().equals(_annotations[0].getText());
     }
 
     /**
@@ -1171,12 +1171,12 @@ class IonReaderTextSystemX
             && _value_type == IonType.SEXP
             && !isNullValue()
             && macroCompilationNotInProgress()
-            && startsWithIonEncoding();
+            && startsWithIonAnnotation();
     }
 
     /**
      * Reads an encoding directive and installs any symbols and/or macros found within. Upon calling this method,
-     * the reader must be positioned on an s-expression annotated with `$ion_encoding`.
+     * the reader must be positioned on a top-level s-expression annotated with `$ion`.
      */
     private void readEncodingDirective() {
         if (encodingDirectiveReader == null) {
