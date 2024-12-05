@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
+import com.amazon.ion.SystemSymbols
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.SystemSymbols_1_1.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
@@ -52,23 +53,25 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro set_symbols (symbols*)
-     *        $ion_encoding::(
+     *        $ion::(module _
      *          (symbol_table [(%symbols)])
-     *          (macro_table $ion_encoding)
+     *          (macro_table _)
      *        ))
      * ```
      */
     SetSymbols(
         11, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
-            annotated(ION_ENCODING, ::sexp) {
+            annotated(ION, ::sexp) {
+                symbol(MODULE)
+                symbol(SystemSymbols.DEFAULT_MODULE)
                 sexp {
                     symbol(SYMBOL_TABLE)
                     list { variable(0) }
                 }
                 sexp {
                     symbol(MACRO_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                 }
             }
         }
@@ -77,24 +80,26 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro add_symbols (symbols*)
-     *        $ion_encoding::(
-     *          (symbol_table $ion_encoding [(%symbols)])
-     *          (macro_table $ion_encoding)
+     *        $ion::(module _
+     *          (symbol_table _ [(%symbols)])
+     *          (macro_table _)
      *        ))
      * ```
      */
     AddSymbols(
         12, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
-            annotated(ION_ENCODING, ::sexp) {
+            annotated(ION, ::sexp) {
+                symbol(MODULE)
+                symbol(com.amazon.ion.SystemSymbols.DEFAULT_MODULE)
                 sexp {
                     symbol(SYMBOL_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(com.amazon.ion.SystemSymbols.DEFAULT_MODULE)
                     list { variable(0) }
                 }
                 sexp {
                     symbol(MACRO_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                 }
             }
         }
@@ -103,8 +108,8 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro set_macros (macros*)
-     *        $ion_encoding::(
-     *          (symbol_table $ion_encoding)
+     *        $ion::(module _
+     *          (symbol_table _)
      *          (macro_table (%macros))
      *        ))
      * ```
@@ -112,10 +117,12 @@ enum class SystemMacro(
     SetMacros(
         13, SET_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
-            annotated(ION_ENCODING, ::sexp) {
+            annotated(ION, ::sexp) {
+                symbol(MODULE)
+                symbol(SystemSymbols.DEFAULT_MODULE)
                 sexp {
                     symbol(SYMBOL_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                 }
                 sexp {
                     symbol(MACRO_TABLE)
@@ -128,23 +135,25 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro add_macros (macros*)
-     *        $ion_encoding::(
-     *          (symbol_table $ion_encoding)
-     *          (macro_table $ion_encoding (%macros))
+     *        $ion::(module _
+     *          (symbol_table _)
+     *          (macro_table _ (%macros))
      *        ))
      * ```
      */
     AddMacros(
         14, ADD_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
-            annotated(ION_ENCODING, ::sexp) {
+            annotated(ION, ::sexp) {
+                symbol(MODULE)
+                symbol(SystemSymbols.DEFAULT_MODULE)
                 sexp {
                     symbol(SYMBOL_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                 }
                 sexp {
                     symbol(MACRO_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                     variable(0)
                 }
             }
@@ -154,10 +163,10 @@ enum class SystemMacro(
     /**
      * ```ion
      * (macro use (catalog_key version?)
-     *        $ion_encoding::(
-     *          (import the_module (%catalog_key) (.if_none (%version) 1 (%version)))
-     *          (symbol_table $ion_encoding the_module)
-     *          (macro_table $ion_encoding the_module)
+     *        $ion::(module _
+     *          (import the_module catalog_key (.default (%version) 1))
+     *          (symbol_table _ the_module)
+     *          (macro_table _ the_module)
      *        ))
      * ```
      */
@@ -165,11 +174,14 @@ enum class SystemMacro(
         15, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
         templateBody {
             val theModule = _Private_Utils.newSymbolToken("the_module")
-            annotated(ION_ENCODING, ::sexp) {
+            annotated(ION, ::sexp) {
+                symbol(MODULE)
+                symbol(SystemSymbols.DEFAULT_MODULE)
                 sexp {
                     symbol(IMPORT)
                     symbol(theModule)
                     variable(0)
+                    // This is equivalent to `(.default (%version) 1)`, but eliminates a layer of indirection.
                     macro(IfNone) {
                         variable(1)
                         int(1)
@@ -178,12 +190,12 @@ enum class SystemMacro(
                 }
                 sexp {
                     symbol(SYMBOL_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                     symbol(theModule)
                 }
                 sexp {
                     symbol(MACRO_TABLE)
-                    symbol(ION_ENCODING)
+                    symbol(SystemSymbols.DEFAULT_MODULE)
                     symbol(theModule)
                 }
             }
