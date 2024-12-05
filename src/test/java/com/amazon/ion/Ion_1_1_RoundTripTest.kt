@@ -262,7 +262,7 @@ class Ion_1_1_RoundTripTest {
             val reader: MacroAwareIonReader = (IonReaderBuilder.standard() as _Private_IonReaderBuilder).buildMacroAware(ion)
             val writer: MacroAwareIonWriter = ION_1_1.textWriterBuilder().build(actual) as MacroAwareIonWriter
 
-            reader.transcodeTo(writer)
+            reader.transcodeAllTo(writer)
 
             reader.close()
             writer.close()

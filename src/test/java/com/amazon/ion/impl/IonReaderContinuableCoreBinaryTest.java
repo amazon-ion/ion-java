@@ -1169,7 +1169,7 @@ public class IonReaderContinuableCoreBinaryTest {
             IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data);
             MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.textWriterBuilder().build(sb);
         ) {
-            reader.transcodeTo(writer);
+            reader.transcodeAllTo(writer);
         }
         IonSystem system = IonSystemBuilder.standard().build();
         IonDatagram actual = system.getLoader().load(sb.toString());

@@ -183,26 +183,26 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     }
 
     @FunctionalInterface
-    interface IonReaderFromBytesFactoryText {
-        IonReader makeReader(IonCatalog catalog, byte[] ionData, int offset, int length, _Private_LocalSymbolTableFactory lstFactory);
+    interface IonReaderFromBytesFactoryText<T> {
+        T makeReader(IonCatalog catalog, byte[] ionData, int offset, int length, _Private_LocalSymbolTableFactory lstFactory);
     }
 
     @FunctionalInterface
-    interface IonReaderFromBytesFactoryBinary {
-        IonReader makeReader(_Private_IonReaderBuilder builder, byte[] ionData, int offset, int length);
+    interface IonReaderFromBytesFactoryBinary<T> {
+        T makeReader(_Private_IonReaderBuilder builder, byte[] ionData, int offset, int length);
     }
 
-    static IonReader buildReader(
+    static <T> T buildReader(
         _Private_IonReaderBuilder builder,
         byte[] ionData,
         int offset,
         int length,
-        IonReaderFromBytesFactoryBinary binary,
-        IonReaderFromBytesFactoryText text
+        IonReaderFromBytesFactoryBinary<T> binary,
+        IonReaderFromBytesFactoryText<T> text
     ) {
         if (IonStreamUtils.isGzip(ionData, offset, length)) {
             try {
-                return buildReader(
+                return (T) buildReader(
                     builder,
                     new GZIPInputStream(new ByteArrayInputStream(ionData, offset, length)),
                     _Private_IonReaderFactory::makeReaderBinary,
@@ -257,20 +257,20 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     }
 
     @FunctionalInterface
-    interface IonReaderFromInputStreamFactoryText {
-        IonReader makeReader(IonCatalog catalog, InputStream source, _Private_LocalSymbolTableFactory lstFactory);
+    interface IonReaderFromInputStreamFactoryText<T> {
+        T makeReader(IonCatalog catalog, InputStream source, _Private_LocalSymbolTableFactory lstFactory);
     }
 
     @FunctionalInterface
-    interface IonReaderFromInputStreamFactoryBinary {
-        IonReader makeReader(_Private_IonReaderBuilder builder, InputStream source, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen);
+    interface IonReaderFromInputStreamFactoryBinary<T> {
+        T makeReader(_Private_IonReaderBuilder builder, InputStream source, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen);
     }
 
-    static IonReader buildReader(
+    static <T> T buildReader(
         _Private_IonReaderBuilder builder,
         InputStream source,
-        IonReaderFromInputStreamFactoryBinary binary,
-        IonReaderFromInputStreamFactoryText text
+        IonReaderFromInputStreamFactoryBinary<T> binary,
+        IonReaderFromInputStreamFactoryText<T> text
     ) {
         if (source == null) {
             throw new NullPointerException("Cannot build a reader from a null InputStream.");
@@ -358,10 +358,31 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
      * @return a new MacroAwareIonReader instance.
      */
     public MacroAwareIonReader buildMacroAware(byte[] ionData) {
-        // TODO make this work for text too.
-        if (!IonStreamUtils.isIonBinary(ionData)) {
-            throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
-        }
-        return new IonReaderContinuableCoreBinary(getBufferConfiguration(), ionData, 0, ionData.length);
+        return buildReader(
+            this,
+            ionData,
+            0,
+            ionData.length,
+            (builder, data, offset, length) -> new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), data, offset,length),
+            (catalog, data, offset, length, factory) -> {
+                throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
+            }
+        );
+    }
+
+    /**
+     * Creates a new {@link MacroAwareIonReader} over the given data.
+     * @param ionData the data to read.
+     * @return a new MacroAwareIonReader instance.
+     */
+    public MacroAwareIonReader buildMacroAware(InputStream ionData) {
+        return buildReader(
+            this,
+            ionData,
+            (builder, source, alreadyRead, alreadyReadOff, alreadyReadLen) -> new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), source, alreadyRead, alreadyReadOff, alreadyReadLen),
+            (catalog, source, factory) -> {
+                throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
+            }
+        );
     }
 }
