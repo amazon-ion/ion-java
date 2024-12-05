@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package com.amazon.ion;
+package com.amazon.ion.util;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,7 +9,7 @@ import java.util.zip.GZIPInputStream;
 /**
  * The interceptor for GZIP streams.
  */
-public enum GZIPStreamInterceptor implements StreamInterceptor {
+public enum GZIPStreamInterceptor implements InputStreamInterceptor {
 
     INSTANCE;
 
@@ -21,7 +21,7 @@ public enum GZIPStreamInterceptor implements StreamInterceptor {
     }
 
     @Override
-    public int headerLength() {
+    public int headerMatchLength() {
         return GZIP_HEADER.length;
     }
 

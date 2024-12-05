@@ -7,7 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
-import com.amazon.ion.StreamInterceptor;
+import com.amazon.ion.util.InputStreamInterceptor;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
@@ -64,6 +64,20 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         } else {
             lstFactory = factory;
         }
+    }
+
+    /**
+     * Configures the builder to use a custom {@link ClassLoader} for loading resources, such as
+     * {@link InputStreamInterceptor} instances. This method is internal only; users should configure
+     * stream interceptors using either {@link #addInputStreamInterceptor(InputStreamInterceptor)} or by
+     * making instances available for discovery by the default ClassLoader.
+     * @param customClassLoader the ClassLoader to use when loading resources.
+     * @return this builder instance, if mutable; otherwise, a mutable copy of this builder.
+     */
+    public IonReaderBuilder withCustomClassLoader(ClassLoader customClassLoader) {
+        _Private_IonReaderBuilder b = (_Private_IonReaderBuilder) mutable();
+        b.customClassLoader = customClassLoader;
+        return b;
     }
 
     public static class Mutable extends _Private_IonReaderBuilder {
@@ -199,7 +213,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReaderFromBytesFactoryBinary binary,
         IonReaderFromBytesFactoryText text
     ) {
-        for (StreamInterceptor streamInterceptor : builder.getStreamInterceptors()) {
+        for (InputStreamInterceptor streamInterceptor : builder.getInputStreamInterceptors()) {
             if (streamInterceptor.matchesHeader(ionData, offset, length)) {
                 try {
                     return buildReader(
@@ -269,7 +283,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
         int maxHeaderLength = Math.max(
             _Private_IonConstants.BINARY_VERSION_MARKER_SIZE,
-            builder.getStreamInterceptors().stream().mapToInt(StreamInterceptor::headerLength).max().orElse(0)
+            builder.getInputStreamInterceptors().stream().mapToInt(InputStreamInterceptor::headerMatchLength).max().orElse(0)
         );
         // Note: this can create a lot of layers of InputStream wrappers. For example, if this method is called
         // from build(byte[]) and the bytes contain GZIP, the chain will be SequenceInputStream(ByteArrayInputStream,
@@ -292,7 +306,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
         // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
         // (which has always been unsupported).
-        for (StreamInterceptor streamInterceptor : builder.getStreamInterceptors()) {
+        for (InputStreamInterceptor streamInterceptor : builder.getInputStreamInterceptors()) {
             if (streamInterceptor.matchesHeader(possibleIVM, 0, bytesRead)) {
                 try {
                     ionData = streamInterceptor.newInputStream(
