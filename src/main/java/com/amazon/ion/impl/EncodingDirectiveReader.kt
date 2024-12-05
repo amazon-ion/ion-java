@@ -3,6 +3,7 @@
 package com.amazon.ion.impl
 
 import com.amazon.ion.*
+import com.amazon.ion.SystemSymbols.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.MacroRef.Companion.byId
 import com.amazon.ion.impl.macro.MacroRef.Companion.byName
@@ -28,7 +29,9 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
     var isMacroTableAlreadyClassified = false
 
     private enum class State {
-        IN_ION_ENCODING_SEXP,
+        IN_DIRECTIVE_SEXP,
+        IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME,
+        IN_MODULE_DIRECTIVE_SEXP,
         IN_SYMBOL_TABLE_SEXP,
         IN_SYMBOL_TABLE_LIST,
         IN_MACRO_TABLE_SEXP,
@@ -36,14 +39,29 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
         READING_VALUE
     }
 
-    private fun classifySexpWithinEncodingDirective() {
+    private fun classifyDirective() {
+        errorIf(reader.type != IonType.SYMBOL) { "Ion encoding directives must start with a directive keyword; found ${reader.type}" }
+        val name: String = reader.stringValue()
+        // TODO: Add support for `import` and `encoding` directives
+        if (SystemSymbols_1_1.MODULE.text == name) {
+            state = State.IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME
+        } else if (SystemSymbols_1_1.IMPORT.text == name) {
+            throw IonException("'import' directive not yet supported")
+        } else if (SystemSymbols_1_1.ENCODING.text == name) {
+            throw IonException("'encoding' directive not yet supported")
+        } else {
+            throw IonException(String.format("'%s' is not a valid directive keyword", name))
+        }
+    }
+
+    private fun classifySexpWithinModuleDirective() {
         val name: String = reader.stringValue()
         state = if (SystemSymbols_1_1.SYMBOL_TABLE.text == name) {
             State.IN_SYMBOL_TABLE_SEXP
         } else if (SystemSymbols_1_1.MACRO_TABLE.text == name) {
             State.IN_MACRO_TABLE_SEXP
         } else {
-            throw IonException(String.format("\$ion_encoding expressions '%s' not supported.", name))
+            throw IonException("'$name' clause not supported in module definition")
         }
     }
 
@@ -64,7 +82,7 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
         }
         isSymbolTableAlreadyClassified = true
         if (IonType.isText(type)) {
-            if (SystemSymbols.ION_ENCODING == reader.stringValue() && !isSymbolTableAppend) {
+            if (DEFAULT_MODULE == reader.stringValue() && !isSymbolTableAppend) {
                 isSymbolTableAppend = true
                 if (reader.next() == null) {
                     return true
@@ -73,10 +91,10 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
                     throw IonException("symbol_table s-expression must begin with a list.")
                 }
             } else {
-                throw IonException("symbol_table s-expression must begin with either \$ion_encoding or a list.")
+                throw IonException("symbol_table s-expression must begin with either '_' or a list.")
             }
         } else if (type != IonType.LIST) {
-            throw IonException("symbol_table s-expression must begin with either \$ion_encoding or a list.")
+            throw IonException("symbol_table s-expression must begin with either '_' or a list.")
         }
         reader.stepIn()
         state = State.IN_SYMBOL_TABLE_LIST
@@ -98,7 +116,7 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
         }
         isMacroTableAlreadyClassified = true
         if (IonType.isText(type)) {
-            if (SystemSymbols.ION_ENCODING == reader.stringValue() && !isMacroTableAppend) {
+            if (SystemSymbols.DEFAULT_MODULE == reader.stringValue() && !isMacroTableAppend) {
                 isMacroTableAppend = true
                 if (reader.next() == null) {
                     return true
@@ -107,14 +125,25 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
                     throw IonException("macro_table s-expression must begin with s-expression(s).")
                 }
             } else {
-                throw IonException("macro_table s-expression must begin with either \$ion_encoding or s-expression(s).")
+                throw IonException("macro_table s-expression must begin with either '_' or s-expression(s).")
             }
         } else if (type == IonType.SEXP) {
             localMacroMaxOffset = -1
         } else {
-            throw IonException("macro_table s-expression must begin with either \$ion_encoding or s-expression(s).")
+            throw IonException("macro_table s-expression must begin with either '_' or s-expression(s).")
         }
         return false
+    }
+
+    /**
+     * Utility function to make error cases more concise.
+     * @param condition the condition under which an IonException should be thrown
+     * @param lazyErrorMessage the message to use in the exception
+     */
+    private inline fun errorIf(condition: Boolean, lazyErrorMessage: () -> String) {
+        if (condition) {
+            throw IonException(lazyErrorMessage())
+        }
     }
 
     /**
@@ -126,30 +155,41 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
         val macroCompiler = MacroCompiler({ key -> resolveMacro(encodingContext, key) }, readerAdapter)
 
         reader.stepIn()
-        state = State.IN_ION_ENCODING_SEXP
+        state = State.IN_DIRECTIVE_SEXP
         while (true) {
             when (state) {
 
-                State.IN_ION_ENCODING_SEXP -> {
+                State.IN_DIRECTIVE_SEXP -> {
+                    errorIf(reader.next() == null) { "invalid Ion directive; missing directive keyword" }
+                    classifyDirective()
+                }
+                State.IN_MODULE_DIRECTIVE_SEXP_AWAITING_MODULE_NAME -> {
+                    errorIf(reader.next() == null) { "invalid module directive; missing module name" }
+                    errorIf(reader.type != IonType.SYMBOL) { "invalid module directive; module name must be a symbol" }
+                    // TODO: Support other module names
+                    errorIf(DEFAULT_MODULE != reader.stringValue()) { "IonJava currently supports only the default module" }
+                    state = State.IN_MODULE_DIRECTIVE_SEXP
+                }
+                State.IN_MODULE_DIRECTIVE_SEXP -> {
                     if (reader.next() == null) {
                         reader.stepOut()
                         state = State.READING_VALUE
                         return
                     }
                     if (reader.type != IonType.SEXP) {
-                        throw IonException("Ion encoding directives must contain only s-expressions.")
+                        throw IonException("module definition must contain only s-expressions.")
                     }
                     reader.stepIn()
                     if (reader.next() == null || !IonType.isText(reader.type)) {
-                        throw IonException("S-expressions within encoding directives must begin with a text token.")
+                        throw IonException("S-expressions within module definitions must begin with a text token.")
                     }
-                    classifySexpWithinEncodingDirective()
+                    classifySexpWithinModuleDirective()
                 }
 
                 State.IN_SYMBOL_TABLE_SEXP -> {
                     if (reader.next() == null || classifySymbolTable()) {
                         reader.stepOut()
-                        state = State.IN_ION_ENCODING_SEXP
+                        state = State.IN_MODULE_DIRECTIVE_SEXP
                         continue
                     }
                 }
@@ -169,7 +209,7 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
                 State.IN_MACRO_TABLE_SEXP -> {
                     if (reader.next() == null || classifyMacroTable()) {
                         reader.stepOut()
-                        state = State.IN_ION_ENCODING_SEXP
+                        state = State.IN_MODULE_DIRECTIVE_SEXP
                         continue
                     }
                     state = State.COMPILING_MACRO

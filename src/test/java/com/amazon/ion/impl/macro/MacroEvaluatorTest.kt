@@ -6,7 +6,7 @@ import com.amazon.ion.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.SystemSymbols_1_1.*
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
-import com.amazon.ion.impl.bin.IonManagedWriter_1_1_Test.Companion.ion_encoding
+import com.amazon.ion.impl.bin.IonManagedWriter_1_1_Test.Companion.ion
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.eExpBody
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
@@ -1140,9 +1140,9 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
+            $ion::(module _
               (symbol_table [a, b, c])
-              (macro_table $ion_encoding)
+              (macro_table _)
             )
             """
         )
@@ -1162,9 +1162,9 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
-              (symbol_table $ion_encoding [a, b, c])
-              (macro_table $ion_encoding)
+            $ion::(module _
+              (symbol_table _ [a, b, c])
+              (macro_table _)
             )
             """
         )
@@ -1187,8 +1187,8 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
-              (symbol_table $ion_encoding)
+            $ion::(module _
+              (symbol_table _)
               (macro_table
                 (macro answer () 42))
             )
@@ -1213,10 +1213,10 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
-              (symbol_table $ion_encoding)
+            $ion::(module _
+              (symbol_table _)
               (macro_table
-                $ion_encoding
+                _
                 (macro answer () 42))
             )
             """
@@ -1234,10 +1234,10 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
+            $ion::(module _
               (import the_module "com.amazon.Foo" 2)
-              (symbol_table $ion_encoding the_module)
-              (macro_table $ion_encoding the_module)
+              (symbol_table _ the_module)
+              (macro_table _ the_module)
             )
             """
         )
@@ -1254,10 +1254,10 @@ class MacroEvaluatorTest {
         }
         evaluator.assertExpansion(
             """
-            $ion_encoding::(
+            $ion::(module _
               (import the_module "com.amazon.Foo" 1)
-              (symbol_table $ion_encoding the_module)
-              (macro_table $ion_encoding the_module)
+              (symbol_table _ the_module)
+              (macro_table _ the_module)
             )
             """
         )

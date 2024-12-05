@@ -195,7 +195,7 @@ internal class IonManagedWriter_1_1(
      *        - It could mangle the name
      *        - It could remove the name from a macro in macroTable, but then it would have to immediately flush to
      *          make sure that any prior e-expressions are still valid. In addition, we would need to re-export all
-     *          the other macros from `$ion_encoding`.
+     *          the other macros from `_` (the default module).
      *        - For now, we're just throwing an Exception.
      *
      * Visible for testing.
@@ -361,15 +361,17 @@ internal class IonManagedWriter_1_1(
     }
 
     /**
-     * Writes an encoding directive for the current encoding context using the verbose `$ion_encoding::(...)` syntax,
+     * Writes an encoding directive for the current encoding context using the verbose `$ion::(module _ ...)` syntax,
      * and updates internal state accordingly. This always appends to the current encoding context. If there is nothing
      * to append, calling this function is a no-op.
      */
     private fun writeVerboseEncodingDirective() {
         if (newSymbols.isEmpty() && newMacros.isEmpty()) return
 
-        systemData.writeAnnotations(SystemSymbols_1_1.ION_ENCODING)
+        systemData.writeAnnotations(SystemSymbols_1_1.ION)
         writeSystemSexp {
+            writeSymbol(SystemSymbols_1_1.MODULE)
+            writeSymbol(SystemSymbols.DEFAULT_MODULE)
             writeVerboseSymbolTableClause()
             writeVerboseMacroTableClause()
         }
@@ -420,7 +422,7 @@ internal class IonManagedWriter_1_1(
             // Add previous symbol table
             if (hasSymbolsToRetain) {
                 if (newSymbols.size > 0) forceNoNewlines(false)
-                writeSymbol(SystemSymbols_1_1.ION_ENCODING)
+                writeSymbol(SystemSymbols.DEFAULT_MODULE)
             }
 
             // Add new symbols
@@ -484,7 +486,7 @@ internal class IonManagedWriter_1_1(
             writeSymbol(SystemSymbols_1_1.MACRO_TABLE)
             if (newMacros.size > 0) forceNoNewlines(false)
             if (hasMacrosToRetain) {
-                writeSymbol(SystemSymbols_1_1.ION_ENCODING)
+                writeSymbol(SystemSymbols.DEFAULT_MODULE)
             }
             forceNoNewlines(false)
             newMacros.forEach { (macro, address) ->

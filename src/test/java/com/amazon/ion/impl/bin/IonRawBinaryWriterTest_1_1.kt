@@ -877,7 +877,7 @@ class IonRawBinaryWriterTest_1_1 {
         val expectedBytes = "E8 15 01 6A 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(10)
-            writeAnnotations(SystemSymbols_1_1.ION_ENCODING)
+            writeAnnotations(SystemSymbols_1_1.ENCODING)
             writeBool(false)
         }
     }
@@ -887,7 +887,7 @@ class IonRawBinaryWriterTest_1_1 {
         val expectedBytes = "E8 FB 66 6F 6F 01 6A 6F"
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations("foo")
-            writeAnnotations(SystemSymbols_1_1.ION_ENCODING)
+            writeAnnotations(SystemSymbols_1_1.ENCODING)
             writeBool(false)
         }
     }
@@ -898,7 +898,7 @@ class IonRawBinaryWriterTest_1_1 {
         assertWriterOutputEquals(expectedBytes) {
             writeAnnotations(10)
             writeAnnotations("foo")
-            writeAnnotations(SystemSymbols_1_1.ION_ENCODING)
+            writeAnnotations(SystemSymbols_1_1.ENCODING)
             writeBool(false)
         }
     }

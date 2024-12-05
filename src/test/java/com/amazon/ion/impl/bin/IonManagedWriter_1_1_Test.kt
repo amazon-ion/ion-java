@@ -227,8 +227,10 @@ internal class IonManagedWriter_1_1_Test {
             TestUtils.cleanCommentedHexBytes(
                 """
             E0 01 01 EA | IVM
-            E7 01 6A    | $ion_encoding::
-            C6          | (
+            E7 01 61    | $ion::
+            CA          | (
+            EE 10       |    module
+            A1 5F       |    _
             C5          |    (
             EE 0F       |       symbol_table
             B2 91 61    |       ["a"]
