@@ -331,6 +331,21 @@ public class EncodingDirectiveCompilationTest {
         return combinations;
     }
 
+    public static Arguments[] allInputFormatsInputTypesAndOutputFormats() {
+        InputType[] inputTypes = InputType.values();
+        StreamType[] streamTypes = StreamType.values();
+        Arguments[] combinations = new Arguments[inputTypes.length * streamTypes.length * streamTypes.length];
+        int i = 0;
+        for (InputType inputType : inputTypes) {
+            for (StreamType inputFormat : streamTypes) {
+                for (StreamType outputFormat : streamTypes) {
+                    combinations[i++] = Arguments.of(inputType, inputFormat, outputFormat);
+                }
+            }
+        }
+        return combinations;
+    }
+
     private static int getSymbolId(Map<String, Integer> symbols, String value) {
         Integer sid = symbols.get(value);
         return sid == null ? -1 : sid;
@@ -675,11 +690,14 @@ public class EncodingDirectiveCompilationTest {
         return out;
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void nestedInvocationMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationWithinStruct(StreamType.BINARY, new TreeMap<>());
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void nestedInvocationMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationWithinStruct(inputFormat, new TreeMap<>());
 
         ByteArrayOutputStream out = macroAwareTranscodeValueByValue(data, inputType, outputFormat, 1, false);
 
@@ -696,12 +714,15 @@ public class EncodingDirectiveCompilationTest {
         );
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void multipleNestedInvocationMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void multipleNestedInvocationMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
         ByteArrayOutputStream source = new ByteArrayOutputStream();
-        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(source);
+        IonRawWriter_1_1 writer = inputFormat.newWriter(source);
         writer.writeIVM();
 
         writeSymbolTableEExpression(false, writer, "foo", "bar", "baz", "zar");
@@ -800,11 +821,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void zeroArgMacroThatExpandsToEncodingDirectiveMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = zeroArgMacroThatExpandsToEncodingDirective(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void zeroArgMacroThatExpandsToEncodingDirectiveMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = zeroArgMacroThatExpandsToEncodingDirective(inputFormat);
         ByteArrayOutputStream out = macroAwareTranscodeValueByValue(data, inputType, outputFormat, 2, true);
 
         verifyStream("def abc".getBytes(StandardCharsets.UTF_8), out, outputFormat,
@@ -1179,11 +1203,14 @@ public class EncodingDirectiveCompilationTest {
         verifyStream(data, out, streamType, expectations);
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void macroInvocationsNestedWithinParameterMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationsNestedWithinParameter(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationsNestedWithinParameterMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationsNestedWithinParameter(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
@@ -1348,11 +1375,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void macroInvocationInMacroDefinitionMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationInMacroDefinition(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationInMacroDefinitionMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationInMacroDefinition(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
@@ -1558,11 +1588,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void macroInvocationsProduceEncodingDirectivesThatModifySymbolTableMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifySymbolTable(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationsProduceEncodingDirectivesThatModifySymbolTableMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifySymbolTable(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 1),
@@ -1659,11 +1692,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void macroInvocationsProduceEncodingDirectivesThatModifyMacroTableMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationsProduceEncodingDirectivesThatModifyMacroTableMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 1),
@@ -1674,11 +1710,14 @@ public class EncodingDirectiveCompilationTest {
         );
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void multiValuePartialMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void multiValuePartialMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifyMacroTable(inputFormat);
         ByteArrayOutputStream out = macroAwareTranscodeValueByValue(data, inputType, outputFormat, 2, false);
 
         verifyStream("Pi 3.14159".getBytes(StandardCharsets.UTF_8), out, outputFormat,
@@ -1749,11 +1788,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void emptyMacroAppendToEmptyTableMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = emptyMacroAppendToEmptyTable(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void emptyMacroAppendToEmptyTableMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = emptyMacroAppendToEmptyTable(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
@@ -1810,11 +1852,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void emptyMacroAppendToNonEmptyTableMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = emptyMacroAppendToNonEmptyTable(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void emptyMacroAppendToNonEmptyTableMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = emptyMacroAppendToNonEmptyTable(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
@@ -1872,11 +1917,14 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void invokeUnqualifiedSystemMacroInTDLMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
-        byte[] data = invokeUnqualifiedSystemMacroInTDL(StreamType.BINARY);
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void invokeUnqualifiedSystemMacroInTDLMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = invokeUnqualifiedSystemMacroInTDL(inputFormat);
         verifyMacroAwareTranscode(data, inputType, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
@@ -1887,12 +1935,15 @@ public class EncodingDirectiveCompilationTest {
         );
     }
 
-    // TODO also parameterize for StreamType inputFormat support for macro-aware text reading is added
-    @ParameterizedTest(name = "{0},{1}")
-    @MethodSource("allCombinations")
-    public void multipleIonVersionMarkersMacroAwareTranscode(InputType inputType, StreamType outputFormat) throws Exception {
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void multipleIonVersionMarkersMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
+        IonRawWriter_1_1 writer = inputFormat.newWriter(out);
         Map<String, Integer> symbols = new HashMap<>();
         writer.writeIVM();
         writeSymbolTableAppendEExpression(writer, symbols, "foo");

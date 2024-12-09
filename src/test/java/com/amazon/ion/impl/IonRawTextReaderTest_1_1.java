@@ -139,12 +139,12 @@ public class IonRawTextReaderTest_1_1 {
         "(:values (:: ) ) 0 1",
         "(:values (:: 0 1))",
         "(:values 0 1)",
-        "(:values (:: (:: 0) (:values (:: 1))))",
-        "(:values (:: 0) (:values (:: 1)))",
+        // "(:values (:: (:: 0) (:values (:: 1))))", // TODO make this illegal: https://github.com/amazon-ion/ion-java/issues/1009
+        // "(:values (:: 0) (:values (:: 1)))", // TODO make this illegal: https://github.com/amazon-ion/ion-java/issues/1009
         "(:values (:values (:: 0 1)))",
         "(:values (:values 0 1))",
         "(:1 (:1 0 1))",
-        "(:1 (:: (:: 0) (:1 (:: 1))))"
+        // "(:1 (:: (:: 0) (:1 (:: 1))))" // TODO make this illegal: https://github.com/amazon-ion/ion-java/issues/1009
     })
     public void validValuesInvocations(String text) throws Exception {
         try (IonReader reader = newTextReader("$ion_1_1 " + text)) {
