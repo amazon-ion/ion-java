@@ -25,7 +25,7 @@ jobs:
         with:
           validate-wrappers: true
       - run: ./gradlew build
-      - uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5.0.7
+      - uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
         with:
           files: build/reports/jacoco/test/jacocoTestReport.xml
       - uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
