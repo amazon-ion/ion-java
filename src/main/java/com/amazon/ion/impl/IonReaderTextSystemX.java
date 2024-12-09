@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import static com.amazon.ion.SystemSymbols.ION_1_0;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
+import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
 
 import com.amazon.ion.Decimal;
@@ -17,10 +20,13 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.MacroAwareIonReader;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.UnsupportedIonVersionException;
 import com.amazon.ion.impl.IonReaderTextRawTokensX.IonReaderTextTokenException;
 import com.amazon.ion.impl.IonTokenConstsX.CharacterSequence;
 import com.amazon.ion.impl._Private_ScalarConversions.AS_TYPE;
@@ -38,15 +44,18 @@ import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
 import com.amazon.ion.impl.macro.SystemMacro;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -60,11 +69,13 @@ import java.util.Map;
  */
 class IonReaderTextSystemX
     extends IonReaderTextRawX
-    implements _Private_ReaderWriter
+    implements _Private_ReaderWriter, MacroAwareIonReader
 {
     private static int UNSIGNED_BYTE_MAX_VALUE = 255;
 
     SymbolTable _system_symtab;
+
+    SymbolTable _symbols;
 
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
     private final MacroEvaluator macroEvaluator = new MacroEvaluator();
@@ -87,9 +98,13 @@ class IonReaderTextSystemX
     // Indicates whether the reader is currently evaluating an e-expression.
     boolean isEvaluatingEExpression = false;
 
+    // The writer that will perform a macro-aware transcode, if requested.
+    private MacroAwareIonWriter macroAwareTranscoder = null;
+
     protected IonReaderTextSystemX(UnifiedInputStreamX iis)
     {
         _system_symtab = _Private_Utils.systemSymtab(1); // TODO check IVM to determine version: amazon-ion/ion-java/issues/19
+        _symbols = _system_symtab;
         init_once();
         init(iis, IonType.DATAGRAM);
     }
@@ -720,7 +735,7 @@ class IonReaderTextSystemX
         SymbolTable symtab = super.getSymbolTable();
         if (symtab == null)
         {
-            symtab = _system_symtab;
+            symtab = _symbols;
         }
         return symtab;
     }
@@ -1132,7 +1147,7 @@ class IonReaderTextSystemX
      * @param symbolTable the symbol table to make active.
      */
     protected void setSymbolTable(SymbolTable symbolTable) {
-        // System readers don't handle symbol tables.
+        _symbols = symbolTable;
     }
 
     /**
@@ -1189,10 +1204,11 @@ class IonReaderTextSystemX
             SymbolTable current = getSymbolTable();
             if (current.isSystemTable()) {
                 // TODO determine the best way to handle the Ion 1.1 system symbols.
-                newSymbols.addAll(0, SystemSymbols_1_1.allSymbolTexts());
+                List<String> withSystemSymbols = new ArrayList<>(SystemSymbols_1_1.allSymbolTexts());
+                withSystemSymbols.addAll(newSymbols);
                 setSymbolTable(new LocalSymbolTable(
                     LocalSymbolTableImports.EMPTY,
-                    newSymbols
+                    withSystemSymbols
                 ));
             } else {
                 LocalSymbolTable currentLocal = (LocalSymbolTable) current;
@@ -1372,6 +1388,167 @@ class IonReaderTextSystemX
     public boolean hasNext()
     {
         return has_next_system_value();
+    }
+
+    @Override
+    public void transcodeAllTo(MacroAwareIonWriter writer) throws IOException {
+        prepareTranscodeTo(writer);
+        while (transcodeNext());
+    }
+
+    @Override
+    public void prepareTranscodeTo(@NotNull MacroAwareIonWriter writer) {
+        macroAwareTranscoder = writer;
+    }
+
+    @Override
+    public boolean transcodeNext() throws IOException {
+        // TODO consider improving the readability of this method and its binary counterpart: https://github.com/amazon-ion/ion-java/issues/1004
+        if (macroAwareTranscoder == null) {
+            throw new IllegalArgumentException("prepareTranscodeTo must be called before transcodeNext.");
+        }
+        boolean isSystemValue = false;
+        while (true) {
+            if (isEvaluatingEExpression) {
+                if (evaluateNext()) {
+                    if (isSystemValue) {
+                        continue;
+                    }
+                    return !_eof;
+                }
+            } else {
+                nextRaw();
+            }
+            isSystemValue = false;
+            if (_value_type != null && getDepth() == 0) {
+                if (IonType.SYMBOL == getType() && handlePossibleIonVersionMarker()) {
+                    // Which IVM to write is inherent to the writer implementation.
+                    // We don't have a single implementation that writes both formats.
+                    macroAwareTranscoder.startEncodingSegmentWithIonVersionMarker();
+                    isSystemValue = true;
+                    continue;
+                }
+                if (minorVersion > 0 && isPositionedOnEncodingDirective()) {
+                    boolean isEncodingDirectiveFromEExpression = isEvaluatingEExpression;
+                    readEncodingDirective();
+                    macroAwareTranscoder.startEncodingSegmentWithEncodingDirective(
+                        encodingDirectiveReader.getNewMacros(),
+                        encodingDirectiveReader.isMacroTableAppend(),
+                        encodingDirectiveReader.getNewSymbols(),
+                        encodingDirectiveReader.isSymbolTableAppend(),
+                        isEncodingDirectiveFromEExpression
+                    );
+                    isSystemValue = true;
+                    continue;
+                }
+            }
+            if (_container_is_e_expression) {
+                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                macroEvaluatorIonReader.transcodeArgumentsTo(macroAwareTranscoder);
+                isEvaluatingEExpression = true;
+                continue;
+            } else if (isEvaluatingEExpression) {
+                // This is an e-expression that yields user values. Its arguments have already been transcoded.
+                continue;
+            }
+            if (_eof) {
+                return false;
+            }
+            transcodeValueLiteral();
+            return !_eof;
+        }
+    }
+
+    /**
+     * @return true if the reader is positioned on an Ion 1.0 symbol table; otherwise, false. Note: the caller must
+     *  ensure this is called only at the top level.
+     */
+    boolean isPositionedOnSymbolTable() {
+        return _annotation_count > 0 && (ION_SYMBOL_TABLE.equals(_annotations[0].getText()) || ION_SYMBOL_TABLE_SID == _annotations[0].getSid());
+    }
+
+    // Matches "$ion_x_y", where x and y are integers.
+    private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
+
+    /**
+     * @param text the text of a symbol value.
+     * @return true if the text denotes an IVM; otherwise, false.
+     */
+    static boolean isIonVersionMarker(String text)
+    {
+        return text != null && ION_VERSION_MARKER_REGEX.matcher(text).matches();
+    }
+
+    /**
+     * Resets the symbol table after an IVM is encountered. May be overridden if additional side effects are required.
+     */
+    void symbol_table_reset() {
+        setSymbolTable(_system_symtab);
+    }
+
+    /**
+     * Determines whether the top-level symbol value on which the reader is positioned is an Ion version marker.
+     * If it is, sets the reader's Ion version accordingly and resets the symbol table.
+     * @return true if the symbol represented an Ion version marker; otherwise, false. Note: the caller must
+     *  ensure this is called only at the top level with the reader positioned on a symbol value.
+     */
+    boolean handlePossibleIonVersionMarker() {
+        if (_annotation_count == 0)
+        {
+            // $ion_1_0 is read as an IVM only if it is not annotated
+            String version = symbolValue().getText();
+            if (isIonVersionMarker(version))
+            {
+                if (ION_1_0.equals(version) || "$ion_1_1".equals(version))
+                {
+                    setMinorVersion(version.charAt(version.length() - 1) - '0');
+                    if (_value_keyword != IonTokenConstsX.KEYWORD_sid)
+                    {
+                        symbol_table_reset();
+                    }
+                    _has_next_called = false;
+                }
+                else
+                {
+                    throw new UnsupportedIonVersionException(version);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Transcodes a value literal to the macroAwareTranscoder. The caller must ensure that the reader is positioned
+     * on a value literal (i.e. a scalar or container value not expanded from an e-expression) before calling this
+     * method.
+     * @throws IOException if thrown by the writer during transcoding.
+     */
+    private void transcodeValueLiteral() throws IOException {
+        if (getDepth() == 0 && isPositionedOnSymbolTable()) {
+            if (minorVersion > 0) {
+                // TODO finalize handling of Ion 1.0-style symbol tables in Ion 1.1: https://github.com/amazon-ion/ion-java/issues/1002
+                throw new IonException("Macro-aware transcoding of Ion 1.1 data containing Ion 1.0-style symbol tables not yet supported.");
+            }
+            // Ion 1.0 symbol tables are transcoded verbatim for now; this may change depending on the resolution to
+            // https://github.com/amazon-ion/ion-java/issues/1002.
+            macroAwareTranscoder.writeValue(this);
+        } else if (IonType.isContainer(getType()) && !isNullValue()) {
+            // Containers need to be transcoded recursively to avoid expanding macro invocations at any depth.
+            if (isInStruct()) {
+                macroAwareTranscoder.setFieldNameSymbol(getFieldNameSymbol());
+            }
+            macroAwareTranscoder.setTypeAnnotationSymbols(getTypeAnnotationSymbols());
+            macroAwareTranscoder.stepIn(getType());
+            super.stepIn();
+            while (transcodeNext()); // TODO make this iterative.
+            super.stepOut();
+            macroAwareTranscoder.stepOut();
+        } else {
+            // The reader is now positioned on a scalar literal. Write the value.
+            // Note: writeValue will include any field name and/or annotations on the scalar.
+            macroAwareTranscoder.writeValue(this);
+        }
     }
 
     @Override

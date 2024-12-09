@@ -21,6 +21,7 @@ import java.util.zip.GZIPInputStream;
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReaderText;
+import static com.amazon.ion.impl._Private_IonReaderFactory.makeSystemReaderText;
 
 /**
  * {@link IonReaderBuilder} extension for internal use only.
@@ -364,9 +365,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             0,
             ionData.length,
             (builder, data, offset, length) -> new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), data, offset,length),
-            (catalog, data, offset, length, factory) -> {
-                throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
-            }
+            (catalog, data, offset, length, factory) -> (IonReaderTextSystemX) makeSystemReaderText(catalog, data, offset, length, factory)
         );
     }
 
@@ -380,9 +379,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             this,
             ionData,
             (builder, source, alreadyRead, alreadyReadOff, alreadyReadLen) -> new IonReaderContinuableCoreBinary(builder.getBufferConfiguration(), source, alreadyRead, alreadyReadOff, alreadyReadLen),
-            (catalog, source, factory) -> {
-                throw new UnsupportedOperationException("MacroAwareIonReader is not yet implemented for text data.");
-            }
+            (catalog, source, factory) -> (IonReaderTextSystemX) makeSystemReaderText(catalog, source, factory)
         );
     }
 }
