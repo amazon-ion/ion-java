@@ -237,7 +237,7 @@ public abstract class EExpressionArgsReader {
         }
         IonType type = reader.encodingType();
         List<SymbolToken> annotations = getAnnotations();
-        if (isImplicitRest) {
+        if (isImplicitRest && !isContainerAnExpressionGroup()) {
             readStreamAsExpressionGroup(expressions);
         } else if (IonType.isContainer(type)) {
             readContainerValueAsExpression(type, annotations, expressions);
