@@ -26,7 +26,7 @@ public class _Private_IonTextWriterBuilder_1_1
         return new _Private_IonTextWriterBuilder_1_1.Mutable();
     }
 
-    private SymbolInliningStrategy symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE;
+    private SymbolInliningStrategy symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE;
 
     private _Private_IonTextWriterBuilder_1_1() {
         super();
