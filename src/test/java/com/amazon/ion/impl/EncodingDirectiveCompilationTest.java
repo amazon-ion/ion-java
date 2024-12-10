@@ -16,6 +16,7 @@ import com.amazon.ion.MacroAwareIonReader;
 import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1;
+import com.amazon.ion.impl.bin.SymbolInliningStrategy;
 import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
@@ -1606,7 +1607,42 @@ public class EncodingDirectiveCompilationTest {
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 2),
             substringCount(SystemSymbols_1_1.SET_MACROS, 0),
-            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0)
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0),
+            // Symbol tokens are written using inline text, not symbol identifiers.
+            substringCount("$1", 0),
+            substringCount("$2", 0),
+            substringCount("$3", 0)
+        );
+    }
+
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationsProduceEncodingDirectivesThatModifySymbolTableMacroAwareTranscodeWithoutInlining(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationsProduceEncodingDirectivesThatModifySymbolTable(inputFormat);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (
+            MacroAwareIonReader reader = inputType.newMacroAwareReader(data);
+            MacroAwareIonWriter rewriter = (MacroAwareIonWriter) (outputFormat == StreamType.TEXT
+                ? IonEncodingVersion.ION_1_1.textWriterBuilder().withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE).build(out)
+                : IonEncodingVersion.ION_1_1.binaryWriterBuilder().withSymbolInliningStrategy(SymbolInliningStrategy.NEVER_INLINE).build(out))
+        ) {
+            reader.transcodeAllTo(rewriter);
+        }
+        verifyStream(data, out, outputFormat,
+            substringCount("$ion_1_1", 1),
+            substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 1),
+            substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
+            substringCount(SystemSymbols_1_1.SET_SYMBOLS, 2),
+            substringCount(SystemSymbols_1_1.SET_MACROS, 0),
+            substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0),
+            // Symbol tokens are written using symbol identifiers, not inline text.
+            substringCount("$1", 3),
+            substringCount("$2", 2),
+            substringCount("$3", 1)
         );
     }
 

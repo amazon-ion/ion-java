@@ -22,26 +22,6 @@ data class ManagedWriterOptions_1_1(
     val lengthPrefixStrategy: LengthPrefixStrategy,
     val eExpressionIdentifierStrategy: EExpressionIdentifierStrategy,
 ) : SymbolInliningStrategy by symbolInliningStrategy, LengthPrefixStrategy by lengthPrefixStrategy {
-    companion object {
-        @JvmField
-        val ION_BINARY_DEFAULT = ManagedWriterOptions_1_1(
-            internEncodingDirectiveSymbols = true,
-            invokeTdlMacrosByName = false,
-            symbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
-            lengthPrefixStrategy = LengthPrefixStrategy.ALWAYS_PREFIXED,
-            eExpressionIdentifierStrategy = EExpressionIdentifierStrategy.BY_ADDRESS,
-        )
-        @JvmField
-        val ION_TEXT_DEFAULT = ManagedWriterOptions_1_1(
-            // Encoding directives are easier to read if we don't intern their keywords.
-            internEncodingDirectiveSymbols = false,
-            invokeTdlMacrosByName = true,
-            symbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
-            // This doesn't actually have any effect for Ion Text since there are no length-prefixed containers.
-            lengthPrefixStrategy = LengthPrefixStrategy.NEVER_PREFIXED,
-            eExpressionIdentifierStrategy = EExpressionIdentifierStrategy.BY_NAME,
-        )
-    }
 
     /**
      * Indicates whether e-expressions should be written using macro
