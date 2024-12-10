@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
-import static com.amazon.ion.SystemSymbols.ION_1_0;
-import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE;
-import static com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE_SID;
 
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonType;
@@ -16,8 +13,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.UnknownSymbolException;
-import com.amazon.ion.UnsupportedIonVersionException;
-import java.util.regex.Pattern;
 
 /**
  *    The text user reader add support for symbols and recognizes,
@@ -44,7 +39,6 @@ class IonReaderTextUserX
     extends IonReaderTextSystemX
     implements _Private_ReaderWriter
 {
-    private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
 
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -56,7 +50,6 @@ class IonReaderTextUserX
 
     // IonSystem   _system; now in IonReaderTextSystemX where it could be null
     IonCatalog  _catalog;
-    SymbolTable _symbols;
 
 
     protected IonReaderTextUserX(IonCatalog catalog,
@@ -77,10 +70,6 @@ class IonReaderTextUserX
         this(catalog, lstFactory, uis, 0);
     }
 
-    @Override
-    protected void setSymbolTable(SymbolTable symbolTable) {
-        _symbols = symbolTable;
-    }
 
     /**
      * this looks forward to see if there is an upcoming value
@@ -124,7 +113,7 @@ class IonReaderTextUserX
             if (_value_type != null && !isNullValue() && IonType.DATAGRAM.equals(getContainerType())) {
                 switch (_value_type) {
                 case STRUCT:
-                    if (_annotation_count > 0 && (ION_SYMBOL_TABLE.equals(_annotations[0].getText()) || ION_SYMBOL_TABLE_SID == _annotations[0].getSid())) {
+                    if (isPositionedOnSymbolTable()) {
                         setSymbolTable(_lstFactory.newLocalSymtab(_catalog,
                                                               this,
                                                               true));
@@ -133,28 +122,7 @@ class IonReaderTextUserX
                     }
                     break;
                 case SYMBOL:
-                    if (_annotation_count == 0)
-                    {
-                        // $ion_1_0 is read as an IVM only if it is not annotated
-                        String version = symbolValue().getText();
-                        if (isIonVersionMarker(version))
-                        {
-                            if (ION_1_0.equals(version) || "$ion_1_1".equals(version))
-                            {
-                                setMinorVersion(version.charAt(version.length() - 1) - '0');
-                                if (_value_keyword != IonTokenConstsX.KEYWORD_sid)
-                                {
-                                    symbol_table_reset();
-                                    push_symbol_table(_system_symtab); // TODO install the correct system symbol table for the active Ion version.
-                                }
-                                _has_next_called = false;
-                            }
-                            else
-                            {
-                                throw new UnsupportedIonVersionException(version);
-                            }
-                        }
-                    }
+                    handlePossibleIonVersionMarker();
                     break;
                 default:
                     break;
@@ -164,17 +132,13 @@ class IonReaderTextUserX
         return (!_eof);
     }
 
-    static boolean isIonVersionMarker(String text)
-    {
-        return text != null && ION_VERSION_MARKER_REGEX.matcher(text).matches();
-    }
-
-    private final void symbol_table_reset()
+    @Override
+    final void symbol_table_reset()
     {
         IonType t = next();
         assert( IonType.SYMBOL.equals(t) );
         setSymbolTable(_system_symtab);
-        return;
+        push_symbol_table(_system_symtab); // TODO install the correct system symbol table for the active Ion version.
     }
 
     private void validateSymbolToken(SymbolToken symbol) {
