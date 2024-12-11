@@ -1069,7 +1069,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x00, // User macro ID 0
             0xF9, 0x6E, 0x61, 0x6D, 0x65, // interpreted as compact symbol (FlexSym with inline text "name")
             0x09, // interpreted as compact symbol (FlexSym with SID 4)
-            0x01, 0x75 // interpreted as compact symbol (special FlexSym)
+            0x01, 0x81 // interpreted as compact symbol (special FlexSym)
         ));
         try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
             assertSequence(
@@ -1090,7 +1090,7 @@ public class IonReaderContinuableCoreBinaryTest {
     @ValueSource(booleans = {true, false})
     public void addSymbolsSystemMacro(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(1, bytes(
-            0xEF, 0x0C, // system macro add_symbols
+            0xEF, 0x14, // system macro add_symbols
             0x02, // AEB: 0b------aa; a=10, expression group
             0x01, // FlexInt 0, a delimited expression group
             0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
@@ -1181,13 +1181,13 @@ public class IonReaderContinuableCoreBinaryTest {
     @ValueSource(booleans = {true, false})
     public void encodingLevelTranscodeOfSystemMacroInvocation(boolean constructFromBytes) throws Exception {
         byte[] data = withIvm(1, bytes(
-            0xEF, 0x0C, // system macro add_symbols
+            0xEF, 0x14, // system macro add_symbols
             0x02, // AEB: 0b------aa; a=10, expression group
             0x01, // FlexInt 0, a delimited expression group
             0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
             0xF0, // delimited end...  of expression group
             0xE1, // SID single byte
-            0x42  // SID $66
+            0x40  // SID $64
         ));
         assertMacroAwareTranscribeProducesEquivalentStream(data, constructFromBytes);
     }
