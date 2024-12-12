@@ -4,52 +4,46 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
-import com.amazon.ion.system.IonWriterBuilder;
 
 import java.io.OutputStream;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Represents the different Ion output formats supported by the command line com.amazon.tools in this package.
  */
 public enum OutputFormat {
-    /** Nicely spaced, 'prettified' text Ion */
-    PRETTY(IonTextWriterBuilder::pretty),
-    /** Minimally spaced text Ion */
-    TEXT(IonTextWriterBuilder::standard),
-    /** Compact, read-optimized binary Ion */
-    BINARY(IonBinaryWriterBuilder::standard),
-    /** Event Stream */
-    EVENTS(IonTextWriterBuilder::pretty),
-    /** No output, /dev/null */
-    NONE(IonTextWriterBuilder::standard, o -> new NoOpOutputStream());
-
-    OutputFormat(Supplier<IonWriterBuilder> supplier) {
-        this(supplier, o -> o);
-    }
-
-    OutputFormat(Supplier<IonWriterBuilder> supplier, Function<OutputStream, OutputStream> function) {
-        this.writerBuilderSupplier = supplier;
-        this.outputTransformer = function;
-    }
+    /** Nicely spaced, 'prettified' text Ion */ PRETTY,
+    /** Minimally spaced text Ion */            TEXT,
+    /** Compact, read-optimized binary Ion */   BINARY,
+    /** Event Stream */                         EVENTS,
+    /** No output, /dev/null */                 NONE;
 
     IonWriter createIonWriter(OutputStream outputStream) {
-        return writerBuilderSupplier.get().build(outputTransformer.apply(outputStream));
+        return createIonWriter(this, outputStream);
     }
 
     IonWriter createIonWriterWithImports(OutputStream outputStream, SymbolTable[] symbolTable) {
-        IonWriterBuilder builder = writerBuilderSupplier.get();
-        OutputStream out = outputTransformer.apply(outputStream);
-        if (builder instanceof IonTextWriterBuilder) {
-            return ((IonTextWriterBuilder)builder).withImports(symbolTable).build(out);
-        } else if (builder instanceof IonBinaryWriterBuilder) {
-            return ((IonBinaryWriterBuilder)builder).withImports(symbolTable).build(out);
-        } else {
-            throw new IllegalStateException("Unreachable, the created IonWriterBuilders must be either binary or text");
+        return createIonWriter(this, outputStream, symbolTable);
+    }
+
+    private static IonWriter createIonWriter(OutputFormat format, OutputStream outputStream) {
+        switch (format) {
+            case TEXT: return IonTextWriterBuilder.standard().build(outputStream);
+            case PRETTY: return IonTextWriterBuilder.pretty().build(outputStream);
+            case EVENTS: return IonTextWriterBuilder.pretty().build(outputStream);
+            case BINARY: return IonBinaryWriterBuilder.standard().build(outputStream);
+            case NONE: return IonTextWriterBuilder.standard().build(new NoOpOutputStream());
+            default: throw new IllegalStateException("Unsupported output format: " + format);
         }
     }
 
-    private final Supplier<IonWriterBuilder> writerBuilderSupplier;
-    private final Function<OutputStream, OutputStream> outputTransformer;
+    private static IonWriter createIonWriter(OutputFormat format, OutputStream out, SymbolTable... symbols) {
+        switch (format) {
+            case TEXT: return IonTextWriterBuilder.standard().withImports(symbols).build(out);
+            case PRETTY: return IonTextWriterBuilder.pretty().withImports(symbols).build(out);
+            case EVENTS: return IonTextWriterBuilder.pretty().withImports(symbols).build(out);
+            case BINARY: return IonBinaryWriterBuilder.standard().withImports(symbols).build(out);
+            case NONE: return IonTextWriterBuilder.standard().withImports(symbols).build(new NoOpOutputStream());
+            default: throw new IllegalStateException("Unsupported output format: " + format);
+        }
+    }
 }
