@@ -29,13 +29,24 @@ enum class SystemMacro(
     // The real macros
     None(0, NONE, emptyList()),
     Values(1, VALUES, listOf(zeroToManyTagged("values"))),
-    Annotate(2, ANNOTATE, listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
-    MakeString(3, MAKE_STRING, listOf(zeroToManyTagged("text"))),
-    MakeSymbol(4, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
-    MakeBlob(5, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
-    MakeDecimal(6, MAKE_DECIMAL, listOf(exactlyOneTagged("coefficient"), exactlyOneTagged("exponent"))),
+    Default(
+        2, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
+        templateBody {
+            macro(IfNone) { variable(0); variable(1); variable(0) }
+        }
+    ),
+    Meta(3, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
+    Repeat(4, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
+    Flatten(5, FLATTEN, listOf(zeroToManyTagged("values")), null), // TODO: flatten
+    Delta(6, DELTA, listOf(zeroToManyTagged("deltas"))),
+    Sum(7, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
+
+    Annotate(8, ANNOTATE, listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
+    MakeString(9, MAKE_STRING, listOf(zeroToManyTagged("text"))),
+    MakeSymbol(10, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
+    MakeDecimal(11, MAKE_DECIMAL, listOf(exactlyOneTagged("coefficient"), exactlyOneTagged("exponent"))),
     MakeTimestamp(
-        7, MAKE_TIMESTAMP,
+        12, MAKE_TIMESTAMP,
         listOf(
             exactlyOneTagged("year"),
             zeroOrOneTagged("month"),
@@ -46,9 +57,17 @@ enum class SystemMacro(
             zeroOrOneTagged("offset_minutes"),
         )
     ),
-    // TODO: make_list
-    // TODO: make_sexp
-    // TODO: make_struct
+    MakeBlob(13, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
+    MakeList(14, MAKE_LIST, listOf(zeroToManyTagged("sequences")), null), // TODO: make_list
+    MakeSExp(15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")), null), // TODO: make_sexp
+    MakeField(
+        16, MAKE_FIELD,
+        listOf(
+            Macro.Parameter("field_name", Macro.ParameterEncoding.FlexSym, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
+        )
+    ),
+    MakeStruct(17, MAKE_STRUCT, listOf(zeroToManyTagged("structs")), null), // TODO: make_struct
+    ParseIon(18, PARSE_ION, listOf(zeroToManyTagged("data")), null), // TODO: parse_ion
 
     /**
      * ```ion
@@ -60,7 +79,7 @@ enum class SystemMacro(
      * ```
      */
     SetSymbols(
-        11, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
+        19, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -87,7 +106,7 @@ enum class SystemMacro(
      * ```
      */
     AddSymbols(
-        12, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
+        20, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -115,7 +134,7 @@ enum class SystemMacro(
      * ```
      */
     SetMacros(
-        13, SET_MACROS, listOf(zeroToManyTagged("macros")),
+        21, SET_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -142,7 +161,7 @@ enum class SystemMacro(
      * ```
      */
     AddMacros(
-        14, ADD_MACROS, listOf(zeroToManyTagged("macros")),
+        22, ADD_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -171,7 +190,7 @@ enum class SystemMacro(
      * ```
      */
     Use(
-        15, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
+        23, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
         templateBody {
             val theModule = _Private_Utils.newSymbolToken("the_module")
             annotated(ION, ::sexp) {
@@ -198,29 +217,6 @@ enum class SystemMacro(
                     symbol(SystemSymbols.DEFAULT_MODULE)
                     symbol(theModule)
                 }
-            }
-        }
-    ),
-    // TODO: parse_ion
-    Repeat(17, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
-    Delta(18, DELTA, listOf(zeroToManyTagged("deltas"))),
-    // TODO: flatten
-    Sum(20, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
-    Comment(21, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
-    MakeField(
-        22, MAKE_FIELD,
-        listOf(
-            Macro.Parameter("field_name", Macro.ParameterEncoding.FlexSym, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
-        )
-    ),
-
-    Default(
-        23, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
-        templateBody {
-            macro(IfNone) {
-                variable(0)
-                variable(1)
-                variable(0)
             }
         }
     ),

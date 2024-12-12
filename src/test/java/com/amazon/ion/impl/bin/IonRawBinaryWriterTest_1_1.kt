@@ -824,7 +824,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write empty text and sid 0 annotations`() {
         // Empty text is a system symbol
-        assertWriterOutputEquals("E8 01 60 01 75 6E") {
+        assertWriterOutputEquals("E8 01 60 01 81 6E") {
             writeAnnotations(0)
             writeAnnotations("")
             writeBool(true)
@@ -1080,7 +1080,7 @@ class IonRawBinaryWriterTest_1_1 {
             E2 39 2F
             A3 66 6F 6F
             EE 0B
-            EE 15
+            EE 21
             """
         ) {
             writeSymbol(0)
@@ -1088,7 +1088,7 @@ class IonRawBinaryWriterTest_1_1 {
             writeSymbol(12345)
             writeSymbol("foo")
             writeSymbol(SystemSymbols_1_1.ION_LITERAL)
-            writeSymbol(SystemSymbols_1_1.THE_EMPTY_SYMBOL)
+            writeSymbol(SystemSymbols_1_1.EMPTY_TEXT)
         }
     }
 
@@ -1912,7 +1912,7 @@ class IonRawBinaryWriterTest_1_1 {
         // Text
         "    a, FF 61",
         "  abc, FB 61 62 63",
-        "   '', 01 75",
+        "   '', 01 81",
     )
     fun `write a tagless symbol`(value: String, expectedBytes: String) {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.FlexSym))

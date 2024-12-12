@@ -450,20 +450,20 @@ class MacroEvaluator {
             @JvmStatic
             fun forSystemMacro(macro: SystemMacro): ExpansionKind {
                 return when (macro) {
+                    SystemMacro.IfNone -> IfNone
+                    SystemMacro.IfSome -> IfSome
+                    SystemMacro.IfSingle -> IfSingle
+                    SystemMacro.IfMulti -> IfMulti
                     SystemMacro.None -> Values // "none" takes no args, so we can treat it as an empty "values" expansion
                     SystemMacro.Values -> Values
                     SystemMacro.Annotate -> Annotate
                     SystemMacro.MakeString -> MakeString
                     SystemMacro.MakeSymbol -> MakeSymbol
-                    SystemMacro.MakeBlob -> MakeBlob
                     SystemMacro.MakeDecimal -> MakeDecimal
                     SystemMacro.MakeTimestamp -> MakeTimestamp
-                    SystemMacro.IfNone -> IfNone
-                    SystemMacro.IfSome -> IfSome
-                    SystemMacro.IfSingle -> IfSingle
-                    SystemMacro.IfMulti -> IfMulti
-                    SystemMacro.Repeat -> Repeat
+                    SystemMacro.MakeBlob -> MakeBlob
                     SystemMacro.MakeField -> MakeField
+                    SystemMacro.Repeat -> Repeat
                     SystemMacro.Sum -> Sum
                     SystemMacro.Delta -> Delta
                     else -> if (macro.body != null) {

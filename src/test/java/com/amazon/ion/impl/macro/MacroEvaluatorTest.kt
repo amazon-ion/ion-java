@@ -1106,15 +1106,15 @@ class MacroEvaluatorTest {
     }
 
     @Test
-    fun `the comment macro expands to nothing`() {
+    fun `the meta macro expands to nothing`() {
         // Given: <system macros>
         // When:
-        //   (:comment 1 2 3)
+        //   (:meta 1 2 3)
         // Then:
         //   <nothing>
 
         evaluator.initExpansion {
-            eexp(Comment) {
+            eexp(Meta) {
                 expressionGroup {
                     int(1)
                     int(2)
