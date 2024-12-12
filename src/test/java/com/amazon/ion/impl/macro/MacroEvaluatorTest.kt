@@ -56,6 +56,47 @@ class MacroEvaluatorTest {
     val evaluator = MacroEvaluator()
 
     @Test
+    fun `data with just scalars`() {
+        evaluator.initExpansion {
+            int(1)
+            int(2)
+            int(3)
+        }
+
+        evaluator.assertExpansion("1 2 3")
+    }
+
+    @Test
+    fun `data with a list`() {
+        evaluator.initExpansion {
+            list {
+                int(1)
+                list {
+                    int(2)
+                    int(3)
+                }
+                string("a")
+            }
+        }
+        evaluator.assertExpansion("""[1, [2, 3], "a"] """)
+    }
+
+    @Test
+    fun `data with a struct`() {
+
+        evaluator.initExpansion {
+            struct {
+                fieldName("a")
+                int(1)
+                fieldName("b")
+                int(2)
+            }
+        }
+
+        evaluator.assertExpansion("{a:1, b:2}")
+    }
+
+    @Test
     fun `the 'none' system macro`() {
         // Given: <system macros>
         // When:
@@ -244,7 +285,8 @@ class MacroEvaluatorTest {
             }
         }
 
-        assertEquals(BoolValue(emptyList(), true), evaluator.expandNext())
+        val actual = evaluator.expandNext()
+        assertEquals(BoolValue(emptyList(), true), actual)
         assertEquals(null, evaluator.expandNext())
     }
 
@@ -328,20 +370,24 @@ class MacroEvaluatorTest {
     fun `invoke values with scalars`() {
         // Given: <system_macros>
         // When:
-        //   (:values 1 "a")
+        //   (:values 1 2 3 "a")
         // Then:
-        //   1 "a"
+        //   1 2 3 "a"
 
         evaluator.initExpansion {
             eexp(Values) {
                 expressionGroup {
                     int(1)
+                    int(2)
+                    int(3)
                     string("a")
                 }
             }
         }
 
         assertEquals(LongIntValue(emptyList(), 1), evaluator.expandNext())
+        assertEquals(LongIntValue(emptyList(), 2), evaluator.expandNext())
+        assertEquals(LongIntValue(emptyList(), 3), evaluator.expandNext())
         assertEquals(StringValue(emptyList(), "a"), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
@@ -386,7 +432,9 @@ class MacroEvaluatorTest {
         }
 
         evaluator.initExpansion {
-            eexp(voidableIdentityMacro) {}
+            eexp(voidableIdentityMacro) {
+                expressionGroup { }
+            }
         }
 
         assertEquals(null, evaluator.expandNext())
@@ -560,8 +608,12 @@ class MacroEvaluatorTest {
             }
         }
 
+        assertIsInstance<StructValue>(evaluator.expandNext())
+        evaluator.stepIn()
         assertEquals(FieldName(value = newSymbolToken("foo")), evaluator.expandNext())
         assertEquals(LongIntValue(value = 1), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+        evaluator.stepOut()
         assertEquals(null, evaluator.expandNext())
     }
 
@@ -1003,11 +1055,15 @@ class MacroEvaluatorTest {
 
         evaluator.initExpansion {
             eexp(Repeat) {
-                int(2)
-                int(0)
+                int(4)
+                expressionGroup {
+                    int(0)
+                }
             }
         }
 
+        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
+        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())

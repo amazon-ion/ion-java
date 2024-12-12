@@ -15,7 +15,7 @@ import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
  */
 enum class SystemMacro(
     val id: Byte,
-    val systemSymbol: SystemSymbols_1_1,
+    val systemSymbol: SystemSymbols_1_1?,
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>? = null
 ) : Macro {
@@ -26,9 +26,13 @@ enum class SystemMacro(
     IfSingle(-1, IF_SINGLE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
     IfMulti(-1, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
 
+    // Unnameable, unaddressable macros used for the internals of certain other system macros
+    FlattenStruct(-1, systemSymbol = null, listOf(zeroToManyTagged("structs"))),
+    MakeFieldNameAndValue(-1, systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
+
     // The real macros
-    None(0, NONE, emptyList()),
-    Values(1, VALUES, listOf(zeroToManyTagged("values"))),
+    Values(1, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
+    None(0, NONE, emptyList(), templateBody { macro(Values) { expressionGroup { } } }),
     Default(
         2, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
         templateBody {
@@ -37,7 +41,7 @@ enum class SystemMacro(
     ),
     Meta(3, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
     Repeat(4, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
-    Flatten(5, FLATTEN, listOf(zeroToManyTagged("values")), null), // TODO: flatten
+    Flatten(5, FLATTEN, listOf(zeroToManyTagged("values"))),
     Delta(6, DELTA, listOf(zeroToManyTagged("deltas"))),
     Sum(7, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
 
@@ -58,16 +62,49 @@ enum class SystemMacro(
         )
     ),
     MakeBlob(13, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
-    MakeList(14, MAKE_LIST, listOf(zeroToManyTagged("sequences")), null), // TODO: make_list
-    MakeSExp(15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")), null), // TODO: make_sexp
-    MakeField(
-        16, MAKE_FIELD,
-        listOf(
-            Macro.Parameter("field_name", Macro.ParameterEncoding.FlexSym, Macro.ParameterCardinality.ExactlyOne), exactlyOneTagged("value")
-        )
+    MakeList(
+        14, MAKE_LIST, listOf(zeroToManyTagged("sequences")), templateBody {
+            list {
+                macro(Flatten) {
+                    variable(0)
+                }
+            }
+        }
     ),
-    MakeStruct(17, MAKE_STRUCT, listOf(zeroToManyTagged("structs")), null), // TODO: make_struct
-    ParseIon(18, PARSE_ION, listOf(zeroToManyTagged("data")), null), // TODO: parse_ion
+    MakeSExp(
+        15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")), templateBody {
+            sexp {
+                macro(Flatten) {
+                    variable(0)
+                }
+            }
+        }
+    ),
+
+    MakeField(
+        16, MAKE_FIELD, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value")),
+        templateBody {
+            struct {
+                macro(MakeFieldNameAndValue) {
+                    variable(0)
+                    variable(1)
+                }
+            }
+        }
+    ),
+
+    MakeStruct(
+        17, MAKE_STRUCT, listOf(zeroToManyTagged("structs")),
+        templateBody {
+            struct {
+                macro(FlattenStruct) {
+                    variable(0)
+                }
+            }
+        }
+    ),
+    ParseIon(18, PARSE_ION, listOf(zeroToManyTagged("data"))), // TODO: parse_ion
+
 
     /**
      * ```ion
@@ -222,7 +259,7 @@ enum class SystemMacro(
     ),
     ;
 
-    val macroName: String get() = this.systemSymbol.text
+    val macroName: String get() = this.systemSymbol?.text ?: throw IllegalStateException("Attempt to get name for unaddressable macro $name")
 
     override val dependencies: List<Macro>
         get() = body
@@ -233,7 +270,9 @@ enum class SystemMacro(
 
     companion object : MacroTable {
 
-        private val MACROS_BY_NAME: Map<String, SystemMacro> = SystemMacro.entries.associateBy { it.macroName }
+        private val MACROS_BY_NAME: Map<String, SystemMacro> = SystemMacro.entries
+            .filter { it.systemSymbol != null }
+            .associateBy { it.macroName }
 
         // TODO: Once all of the macros are implemented, replace this with an array as in SystemSymbols_1_1
         private val MACROS_BY_ID: Map<Byte, SystemMacro> = SystemMacro.entries

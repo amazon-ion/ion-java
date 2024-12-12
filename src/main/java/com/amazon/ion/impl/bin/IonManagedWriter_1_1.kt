@@ -628,7 +628,7 @@ internal class IonManagedWriter_1_1(
                     is Expression.MacroInvocation -> {
                         val invokedMacro = expression.macro
                         if (invokedMacro is SystemMacro) {
-                            stepInTdlSystemMacroInvocation(invokedMacro.systemSymbol)
+                            stepInTdlSystemMacroInvocation(invokedMacro.systemSymbol!!)
                         } else {
                             val invokedAddress = macroTable[invokedMacro]
                                 ?: newMacros[invokedMacro]

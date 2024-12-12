@@ -5,6 +5,7 @@ package com.amazon.ion.impl
 import com.amazon.ion.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.system.*
+import java.lang.AssertionError
 import java.math.BigDecimal
 import java.math.BigInteger
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
+import org.opentest4j.TestAbortedException
 
 class IonRawTextWriterTest_1_1 {
 
@@ -712,6 +714,7 @@ class IonRawTextWriterTest_1_1 {
     @ParameterizedTest
     @EnumSource(SystemMacro::class)
     fun `write system macro E-expression by name`(systemMacro: SystemMacro) {
+        if (systemMacro.systemSymbol == null) throw TestAbortedException("Skip this test for unaddressable macros")
         assertWriterOutputEquals("(:\$ion::${systemMacro.macroName})") {
             stepInEExp(systemMacro)
             stepOut()

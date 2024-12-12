@@ -35,10 +35,22 @@ class MacroEvaluatorAsIonReader(
     private fun queueNext() {
         queuedValueExpression = null
         while (queuedValueExpression == null) {
-            val nextCandidate = evaluator.expandNext() ?: return
+            val nextCandidate = evaluator.expandNext()
             when (nextCandidate) {
+                null -> {
+                    queuedFieldName = null
+                    return
+                }
                 is Expression.FieldName -> queuedFieldName = nextCandidate
                 is Expression.DataModelValue -> queuedValueExpression = nextCandidate
+                Expression.EndOfContainer -> {
+                    queuedFieldName = null
+                    return
+                }
+                Expression.EndOfExpansion -> {
+                    queuedFieldName = null
+                    return
+                }
             }
         }
     }

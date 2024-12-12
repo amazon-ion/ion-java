@@ -52,7 +52,11 @@ sealed interface Expression {
      * These expressions are the only ones that may be the output from the macro evaluator.
      * All [DataModelExpression]s are also valid to use as [TemplateBodyExpression]s and [EExpressionBodyExpression]s.
      */
-    sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression
+    sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression, ExpansionOutputExpression
+
+    sealed interface ExpansionOutputExpressionOrContinue
+
+    sealed interface ExpansionOutputExpression : ExpansionOutputExpressionOrContinue
 
     /**
      * Interface for expressions that are _values_ in the Ion data model.
@@ -65,12 +69,22 @@ sealed interface Expression {
     }
 
     /** Expressions that represent Ion container types */
-    sealed interface DataModelContainer : HasStartAndEnd, DataModelValue
+    sealed interface DataModelContainer : HasStartAndEnd, DataModelValue {
+        val isConstructedFromMacro: Boolean
+    }
+
+    data object ContinueExpansion : ExpansionOutputExpressionOrContinue
+    data object EndOfExpansion : ExpansionOutputExpression
+
+    // TODO: See if we can remove this
+    data object EndOfContainer : ExpansionOutputExpression // , DataModelExpression
 
     /**
      * A temporary placeholder that is used only while a macro or e-expression is partially compiled.
+     *
+     * TODO: See if we can get rid of this by e.g. using nulls during macro compilation.
      */
-    object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
+    data object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
 
     /**
      * A group of expressions that form the argument for one macro parameter.
@@ -180,10 +194,11 @@ sealed interface Expression {
      * @property selfIndex the index of the first expression of the list (i.e. this instance)
      * @property endExclusive the index of the last expression contained in the list
      */
-    data class ListValue(
+    data class ListValue @JvmOverloads constructor(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
-        override val endExclusive: Int
+        override val endExclusive: Int,
+        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.LIST
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -192,10 +207,11 @@ sealed interface Expression {
     /**
      * An Ion SExp that could contain variables or macro invocations.
      */
-    data class SExpValue(
+    data class SExpValue @JvmOverloads constructor(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
-        override val endExclusive: Int
+        override val endExclusive: Int,
+        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.SEXP
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -204,11 +220,12 @@ sealed interface Expression {
     /**
      * An Ion Struct that could contain variables or macro invocations.
      */
-    data class StructValue(
+    data class StructValue @JvmOverloads constructor(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
         override val endExclusive: Int,
-        val templateStructIndex: Map<String, List<Int>>
+        val templateStructIndex: Map<String, List<Int>> = emptyMap(),
+        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.STRUCT
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
