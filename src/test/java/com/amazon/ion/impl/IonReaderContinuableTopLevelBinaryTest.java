@@ -5062,15 +5062,15 @@ public class IonReaderContinuableTopLevelBinaryTest {
     @ParameterizedTest
     @ValueSource(strings = {
         // Minimal representations
-        "E7 01 75 60            | One empty-text annotation; value int 0 \n" +
+        "E7 01 81 60            | One empty-text annotation; value int 0 \n" +
         "E7 01 60 60            | One SID 0 annotation; value int 0 \n" +
-        "E8 01 75 01 60 60      | Two annotations: empty text, SID 0; value int 0 \n" +
-        "E9 09 01 60 01 75 60   | Variable length = 4 annotations: SID 0, empty text; value int 0 \n",
+        "E8 01 81 01 60 60      | Two annotations: empty text, SID 0; value int 0 \n" +
+        "E9 09 01 60 01 81 60   | Variable length = 4 annotations: SID 0, empty text; value int 0 \n",
         // Overpadded representations
-        "E7 02 00 75 60                    | One overpadded empty-text annotation; value int 0 \n" +
+        "E7 02 00 81 60                    | One overpadded empty-text annotation; value int 0 \n" +
         "E7 04 00 00 60 60                 | One overpadded SID 0 annotation; value int 0 \n" +
-        "E8 08 00 00 00 75 02 00 60 60     | Two overpadded annotations: empty text, SID 0; value int 0 \n" +
-        "E9 90 00 00 00 00 01 60 01 75 60  | Variable overpadded length = 4 annotations: SID 0, empty text; value int 0 \n"
+        "E8 08 00 00 00 81 02 00 60 60     | Two overpadded annotations: empty text, SID 0; value int 0 \n" +
+        "E9 90 00 00 00 00 01 60 01 81 60  | Variable overpadded length = 4 annotations: SID 0, empty text; value int 0 \n"
     })
     public void readAnnotationsWithSpecialFlexSyms_1_1(String inputBytes) throws Exception {
         readAnnotationsWithSpecialFlexSyms_1_1(true, inputBytes);
@@ -5308,17 +5308,17 @@ public class IonReaderContinuableTopLevelBinaryTest {
         // Empty field name in fixed-length SID struct
         "D4      | Struct Length = 4 \n" +
         "01      | switch to FlexSym encoding \n" +
-        "01 75   | FlexSym empty text \n" +
+        "01 81   | FlexSym empty text \n" +
         "6F      | false",
         // Empty field name in variable-length SID struct
         "FD      | Variable length SID struct \n" +
         "09      | Length = 4 \n" +
         "01      | switch to FlexSym encoding \n" +
-        "01 75   | FlexSym empty text \n" +
+        "01 81   | FlexSym empty text \n" +
         "6F      | false",
         // Empty field name in delimited struct
         "F3      | Delimited struct \n" +
-        "01 75   | FlexSym empty text \n" +
+        "01 81   | FlexSym empty text \n" +
         "6F      | false \n" +
         "01 F0   | End delimited struct"
     })
@@ -5990,13 +5990,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void addSymbolsSystemMacro(boolean constructFromBytes) throws Exception {
         int[] data = new int[] {
             0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
-            0xEF, 0x0C, // system macro add_symbols
+            0xEF, 0x14, // system macro add_symbols
             0x02, // AEB: 0b------aa; a=10, expression group
             0x01, // FlexInt 0, a delimited expression group
             0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
             0xF0, // delimited end...  of expression group
             0xE1, // SID single byte
-            0x42  // SID $66
+            0x40  // SID $64
         };
         try (IonReader reader = readerFor(constructFromBytes,data)) {
             assertEquals(IonType.SYMBOL, reader.next());
@@ -6008,13 +6008,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void addSymbolsSystemMacroWhenNotEntirelyBuffered() throws Exception {
         int[] data = new int[] {
             /*  0 -  3 */  // 0xEA, 0x01, 0x01, 0xE0, // implicitly provided by BinaryIonAppender
-            /*  4 -  5 */  0xEF, 0x0C, // system macro add_symbols
+            /*  4 -  5 */  0xEF, 0x14, // system macro add_symbols
             /*  6 -  7 */  0x02,  0x01, // AEB: 0b------aa; a=10, FlexInt 0, a delimited expression group
             /*  8 - 12 */  0x93, 0x66, 0x6F, 0x72, // "for"
             /* 13 - 16 */  0x93, 0x66, 0x75, 0x72, // "fur"
             /* 17 - 21 */  0x94, 0x66, 0x6F, 0x75, 0x72, // "four"
             /* 22 - 22 */  0xF0, // delimited end...  of expression group
-            /* 23 - 24 */ 0xE1, 0x41 + 3, // SID single byte ${usid 1} => "four"
+            /* 23 - 24 */ 0xE1, 0x3F + 3, // SID single byte ${usid 1} => "four"
         };
         byte[] bytes = new TestUtils.BinaryIonAppender(1).append(data).toByteArray();
         totalBytesInStream = bytes.length;

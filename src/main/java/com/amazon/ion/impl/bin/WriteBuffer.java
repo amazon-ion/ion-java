@@ -1536,7 +1536,7 @@ public final class WriteBuffer implements Closeable
      */
     public int writeFlexSym(Utf8StringEncoder.Result text) {
         if (text.getEncodedLength() == 0) {
-            return writeFlexSym(SystemSymbols_1_1.THE_EMPTY_SYMBOL);
+            return writeFlexSym(SystemSymbols_1_1.EMPTY_TEXT);
         } else {
             int numLengthBytes = writeFlexInt(-text.getEncodedLength());
             writeBytes(text.getBuffer(), 0, text.getEncodedLength());
