@@ -46,11 +46,10 @@ public enum OutputFormat {
         } else if (builder instanceof IonBinaryWriterBuilder) {
             return ((IonBinaryWriterBuilder)builder).withImports(symbolTable).build(out);
         } else {
-            throw new IllegalStateException("This is impossible, none of the enums can do this");
+            throw new IllegalStateException("Unreachable, the created IonWriterBuilders must be either binary or text");
         }
     }
 
     private final Supplier<IonWriterBuilder> writerBuilderSupplier;
     private final Function<OutputStream, OutputStream> outputTransformer;
-
 }
