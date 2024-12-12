@@ -1,6 +1,7 @@
 package com.amazon.tools.cli;
 
 
+import com.amazon.ion.IonEncodingVersion;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonWriter;
 import com.amazon.ion.system.IonReaderBuilder;
@@ -42,8 +43,12 @@ class SimpleIonCli {
         System.exit(commandLine.execute(args));
     }
 
+    @Option(names={"-v", "--ion-version"}, description = "Output Ion version", defaultValue = "1.0",
+            converter = IonEncodingVersionConverter.class, scope = CommandLine.ScopeType.INHERIT)
+    IonEncodingVersion ionVersion;
+
     @Option(names={"-f", "--format", "--output-format"}, defaultValue = "pretty",
-            description = "Output format, from the set (text | pretty | binary | none).",
+            description = "Output format, from the set (text | pretty | binary | debug | none).",
             paramLabel = "<format>",
     scope = CommandLine.ScopeType.INHERIT)
     OutputFormat outputFormat;
@@ -57,17 +62,13 @@ class SimpleIonCli {
             mixinStandardHelpOptions = true)
     int cat( @Parameters(paramLabel = "FILE") File... files) {
 
-        if (outputFormat == OutputFormat.EVENTS) {
-            System.err.println("'events' output format is not supported");
-            return CommandLine.ExitCode.USAGE;
-        }
 
         //TODO: Handle stream cutoff- java.io.IOException: Broken pipe
         //TODO: This is not resilient to problems with a single file. Should it be?
         try (InputStream in = getInputStream(files);
              IonReader reader = IonReaderBuilder.standard().build(in);
              OutputStream out = getOutputStream(outputFile);
-             IonWriter writer = outputFormat.createIonWriter(out)) {
+             IonWriter writer = getWriter(ionVersion, outputFormat, out)) {
             // getInputStream will look for stdin if we don't supply
             writer.writeValues(reader);
         } catch (IOException e) {
@@ -110,5 +111,49 @@ class SimpleIonCli {
     private static FileOutputStream getOutputStream(File outputFile) throws IOException {
         // non-line-buffered stdout, or the requested file output
         return outputFile == null ? new FileOutputStream(FileDescriptor.out) : new FileOutputStream(outputFile);
+    }
+
+    private static IonWriter getWriter(IonEncodingVersion<?,?> version, OutputFormat format, OutputStream out) {
+        if (version == IonEncodingVersion.ION_1_0) return getWriter_1_0(format, out);
+        if (version == IonEncodingVersion.ION_1_1) return getWriter_1_1(format, out);
+        throw new IllegalArgumentException("Unrecognized IonEncodingVersion: " + version);
+    }
+
+    private static IonWriter getWriter_1_0(OutputFormat format, OutputStream out) {
+        switch (format) {
+            case Pretty: return IonEncodingVersion.ION_1_0.textWriterBuilder().withPrettyPrinting().build(out);
+            case Text: return IonEncodingVersion.ION_1_0.textWriterBuilder().build(out);
+            case Binary: return IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out);
+            case Debug: throw new UnsupportedOperationException("Not yet supported, pending ion-java #1005");
+            case None: return IonEncodingVersion.ION_1_0.textWriterBuilder().build(new NoOpOutputStream());
+            default: throw new IllegalArgumentException("Unrecognized or unsupported output format: " + format);
+        }
+    }
+
+    private static IonWriter getWriter_1_1(OutputFormat format, OutputStream out) {
+        switch (format) {
+            case Pretty: return IonEncodingVersion.ION_1_1.textWriterBuilder().withPrettyPrinting().build(out);
+            case Text: return IonEncodingVersion.ION_1_1.textWriterBuilder().build(out);
+            case Binary: return IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(out);
+            case Debug: throw new UnsupportedOperationException("Not yet supported, pending ion-java #1005");
+            case None: return IonEncodingVersion.ION_1_1.textWriterBuilder().build(new NoOpOutputStream());
+            default: throw new IllegalArgumentException("Unrecognized or unsupported output format: " + format);
+        }
+    }
+
+    private enum OutputFormat {
+        Pretty, Text, Binary, Debug, None
+    }
+
+    private static class IonEncodingVersionConverter implements CommandLine.ITypeConverter<IonEncodingVersion<?,?>> {
+
+        @Override
+        public IonEncodingVersion<?,?> convert(String ionVersion) {
+            switch (ionVersion) {
+                case "1.0": return IonEncodingVersion.ION_1_0;
+                case "1.1": return IonEncodingVersion.ION_1_1;
+                default: throw new IllegalArgumentException("Unrecognized or unsupported Ion version: " + ionVersion);
+            }
+        }
     }
 }
