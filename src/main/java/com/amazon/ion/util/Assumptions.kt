@@ -47,3 +47,5 @@ internal inline fun confirm(assumption: Boolean, lazyMessage: () -> String) {
         throw IonException(lazyMessage())
     }
 }
+
+internal fun unreachable(reason: String? = null): Nothing = throw IllegalStateException(reason)

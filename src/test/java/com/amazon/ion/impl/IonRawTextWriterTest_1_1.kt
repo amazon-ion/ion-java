@@ -5,7 +5,6 @@ package com.amazon.ion.impl
 import com.amazon.ion.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.system.*
-import java.lang.AssertionError
 import java.math.BigDecimal
 import java.math.BigInteger
 import org.junit.jupiter.api.Assertions.assertEquals

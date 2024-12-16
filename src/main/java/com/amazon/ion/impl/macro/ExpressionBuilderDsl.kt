@@ -57,7 +57,7 @@ internal interface DataModelDsl : ValuesDsl {
 @ExpressionBuilderDslMarker
 internal interface TemplateDsl : ValuesDsl {
     fun macro(macro: Macro, arguments: InvocationBody.() -> Unit)
-    fun variable(signatureIndex: Int)
+    fun variable(signatureIndex: Int, parameter: Macro.Parameter? = null)
     fun list(content: TemplateDsl.() -> Unit)
     fun sexp(content: TemplateDsl.() -> Unit)
     fun struct(content: Fields.() -> Unit)
@@ -186,7 +186,7 @@ internal sealed class ExpressionBuilderDsl : ValuesDsl, ValuesDsl.Fields {
         override fun list(content: TemplateDsl.() -> Unit) = containerWithAnnotations(content, ::ListValue)
         override fun sexp(content: TemplateDsl.() -> Unit) = containerWithAnnotations(content, ::SExpValue)
         override fun struct(content: TemplateDsl.Fields.() -> Unit) = containerWithAnnotations(content, ::newStruct)
-        override fun variable(signatureIndex: Int) { expressions.add(VariableRef(signatureIndex)) }
+        override fun variable(signatureIndex: Int, parameter: Macro.Parameter?) { expressions.add(VariableRef(signatureIndex, parameter)) }
         override fun macro(macro: Macro, arguments: TemplateDsl.InvocationBody.() -> Unit) = container(arguments) { start, end -> MacroInvocation(macro, start, end) }
         override fun expressionGroup(content: TemplateDsl.() -> Unit) = container(content, ::ExpressionGroup)
     }

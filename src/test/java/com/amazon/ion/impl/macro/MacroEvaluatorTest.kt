@@ -937,7 +937,7 @@ class MacroEvaluatorTest {
     @MethodSource("com.amazon.ion.impl.macro.MacroEvaluatorTest\$IfExpanderTestParameters#parameters")
     fun `check 'if' expansion logic`(ifSpecialForm: SystemMacro, expressionToTest: Macro, expectMatches: Boolean) {
         // Given:
-        //   (macro test_if (x*) (<ifSpecialForm> (%x) "a" "b"))
+        //   (macro test_if (x*) (.<ifSpecialForm> (%x) "a" "b"))
         // When:
         //   (:test_if <expressionToTest>)
         // Then:

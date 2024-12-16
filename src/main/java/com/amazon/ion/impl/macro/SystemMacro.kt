@@ -27,8 +27,8 @@ enum class SystemMacro(
     IfMulti(-1, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
 
     // Unnameable, unaddressable macros used for the internals of certain other system macros
-    FlattenStruct(-1, systemSymbol = null, listOf(zeroToManyTagged("structs"))),
-    MakeFieldNameAndValue(-1, systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
+    _Private_FlattenStruct(-1, systemSymbol = null, listOf(zeroToManyTagged("structs"))),
+    _Private_MakeFieldNameAndValue(-1, systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
 
     // The real macros
     Values(1, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
@@ -63,7 +63,8 @@ enum class SystemMacro(
     ),
     MakeBlob(13, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
     MakeList(
-        14, MAKE_LIST, listOf(zeroToManyTagged("sequences")), templateBody {
+        14, MAKE_LIST, listOf(zeroToManyTagged("sequences")),
+        templateBody {
             list {
                 macro(Flatten) {
                     variable(0)
@@ -72,7 +73,8 @@ enum class SystemMacro(
         }
     ),
     MakeSExp(
-        15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")), templateBody {
+        15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")),
+        templateBody {
             sexp {
                 macro(Flatten) {
                     variable(0)
@@ -85,7 +87,7 @@ enum class SystemMacro(
         16, MAKE_FIELD, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value")),
         templateBody {
             struct {
-                macro(MakeFieldNameAndValue) {
+                macro(_Private_MakeFieldNameAndValue) {
                     variable(0)
                     variable(1)
                 }
@@ -97,14 +99,13 @@ enum class SystemMacro(
         17, MAKE_STRUCT, listOf(zeroToManyTagged("structs")),
         templateBody {
             struct {
-                macro(FlattenStruct) {
+                macro(_Private_FlattenStruct) {
                     variable(0)
                 }
             }
         }
     ),
     ParseIon(18, PARSE_ION, listOf(zeroToManyTagged("data"))), // TODO: parse_ion
-
 
     /**
      * ```ion
@@ -236,12 +237,12 @@ enum class SystemMacro(
                 sexp {
                     symbol(IMPORT)
                     symbol(theModule)
-                    variable(0)
+                    variable(0, exactlyOneTagged("catalog_key"))
                     // This is equivalent to `(.default (%version) 1)`, but eliminates a layer of indirection.
                     macro(IfNone) {
-                        variable(1)
+                        variable(1, zeroOrOneTagged("version"))
                         int(1)
-                        variable(1)
+                        variable(1, zeroOrOneTagged("version"))
                     }
                 }
                 sexp {

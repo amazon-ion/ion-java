@@ -43,10 +43,6 @@ class MacroEvaluatorAsIonReader(
                 }
                 is Expression.FieldName -> queuedFieldName = nextCandidate
                 is Expression.DataModelValue -> queuedValueExpression = nextCandidate
-                Expression.EndOfContainer -> {
-                    queuedFieldName = null
-                    return
-                }
                 Expression.EndOfExpansion -> {
                     queuedFieldName = null
                     return

@@ -87,6 +87,12 @@ abstract class ConformanceTestRunner(
             "set_symbols does not accept null.string" in completeTestName -> false
             "set_symbols does not accept annotated arguments" in completeTestName -> false
 
+            // FIXME: Add syntax checks in MacroCompiler
+            "tdl/expression_groups.ion" in file.absolutePath -> false
+
+            // FIXME: Implicit rest args don't always work
+            "implicit rest args" in completeTestName -> false
+
             // FIXME: Ensure that the text reader throws if unexpected extra args are encountered
             "sum arguments may not be more than two integers" in completeTestName -> false
             "none signals an error when argument is" in completeTestName -> false

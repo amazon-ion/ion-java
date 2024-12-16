@@ -18,13 +18,26 @@ data class Environment private constructor(
     val arguments: List<Expression>,
     // TODO: Replace with IntArray
     val argumentIndices: List<Int>,
+    val argumentsByName: Map<Macro.Parameter, Int>,
     val parentEnvironment: Environment?,
 ) {
-    fun createChild(arguments: List<Expression>, argumentIndices: List<Int>) = Environment(arguments, argumentIndices, this)
+    fun createChild(arguments: List<Expression>, argumentIndices: List<Int>, byName: Map<Macro.Parameter, Int>) = Environment(arguments, argumentIndices, byName, this)
+
+    override fun toString() = """
+        |Environment(
+        |    argumentIndices: $argumentIndices,
+        |    argumentsByName: [${argumentsByName.map { (name, index) -> "\n|        $name -> $index" }.joinToString() }
+        |    ],
+        |    argumentExpressions: [${arguments.mapIndexed { index, expression -> "\n|        $index. $expression" }.joinToString() }
+        |    ],
+        |    parent: ${parentEnvironment.toString().lines().joinToString("\n|        ")},
+        |)
+        """.trimMargin()
+
     companion object {
         @JvmStatic
-        val EMPTY = Environment(emptyList(), emptyList(), null)
+        val EMPTY = Environment(emptyList(), emptyList(), emptyMap(), null)
         @JvmStatic
-        fun create(arguments: List<Expression>, argumentIndices: List<Int>) = Environment(arguments, argumentIndices, null)
+        fun create(arguments: List<Expression>, argumentIndices: List<Int>, byName: Map<Macro.Parameter, Int>) = Environment(arguments, argumentIndices, byName, null)
     }
 }

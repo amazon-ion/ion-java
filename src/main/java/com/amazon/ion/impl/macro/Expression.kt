@@ -54,9 +54,19 @@ sealed interface Expression {
      */
     sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression, ExpansionOutputExpression
 
+    /** Output of a macro expansion (internal to the macro evaluator) */
     sealed interface ExpansionOutputExpressionOrContinue
-
+    /** Output of the macro evaluator */
     sealed interface ExpansionOutputExpression : ExpansionOutputExpressionOrContinue
+
+    /**
+     * Indicates to the macro evaluator that the current expansion did not produce a value this time, but it may
+     * produce more expressions. The macro evaluator should request another expression from that macro.
+     */
+    data object ContinueExpansion : ExpansionOutputExpressionOrContinue
+
+    /** Signals the end of an expansion in the macro evaluator. */
+    data object EndOfExpansion : ExpansionOutputExpression
 
     /**
      * Interface for expressions that are _values_ in the Ion data model.
@@ -69,15 +79,7 @@ sealed interface Expression {
     }
 
     /** Expressions that represent Ion container types */
-    sealed interface DataModelContainer : HasStartAndEnd, DataModelValue {
-        val isConstructedFromMacro: Boolean
-    }
-
-    data object ContinueExpansion : ExpansionOutputExpressionOrContinue
-    data object EndOfExpansion : ExpansionOutputExpression
-
-    // TODO: See if we can remove this
-    data object EndOfContainer : ExpansionOutputExpression // , DataModelExpression
+    sealed interface DataModelContainer : HasStartAndEnd, DataModelValue
 
     /**
      * A temporary placeholder that is used only while a macro or e-expression is partially compiled.
@@ -198,7 +200,6 @@ sealed interface Expression {
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
         override val endExclusive: Int,
-        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.LIST
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -211,7 +212,6 @@ sealed interface Expression {
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
         override val endExclusive: Int,
-        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.SEXP
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -225,7 +225,6 @@ sealed interface Expression {
         override val selfIndex: Int,
         override val endExclusive: Int,
         val templateStructIndex: Map<String, List<Int>> = emptyMap(),
-        override val isConstructedFromMacro: Boolean = false,
     ) : DataModelContainer {
         override val type: IonType get() = IonType.STRUCT
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -236,23 +235,27 @@ sealed interface Expression {
     /**
      * A reference to a variable that needs to be expanded.
      */
-    data class VariableRef(val signatureIndex: Int) : TemplateBodyExpression
+    data class VariableRef @JvmOverloads constructor(val signatureIndex: Int, val parameter: Macro.Parameter? = null) : TemplateBodyExpression
+
+    sealed interface InvokableExpression : HasStartAndEnd, Expression {
+        val macro: Macro
+    }
 
     /**
      * A macro invocation that needs to be expanded.
      */
     data class MacroInvocation(
-        val macro: Macro,
+        override val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
-    ) : TemplateBodyExpression, HasStartAndEnd
+    ) : TemplateBodyExpression, HasStartAndEnd, InvokableExpression
 
     /**
      * An e-expression that needs to be expanded.
      */
     data class EExpression(
-        val macro: Macro,
+        override val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
-    ) : EExpressionBodyExpression, HasStartAndEnd
+    ) : EExpressionBodyExpression, HasStartAndEnd, InvokableExpression
 }
