@@ -1010,6 +1010,67 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    private byte[] macroInvocationAsParameterToItself(StreamType outputFormat) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = outputFormat.newWriter(out);
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<String, Macro>() {{
+            put("SimonSays", writeSimonSaysMacro(writer));
+        }};
+
+        outputFormat.startMacroInvocationByName(writer, "SimonSays", expectedMacroTable);
+        writer.stepInStruct(true);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
+        outputFormat.startMacroInvocationByName(writer, "SimonSays", expectedMacroTable);
+        writer.stepInStruct(true);
+        writer.writeFieldName(FIRST_LOCAL_SYMBOL_ID);
+        writer.writeInt(123);
+        writer.stepOut();
+        writer.stepOut();
+
+        writer.stepOut();
+        writer.stepOut();
+
+        return getBytes(writer, out);
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void macroInvocationAsParameterToItself(InputType inputType, StreamType streamType) throws Exception {
+        byte[] data = macroInvocationAsParameterToItself(streamType);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.STRUCT, reader.next());
+            assertEquals("foo", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("foo", reader.getFieldName());
+            assertEquals(123, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1},{2}")
+    @MethodSource("allInputFormatsInputTypesAndOutputFormats")
+    public void macroInvocationAsParameterToItselfMacroAwareTranscode(
+        InputType inputType,
+        StreamType inputFormat,
+        StreamType outputFormat
+    ) throws Exception {
+        byte[] data = macroInvocationAsParameterToItself(outputFormat);
+
+        verifyMacroAwareTranscode(
+            data, inputType, inputFormat,
+            substringCount("(:SimonSays", 2),
+            substringCount("foo:", 2),
+            substringCount("123", 1)
+        );
+    }
+
     @ParameterizedTest(name = "{0},{1}")
     @MethodSource("allCombinations")
     public void macroInvocationAsParameter(InputType inputType, StreamType streamType) throws Exception {
