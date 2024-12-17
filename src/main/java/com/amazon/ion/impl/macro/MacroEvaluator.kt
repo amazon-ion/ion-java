@@ -110,7 +110,7 @@ class MacroEvaluator {
      * Evaluate the macro expansion until the next [DataModelExpression] can be returned.
      * Returns null if at the end of a container or at the end of the expansion.
      */
-    fun expandNext(): ExpansionOutputExpression? {
+    fun expandNext(): DataModelExpression? {
         currentExpr = null
         while (currentExpr == null && !containerStack.isEmpty()) {
             val currentContainer = containerStack.peek()

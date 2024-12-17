@@ -269,7 +269,7 @@ internal class MacroCompiler(
         confirmNoAnnotations("on variable reference '$name'")
         val index = signature.indexOfFirst { it.variableName == name }
         confirm(index >= 0) { "variable '$name' is not recognized" }
-        expressions[placeholderIndex] = VariableRef(index, parameter = signature[index])
+        expressions[placeholderIndex] = VariableRef(index)
         confirm(!nextValue()) { "Variable expansion should contain only the variable name." }
         stepOutOfContainer()
     }

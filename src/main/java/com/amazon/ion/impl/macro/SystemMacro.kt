@@ -237,12 +237,12 @@ enum class SystemMacro(
                 sexp {
                     symbol(IMPORT)
                     symbol(theModule)
-                    variable(0, exactlyOneTagged("catalog_key"))
+                    variable(0)
                     // This is equivalent to `(.default (%version) 1)`, but eliminates a layer of indirection.
                     macro(IfNone) {
-                        variable(1, zeroOrOneTagged("version"))
+                        variable(1)
                         int(1)
-                        variable(1, zeroOrOneTagged("version"))
+                        variable(1)
                     }
                 }
                 sexp {

@@ -86,7 +86,7 @@ sealed interface Expression {
      *
      * TODO: See if we can get rid of this by e.g. using nulls during macro compilation.
      */
-    data object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
+    object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
 
     /**
      * A group of expressions that form the argument for one macro parameter.
@@ -235,7 +235,7 @@ sealed interface Expression {
     /**
      * A reference to a variable that needs to be expanded.
      */
-    data class VariableRef @JvmOverloads constructor(val signatureIndex: Int, val parameter: Macro.Parameter? = null) : TemplateBodyExpression
+    data class VariableRef(val signatureIndex: Int) : TemplateBodyExpression
 
     sealed interface InvokableExpression : HasStartAndEnd, Expression {
         val macro: Macro
