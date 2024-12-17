@@ -48,4 +48,7 @@ internal inline fun confirm(assumption: Boolean, lazyMessage: () -> String) {
     }
 }
 
+/**
+ * Marks a branch as unreachable (for human readability).
+ */
 internal fun unreachable(reason: String? = null): Nothing = throw IllegalStateException(reason)

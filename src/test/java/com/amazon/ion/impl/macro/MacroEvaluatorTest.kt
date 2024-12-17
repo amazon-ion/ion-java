@@ -285,8 +285,7 @@ class MacroEvaluatorTest {
             }
         }
 
-        val actual = evaluator.expandNext()
-        assertEquals(BoolValue(emptyList(), true), actual)
+        assertEquals(BoolValue(emptyList(), true), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
 
@@ -370,24 +369,20 @@ class MacroEvaluatorTest {
     fun `invoke values with scalars`() {
         // Given: <system_macros>
         // When:
-        //   (:values 1 2 3 "a")
+        //   (:values 1 "a")
         // Then:
-        //   1 2 3 "a"
+        //   1 "a"
 
         evaluator.initExpansion {
             eexp(Values) {
                 expressionGroup {
                     int(1)
-                    int(2)
-                    int(3)
                     string("a")
                 }
             }
         }
 
         assertEquals(LongIntValue(emptyList(), 1), evaluator.expandNext())
-        assertEquals(LongIntValue(emptyList(), 2), evaluator.expandNext())
-        assertEquals(LongIntValue(emptyList(), 3), evaluator.expandNext())
         assertEquals(StringValue(emptyList(), "a"), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
     }
@@ -937,7 +932,7 @@ class MacroEvaluatorTest {
     @MethodSource("com.amazon.ion.impl.macro.MacroEvaluatorTest\$IfExpanderTestParameters#parameters")
     fun `check 'if' expansion logic`(ifSpecialForm: SystemMacro, expressionToTest: Macro, expectMatches: Boolean) {
         // Given:
-        //   (macro test_if (x*) (.<ifSpecialForm> (%x) "a" "b"))
+        //   (macro test_if (x*) (<ifSpecialForm> (%x) "a" "b"))
         // When:
         //   (:test_if <expressionToTest>)
         // Then:

@@ -196,10 +196,10 @@ sealed interface Expression {
      * @property selfIndex the index of the first expression of the list (i.e. this instance)
      * @property endExclusive the index of the last expression contained in the list
      */
-    data class ListValue @JvmOverloads constructor(
+    data class ListValue(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
-        override val endExclusive: Int,
+        override val endExclusive: Int
     ) : DataModelContainer {
         override val type: IonType get() = IonType.LIST
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -208,10 +208,10 @@ sealed interface Expression {
     /**
      * An Ion SExp that could contain variables or macro invocations.
      */
-    data class SExpValue @JvmOverloads constructor(
+    data class SExpValue(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
-        override val endExclusive: Int,
+        override val endExclusive: Int
     ) : DataModelContainer {
         override val type: IonType get() = IonType.SEXP
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)
@@ -220,11 +220,11 @@ sealed interface Expression {
     /**
      * An Ion Struct that could contain variables or macro invocations.
      */
-    data class StructValue @JvmOverloads constructor(
+    data class StructValue(
         override val annotations: List<SymbolToken> = emptyList(),
         override val selfIndex: Int,
         override val endExclusive: Int,
-        val templateStructIndex: Map<String, List<Int>> = emptyMap(),
+        val templateStructIndex: Map<String, List<Int>>
     ) : DataModelContainer {
         override val type: IonType get() = IonType.STRUCT
         override fun withAnnotations(annotations: List<SymbolToken>) = copy(annotations = annotations)

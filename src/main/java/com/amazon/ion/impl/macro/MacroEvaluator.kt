@@ -187,8 +187,7 @@ class MacroEvaluator {
                     argsStartInclusive = next.startInclusive,
                     argsEndExclusive = next.endExclusive,
                 )
-                val argsIndicesByName = macro.calculateArgumentIndicesByName(thisExpansion.expressions, next.startInclusive, next.endExclusive)
-                val newEnvironment = thisExpansion.environment.createChild(thisExpansion.expressions, argIndices, argsIndicesByName)
+                val newEnvironment = thisExpansion.environment.createChild(thisExpansion.expressions, argIndices)
                 val expanderKind = if (macro.body != null) Stream else getExpanderKindForSystemMacro(macro as SystemMacro)
                 thisExpansion.expansionDelegate = thisExpansion.session.getExpander(
                     expanderKind = expanderKind,
@@ -667,8 +666,6 @@ class MacroEvaluator {
         }
 
         internal fun ExpansionFrame.readArgument(variableRef: VariableRef): ExpansionFrame {
-            // println("Reading argument for $variableRef")
-            // println("From $environment")
             val argIndex = environment.argumentIndices[variableRef.signatureIndex]
             if (argIndex < 0) {
                 // Argument was elided.
@@ -681,7 +678,7 @@ class MacroEvaluator {
                 startInclusive = if (firstArgExpression is ExpressionGroup) firstArgExpression.startInclusive else argIndex,
                 endExclusive = if (firstArgExpression is HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
                 environment = environment.parentEnvironment!!
-            )//.also { println("Variable $variableRef $it") }
+            )
         }
 
         internal inline fun ExpansionFrame.forEach(variableRef: VariableRef, action: (DataModelExpression) -> Unit) {
@@ -831,9 +828,9 @@ class MacroEvaluator {
         fun produceNext(): ExpansionOutputExpression {
             while (true) {
                 val next = expanderKind.produceNext(this)
-                if (next is ExpansionOutputExpression) return next
-                // Implied:
-                // if (next is ContinueExpansion) continue
+                if (next is ContinueExpansion) continue
+                session.incrementStepCounter()
+                return next as ExpansionOutputExpression
             }
         }
 
@@ -897,41 +894,4 @@ private fun Macro.calculateArgumentIndices(
         throw IonException("Too many arguments. Expected ${signature.size}, but found $numArgs")
     }
     return argsIndices.toList()
-}
-
-private fun Macro.calculateArgumentIndicesByName(
-    encodingExpressions: List<Expression>,
-    argsStartInclusive: Int,
-    argsEndExclusive: Int
-): Map<Macro.Parameter, Int> {
-    // TODO: For TDL macro invocations, see if we can calculate this during the "compile" step.
-    var numArgs = 0
-    val argsIndices = IntArray(signature.size)
-    var currentArgIndex = argsStartInclusive
-
-    for (p in signature) {
-        if (currentArgIndex >= argsEndExclusive) {
-            if (!p.cardinality.canBeVoid) throw IonException("No value provided for parameter ${p.variableName}")
-            // Elided rest parameter.
-            argsIndices[numArgs] = -1
-        } else {
-            argsIndices[numArgs] = currentArgIndex
-            currentArgIndex = when (val expr = encodingExpressions[currentArgIndex]) {
-                is HasStartAndEnd -> expr.endExclusive
-                else -> currentArgIndex + 1
-            }
-        }
-        numArgs++
-    }
-    while (currentArgIndex < argsEndExclusive) {
-        currentArgIndex = when (val expr = encodingExpressions[currentArgIndex]) {
-            is HasStartAndEnd -> expr.endExclusive
-            else -> currentArgIndex + 1
-        }
-        numArgs++
-    }
-    if (numArgs > signature.size) {
-        throw IonException("Too many arguments. Expected ${signature.size}, but found $numArgs")
-    }
-    return argsIndices.mapIndexed { i, it -> signature[i] to it }.toMap()
 }

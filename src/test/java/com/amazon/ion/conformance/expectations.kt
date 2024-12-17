@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.fail
 
 /**
  * Asserts that fully traversing the reader will result in an [IonException].
@@ -53,6 +54,7 @@ fun TestCaseSupport.assertSignals(sexp: SeqElement, r: IonReader) {
 private fun IonReader.walk(): List<String> {
     val events = mutableListOf<String>()
     fun recordEvent(eventType: String = type.toString(), value: Any? = "") {
+        if (events.size > 10_000_000) fail("Ion stream does not appear to terminate.")
         events.add("[$eventType] $value")
     }
     recordEvent("START")
