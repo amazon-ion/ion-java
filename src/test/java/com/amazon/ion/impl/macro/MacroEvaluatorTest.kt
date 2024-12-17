@@ -427,9 +427,7 @@ class MacroEvaluatorTest {
         }
 
         evaluator.initExpansion {
-            eexp(voidableIdentityMacro) {
-                expressionGroup { }
-            }
+            eexp(voidableIdentityMacro) {}
         }
 
         assertEquals(null, evaluator.expandNext())
@@ -1050,15 +1048,11 @@ class MacroEvaluatorTest {
 
         evaluator.initExpansion {
             eexp(Repeat) {
-                int(4)
-                expressionGroup {
-                    int(0)
-                }
+                int(2)
+                int(0)
             }
         }
 
-        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
-        assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(LongIntValue(value = 0), evaluator.expandNext())
         assertEquals(null, evaluator.expandNext())
