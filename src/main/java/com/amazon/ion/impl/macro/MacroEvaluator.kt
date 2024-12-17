@@ -4,13 +4,10 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl._Private_RecyclingStack
-import com.amazon.ion.impl._Private_Utils.*
+import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
-import com.amazon.ion.impl.macro.MacroEvaluator.ExpanderKind.Stream
-import com.amazon.ion.impl.macro.MacroEvaluator.ExpanderKind.Uninitialized
-import com.amazon.ion.util.*
+import com.amazon.ion.util.unreachable
 import java.io.ByteArrayOutputStream
-import java.lang.StringBuilder
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -65,15 +62,15 @@ class MacroEvaluator {
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
-        fun getExpander(expanderKind: ExpanderKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
+        fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
             val expansion = expanderPool.removeLastOrNull() ?: ExpansionInfo(this)
-            expansion.expanderKind = expanderKind
+            expansion.expansionKind = expansionKind
             expansion.expressions = expressions
             expansion.i = startInclusive
             expansion.endExclusive = endExclusive
             expansion.environment = environment
             expansion.additionalState = null
-            expansion.expansionDelegate = null
+            expansion.childExpansion = null
             return expansion
         }
 
@@ -124,7 +121,7 @@ class MacroEvaluator {
      */
     // TODO(PERF): It might be possible to optimize this by changing it to an enum without any methods (or even a set of
     //             integer constants) and converting all their implementations to static methods.
-    private enum class ExpanderKind {
+    private enum class ExpansionKind {
         Uninitialized {
             override fun produceNext(thisExpansion: ExpansionInfo): Nothing = throw IllegalStateException("ExpansionInfo not initialized.")
         },
@@ -134,21 +131,21 @@ class MacroEvaluator {
         Stream {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
                 // If there's a delegate, we'll try that first.
-                val delegate = thisExpansion.expansionDelegate
+                val delegate = thisExpansion.childExpansion
                 check(thisExpansion != delegate)
                 if (delegate != null) {
                     return when (val result = delegate.produceNext()) {
                         is DataModelExpression -> result
                         EndOfExpansion -> {
                             delegate.close()
-                            thisExpansion.expansionDelegate = null
+                            thisExpansion.childExpansion = null
                             ContinueExpansion
                         }
                     }
                 }
 
                 if (thisExpansion.i >= thisExpansion.endExclusive) {
-                    thisExpansion.expanderKind = Empty
+                    thisExpansion.expansionKind = Empty
                     return ContinueExpansion
                 }
 
@@ -162,9 +159,9 @@ class MacroEvaluator {
                         val macro = next.macro
                         val argIndices = calculateArgumentIndices(macro, thisExpansion.expressions, next.startInclusive, next.endExclusive)
                         val newEnvironment = thisExpansion.environment.createChild(thisExpansion.expressions, argIndices)
-                        val expanderKind = ExpanderKind.forMacro(macro)
-                        thisExpansion.expansionDelegate = thisExpansion.session.getExpander(
-                            expanderKind = expanderKind,
+                        val expansionKind = ExpansionKind.forMacro(macro)
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = expansionKind,
                             expressions = macro.body ?: emptyList(),
                             startInclusive = 0,
                             endExclusive = macro.body?.size ?: 0,
@@ -173,8 +170,8 @@ class MacroEvaluator {
                         ContinueExpansion
                     }
                     is ExpressionGroup -> {
-                        thisExpansion.expansionDelegate = thisExpansion.session.getExpander(
-                            expanderKind = ExprGroup,
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = ExprGroup,
                             expressions = thisExpansion.expressions,
                             startInclusive = next.startInclusive,
                             endExclusive = next.endExclusive,
@@ -185,7 +182,7 @@ class MacroEvaluator {
                     }
 
                     is VariableRef -> {
-                        thisExpansion.expansionDelegate = thisExpansion.readArgument(next)
+                        thisExpansion.childExpansion = thisExpansion.readArgument(next)
                         ContinueExpansion
                     }
                     Placeholder -> unreachable()
@@ -286,7 +283,7 @@ class MacroEvaluator {
                         is FieldName -> unreachable()
                     }
                 }
-                thisExpansion.expanderKind = Empty
+                thisExpansion.expansionKind = Empty
                 return StringValue(value = sb.toString())
             }
         },
@@ -321,7 +318,7 @@ class MacroEvaluator {
                         is FieldName -> unreachable()
                     }
                 }
-                thisExpansion.expanderKind = Empty
+                thisExpansion.expansionKind = Empty
                 return BlobValue(value = baos.toByteArray())
             }
         },
@@ -332,7 +329,7 @@ class MacroEvaluator {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
                 val coefficient = thisExpansion.readExactlyOneArgument<IntValue>(COEFFICIENT_ARG).bigIntegerValue
                 val exponent = thisExpansion.readExactlyOneArgument<IntValue>(EXPONENT_ARG).bigIntegerValue
-                thisExpansion.expanderKind = Empty
+                thisExpansion.expansionKind = Empty
                 return DecimalValue(value = BigDecimal(coefficient, -1 * exponent.intValueExact()))
             }
         },
@@ -386,7 +383,7 @@ class MacroEvaluator {
                             Timestamp.forYear(year)
                         }
                     }
-                    thisExpansion.expanderKind = Empty
+                    thisExpansion.expansionKind = Empty
                     return TimestampValue(value = ts)
                 } catch (e: IllegalArgumentException) {
                     throw IonException(e.message)
@@ -410,7 +407,7 @@ class MacroEvaluator {
 
                 return fieldNameExpression.also {
                     thisExpansion.tailCall(valueExpansion)
-                    thisExpansion.expanderKind = ExactlyOneValueStream
+                    thisExpansion.expansionKind = ExactlyOneValueStream
                 }
             }
         },
@@ -425,7 +422,7 @@ class MacroEvaluator {
                     thisExpansion.additionalState = argumentExpansion
                 }
 
-                val currentChildExpansion = thisExpansion.expansionDelegate
+                val currentChildExpansion = thisExpansion.childExpansion
 
                 return when (val next = currentChildExpansion?.produceNext()) {
                     is DataModelExpression -> next
@@ -433,8 +430,8 @@ class MacroEvaluator {
                     // Only possible if expansionDelegate is null
                     null -> when (val nextSequence = argumentExpansion.produceNext()) {
                         is StructValue -> {
-                            thisExpansion.expansionDelegate = thisExpansion.session.getExpander(
-                                expanderKind = Stream,
+                            thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                                expansionKind = Stream,
                                 expressions = argumentExpansion.top().expressions,
                                 startInclusive = nextSequence.startInclusive,
                                 endExclusive = nextSequence.endExclusive,
@@ -464,7 +461,7 @@ class MacroEvaluator {
                     thisExpansion.additionalState = argumentExpansion
                 }
 
-                val currentChildExpansion = thisExpansion.expansionDelegate
+                val currentChildExpansion = thisExpansion.childExpansion
 
                 return when (val next = currentChildExpansion?.produceNext()) {
                     is DataModelExpression -> next
@@ -473,8 +470,8 @@ class MacroEvaluator {
                     null -> when (val nextSequence = argumentExpansion.produceNext()) {
                         is StructValue -> throw IonException("invalid argument; flatten expects sequences")
                         is DataModelContainer -> {
-                            thisExpansion.expansionDelegate = thisExpansion.session.getExpander(
-                                expanderKind = Stream,
+                            thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                                expansionKind = Stream,
                                 expressions = argumentExpansion.top().expressions,
                                 startInclusive = nextSequence.startInclusive,
                                 endExclusive = nextSequence.endExclusive,
@@ -497,7 +494,7 @@ class MacroEvaluator {
                 // TODO(PERF): consider checking whether the value would fit in a long and returning a `LongIntValue`.
                 val a = thisExpansion.readExactlyOneArgument<IntValue>(ARG_A).bigIntegerValue
                 val b = thisExpansion.readExactlyOneArgument<IntValue>(ARG_B).bigIntegerValue
-                thisExpansion.expanderKind = Empty
+                thisExpansion.expansionKind = Empty
                 return BigIntValue(value = a + b)
             }
         },
@@ -506,11 +503,11 @@ class MacroEvaluator {
 
             override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
                 // TODO(PERF): Optimize to use LongIntValue when possible
-                var delegate = thisExpansion.expansionDelegate
+                var delegate = thisExpansion.childExpansion
                 val runningTotal = thisExpansion.additionalState as? BigInteger ?: BigInteger.ZERO
                 if (delegate == null) {
                     delegate = thisExpansion.readArgument(ARGS)
-                    thisExpansion.expansionDelegate = delegate
+                    thisExpansion.childExpansion = delegate
                 }
 
                 when (val nextExpandedArg = delegate.produceNext()) {
@@ -537,16 +534,16 @@ class MacroEvaluator {
                     thisExpansion.additionalState = n
                 }
 
-                if (thisExpansion.expansionDelegate == null) {
+                if (thisExpansion.childExpansion == null) {
                     if (n > 0) {
-                        thisExpansion.expansionDelegate = thisExpansion.readArgument(THING_TO_REPEAT)
+                        thisExpansion.childExpansion = thisExpansion.readArgument(THING_TO_REPEAT)
                         thisExpansion.additionalState = n - 1
                     } else {
                         return EndOfExpansion
                     }
                 }
 
-                val repeated = thisExpansion.expansionDelegate!!
+                val repeated = thisExpansion.childExpansion!!
                 return when (val maybeNext = repeated.produceNext()) {
                     is DataModelExpression -> maybeNext
                     EndOfExpansion -> thisExpansion.closeDelegateAndContinue()
@@ -592,7 +589,7 @@ class MacroEvaluator {
             }
             val firstArgExpression = environment.arguments[argIndex]
             return session.getExpander(
-                expanderKind = Variable,
+                expansionKind = Variable,
                 expressions = environment.arguments,
                 startInclusive = if (firstArgExpression is ExpressionGroup) firstArgExpression.startInclusive else argIndex,
                 endExclusive = if (firstArgExpression is HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
@@ -663,29 +660,29 @@ class MacroEvaluator {
 
         companion object {
             /**
-             * Gets the [ExpanderKind] for the given [macro].
+             * Gets the [ExpansionKind] for the given [macro].
              */
             @JvmStatic
-            fun forMacro(macro: Macro): ExpanderKind {
+            fun forMacro(macro: Macro): ExpansionKind {
                 return if (macro.body != null) {
                     TemplateBody
                 } else when (macro as SystemMacro) {
-                    SystemMacro.Annotate -> Annotate
-                    SystemMacro.MakeString -> MakeString
-                    SystemMacro.MakeSymbol -> MakeSymbol
-                    SystemMacro.MakeDecimal -> MakeDecimal
-                    SystemMacro.Repeat -> Repeat
-                    SystemMacro.Sum -> Sum
-                    SystemMacro.Delta -> Delta
-                    SystemMacro.MakeBlob -> MakeBlob
-                    SystemMacro.Flatten -> Flatten
-                    SystemMacro._Private_FlattenStruct -> _Private_FlattenStruct
-                    SystemMacro.MakeTimestamp -> MakeTimestamp
-                    SystemMacro._Private_MakeFieldNameAndValue -> _Private_MakeFieldNameAndValue
                     SystemMacro.IfNone -> IfNone
                     SystemMacro.IfSome -> IfSome
                     SystemMacro.IfSingle -> IfSingle
                     SystemMacro.IfMulti -> IfMulti
+                    SystemMacro.Annotate -> Annotate
+                    SystemMacro.MakeString -> MakeString
+                    SystemMacro.MakeSymbol -> MakeSymbol
+                    SystemMacro.MakeDecimal -> MakeDecimal
+                    SystemMacro.MakeTimestamp -> MakeTimestamp
+                    SystemMacro.MakeBlob -> MakeBlob
+                    SystemMacro.Repeat -> Repeat
+                    SystemMacro.Sum -> Sum
+                    SystemMacro.Delta -> Delta
+                    SystemMacro.Flatten -> Flatten
+                    SystemMacro._Private_FlattenStruct -> _Private_FlattenStruct
+                    SystemMacro._Private_MakeFieldNameAndValue -> _Private_MakeFieldNameAndValue
                     else -> TODO("Not implemented yet: ${macro.name}")
                 }
             }
@@ -698,59 +695,68 @@ class MacroEvaluator {
      * TODO: "info" is very non-specific; rename to ExpansionFrame next time there's a
      *       non-functional refactoring in this class.
      */
-    private class ExpansionInfo(
-        @JvmField val session: Session,
-        @JvmField var expanderKind: ExpanderKind = Uninitialized,
+    private class ExpansionInfo(@JvmField val session: Session) {
+
+        /** The [ExpansionKind]. */
+        @JvmField var expansionKind: ExpansionKind = ExpansionKind.Uninitialized
+        /**
+         * The evaluation [Environment]—i.e. variable bindings.
+         */
+        @JvmField var environment: Environment = Environment.EMPTY
         /**
          * The [Expression]s being expanded. This MUST be the original list, not a sublist because
          * (a) we don't want to be allocating new sublists all the time, and (b) the
          * start and end indices of the expressions may be incorrect if a sublist is taken.
          */
-        @JvmField var expressions: List<Expression> = emptyList(),
-        /** Current position within [expressions] of this expansion */
-        @JvmField var i: Int = 0,
+        @JvmField var expressions: List<Expression> = emptyList()
         /** End of [expressions] that are applicable for this [ExpansionInfo] */
-        @JvmField var endExclusive: Int = 0,
-        /** The evaluation [Environment]—i.e. variable bindings. */
-        @JvmField var environment: Environment = Environment.EMPTY,
-        _expansionDelegate: ExpansionInfo? = null,
-        @JvmField var additionalState: Any? = null,
-    ) {
+        @JvmField var endExclusive: Int = 0
+        /** Current position within [expressions] of this expansion */
+        @JvmField var i: Int = 0
 
-        // TODO: if expansionDelegate == this, it will cause an infinite loop or stack overflow somewhere.
-        // In practice, it should never happen, so we may wish to remove the custom setter to avoid any performance impact.
-        var expansionDelegate: ExpansionInfo? = _expansionDelegate
+        /**
+         * Field for storing any additional state required by an ExpansionKind.
+         */
+        @JvmField
+        var additionalState: Any? = null
+
+        /**
+         * Additional state in the form of a child [ExpansionInfo].
+         */
+        var childExpansion: ExpansionInfo? = null
+            // TODO: if childExpansion == this, it will cause an infinite loop or stack overflow somewhere.
+            // In practice, it should never happen, so we may wish to remove the custom setter to avoid any performance impact.
             set(value) {
                 check(value != this)
                 field = value
             }
 
         /**
-         * Convenience function to close the [expansionDelegate] and return it to the pool.
+         * Convenience function to close the [childExpansion] and return it to the pool.
          */
         fun closeDelegateAndContinue(): ContinueExpansion {
-            expansionDelegate?.close()
-            expansionDelegate = null
+            childExpansion?.close()
+            childExpansion = null
             return ContinueExpansion
         }
 
         /**
-         * Gets the [ExpansionInfo] at the top of the stack of [expansionDelegate]s.
+         * Gets the [ExpansionInfo] at the top of the stack of [childExpansion]s.
          */
-        fun top(): ExpansionInfo = expansionDelegate?.top() ?: this
+        fun top(): ExpansionInfo = childExpansion?.top() ?: this
 
         /**
-         * Returns this [ExpansionInfo] to the expander pool, recursively closing [expansionDelegate]s in the process.
+         * Returns this [ExpansionInfo] to the expander pool, recursively closing [childExpansion]s in the process.
          * Could also be thought of as a `free` function.
          */
         fun close() {
-            expanderKind = Uninitialized
+            expansionKind = ExpansionKind.Uninitialized
             environment = Environment.EMPTY
             expressions = emptyList()
             additionalState?.let { if (it is ExpansionInfo) it.close() }
             additionalState = null
-            expansionDelegate?.close()
-            expansionDelegate = null
+            childExpansion?.close()
+            childExpansion = null
             session.reclaimExpander(this)
         }
 
@@ -759,15 +765,15 @@ class MacroEvaluator {
          * After transferring the state, `other` is returned to the expansion pool.
          */
         fun tailCall(other: ExpansionInfo) {
-            this.expanderKind = other.expanderKind
+            this.expansionKind = other.expansionKind
             this.expressions = other.expressions
             this.i = other.i
             this.endExclusive = other.endExclusive
-            this.expansionDelegate = other.expansionDelegate
+            this.childExpansion = other.childExpansion
             this.additionalState = other.additionalState
             this.environment = other.environment
             // Close `other`
-            other.expansionDelegate = null
+            other.childExpansion = null
             other.close()
         }
 
@@ -776,7 +782,7 @@ class MacroEvaluator {
          */
         fun produceNext(): ExpansionOutputExpression {
             while (true) {
-                val next = expanderKind.produceNext(this)
+                val next = expansionKind.produceNext(this)
                 if (next is ContinueExpansion) continue
                 // This the only place where we count the expansion steps.
                 // It is theoretically possible to have macro expansions that are millions of levels deep because this
@@ -791,14 +797,14 @@ class MacroEvaluator {
 
         override fun toString() = """
         |ExpansionInfo(
-        |    expansionKind: $expanderKind,
+        |    expansionKind: $expansionKind,
         |    environment: ${environment.toString().lines().joinToString("\n|        ")},
         |    expressions: [
         |        ${expressions.mapIndexed { i, expr -> "$i. $expr" }.joinToString(",\n|        ") }
         |    ],
         |    endExclusive: $endExclusive,
         |    i: $i,
-        |    child: ${expansionDelegate?.expanderKind}
+        |    child: ${childExpansion?.expansionKind}
         |    additionalState: $additionalState,
         |)
         """.trimMargin()
@@ -822,7 +828,7 @@ class MacroEvaluator {
         session.reset()
         containerStack.push { ci ->
             ci.type = ContainerInfo.Type.TopLevel
-            ci.expansion = session.getExpander(Stream, encodingExpressions, 0, encodingExpressions.size, Environment.EMPTY)
+            ci.expansion = session.getExpander(ExpansionKind.Stream, encodingExpressions, 0, encodingExpressions.size, Environment.EMPTY)
         }
     }
 
@@ -872,7 +878,7 @@ class MacroEvaluator {
                     else -> unreachable()
                 }
                 ci.expansion = session.getExpander(
-                    expanderKind = Stream,
+                    expansionKind = ExpansionKind.Stream,
                     expressions = topExpansion.expressions,
                     startInclusive = expression.startInclusive,
                     endExclusive = expression.endExclusive,
