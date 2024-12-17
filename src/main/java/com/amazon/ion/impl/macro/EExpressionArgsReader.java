@@ -251,9 +251,6 @@ public abstract class EExpressionArgsReader {
      * @param expressions receives the expressions as they are materialized.
      */
     private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
-        if (reader.isInStruct()) {
-            expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
-        }
         Macro macro = loadMacro();
         List<Macro.Parameter> signature = macro.getSignature();
         PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
@@ -281,6 +278,9 @@ public abstract class EExpressionArgsReader {
         // TODO performance: use a pool of expression lists to avoid repetitive allocations.
         List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
         // TODO performance: avoid fully materializing all expressions up-front.
+        if (reader.isInStruct()) {
+            expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
+        }
         collectEExpressionArgs(expressions);
         macroEvaluator.initExpansion(expressions);
     }

@@ -70,6 +70,8 @@ class MacroEvaluatorAsIonReader(
         val arguments: List<Expression> = evaluator.getArguments()
         val numberOfContainerEndsAtExpressionIndex = IntArray(arguments.size + 1)
 
+        currentFieldName = null // Field names are written only via FieldName expressions
+
         while (index < arguments.size) {
             for (i in 0 until numberOfContainerEndsAtExpressionIndex[index]) {
                 writer.stepOut()
@@ -87,7 +89,6 @@ class MacroEvaluatorAsIonReader(
                     writer.writeValue(this)
                 }
                 is Expression.FieldName -> {
-                    queuedFieldName = argument
                     writer.setFieldNameSymbol(argument.value)
                 }
                 is Expression.EExpression -> {
