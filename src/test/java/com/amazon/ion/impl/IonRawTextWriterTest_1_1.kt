@@ -713,7 +713,11 @@ class IonRawTextWriterTest_1_1 {
     @ParameterizedTest
     @EnumSource(SystemMacro::class)
     fun `write system macro E-expression by name`(systemMacro: SystemMacro) {
-        if (systemMacro.systemSymbol == null) throw TestAbortedException("Skip this test for unaddressable macros")
+        try {
+            systemMacro.systemSymbol
+        } catch (e: IllegalStateException) {
+            throw TestAbortedException("Skip this test for unaddressable macros")
+        }
         assertWriterOutputEquals("(:\$ion::${systemMacro.macroName})") {
             stepInEExp(systemMacro)
             stepOut()

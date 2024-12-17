@@ -29,7 +29,7 @@ data class Environment private constructor(
         |    ],
         |    parent: ${parentEnvironment.toString().lines().joinToString("\n|        ")},
         |)
-        """.trimMargin()
+    """.trimMargin()
 
     companion object {
         @JvmStatic

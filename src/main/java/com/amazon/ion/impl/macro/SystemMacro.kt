@@ -15,7 +15,7 @@ import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
  */
 enum class SystemMacro(
     val id: Byte,
-    val systemSymbol: SystemSymbols_1_1?,
+    private val _systemSymbol: SystemSymbols_1_1?,
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>? = null
 ) : Macro {
@@ -27,8 +27,9 @@ enum class SystemMacro(
     IfMulti(-1, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
 
     // Unnameable, unaddressable macros used for the internals of certain other system macros
-    _Private_FlattenStruct(-1, systemSymbol = null, listOf(zeroToManyTagged("structs"))),
-    _Private_MakeFieldNameAndValue(-1, systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
+    // TODO: See if we can move these somewhere else so that they are not visible
+    _Private_FlattenStruct(-1, _systemSymbol = null, listOf(zeroToManyTagged("structs"))),
+    _Private_MakeFieldNameAndValue(-1, _systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
 
     // The real macros
     Values(1, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
@@ -260,7 +261,10 @@ enum class SystemMacro(
     ),
     ;
 
-    val macroName: String get() = this.systemSymbol?.text ?: throw IllegalStateException("Attempt to get name for unaddressable macro $name")
+    val systemSymbol: SystemSymbols_1_1
+        get() = _systemSymbol ?: throw IllegalStateException("Attempted to get name for unaddressable macro $name")
+
+    val macroName: String get() = this.systemSymbol.text
 
     override val dependencies: List<Macro>
         get() = body
@@ -272,7 +276,7 @@ enum class SystemMacro(
     companion object : MacroTable {
 
         private val MACROS_BY_NAME: Map<String, SystemMacro> = SystemMacro.entries
-            .filter { it.systemSymbol != null }
+            .filter { it._systemSymbol != null }
             .associateBy { it.macroName }
 
         // TODO: Once all of the macros are implemented, replace this with an array as in SystemSymbols_1_1
