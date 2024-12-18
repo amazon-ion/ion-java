@@ -56,6 +56,47 @@ class MacroEvaluatorTest {
     val evaluator = MacroEvaluator()
 
     @Test
+    fun `data with just scalars`() {
+        evaluator.initExpansion {
+            int(1)
+            int(2)
+            int(3)
+        }
+
+        evaluator.assertExpansion("1 2 3")
+    }
+
+    @Test
+    fun `data with a list`() {
+        evaluator.initExpansion {
+            list {
+                int(1)
+                list {
+                    int(2)
+                    int(3)
+                }
+                string("a")
+            }
+        }
+        evaluator.assertExpansion("""[1, [2, 3], "a"] """)
+    }
+
+    @Test
+    fun `data with a struct`() {
+
+        evaluator.initExpansion {
+            struct {
+                fieldName("a")
+                int(1)
+                fieldName("b")
+                int(2)
+            }
+        }
+
+        evaluator.assertExpansion("{a:1, b:2}")
+    }
+
+    @Test
     fun `the 'none' system macro`() {
         // Given: <system macros>
         // When:
@@ -560,8 +601,12 @@ class MacroEvaluatorTest {
             }
         }
 
+        assertIsInstance<StructValue>(evaluator.expandNext())
+        evaluator.stepIn()
         assertEquals(FieldName(value = newSymbolToken("foo")), evaluator.expandNext())
         assertEquals(LongIntValue(value = 1), evaluator.expandNext())
+        assertEquals(null, evaluator.expandNext())
+        evaluator.stepOut()
         assertEquals(null, evaluator.expandNext())
     }
 

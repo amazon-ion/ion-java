@@ -21,6 +21,16 @@ data class Environment private constructor(
     val parentEnvironment: Environment?,
 ) {
     fun createChild(arguments: List<Expression>, argumentIndices: List<Int>) = Environment(arguments, argumentIndices, this)
+
+    override fun toString() = """
+        |Environment(
+        |    argumentIndices: $argumentIndices,
+        |    argumentExpressions: [${arguments.mapIndexed { index, expression -> "\n|        $index. $expression" }.joinToString() }
+        |    ],
+        |    parent: ${parentEnvironment.toString().lines().joinToString("\n|        ")},
+        |)
+    """.trimMargin()
+
     companion object {
         @JvmStatic
         val EMPTY = Environment(emptyList(), emptyList(), null)
