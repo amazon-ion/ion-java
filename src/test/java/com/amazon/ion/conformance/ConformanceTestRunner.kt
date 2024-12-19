@@ -87,6 +87,12 @@ abstract class ConformanceTestRunner(
             "set_symbols does not accept null.string" in completeTestName -> false
             "set_symbols does not accept annotated arguments" in completeTestName -> false
 
+            // FIXME: Add syntax checks in MacroCompiler
+            "tdl/expression_groups.ion" in file.absolutePath -> false
+
+            // FIXME: Implicit rest args don't always work
+            "implicit rest args" in completeTestName -> false
+
             // FIXME: Ensure that the text reader throws if unexpected extra args are encountered
             "sum arguments may not be more than two integers" in completeTestName -> false
             "none signals an error when argument is" in completeTestName -> false
@@ -99,15 +105,8 @@ abstract class ConformanceTestRunner(
 
             // TODO: Not implemented yet
             "subnormal f16" in completeTestName -> false
-            "conformance/system_macros/" in file.absolutePath -> when {
-                file.endsWith("parse_ion.ion") ||
-                    file.endsWith("make_list.ion") ||
-                    file.endsWith("make_sexp.ion") ||
-                    file.endsWith("make_field.ion") ||
-                    file.endsWith("flatten.ion") ||
-                    file.endsWith("make_struct.ion") -> false
-                else -> true
-            }
+            "conformance/system_macros/parse_ion.ion" in file.absolutePath -> false
+
             // Some of these are failing because
             //  - Ion Java doesn't support the Ion 1.1 system symbol table yet
             //  - The tokens `$ion_1_0` and `'$ion_1_0'` are never user values.

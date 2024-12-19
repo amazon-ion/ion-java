@@ -52,7 +52,21 @@ sealed interface Expression {
      * These expressions are the only ones that may be the output from the macro evaluator.
      * All [DataModelExpression]s are also valid to use as [TemplateBodyExpression]s and [EExpressionBodyExpression]s.
      */
-    sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression
+    sealed interface DataModelExpression : Expression, EExpressionBodyExpression, TemplateBodyExpression, ExpansionOutputExpression
+
+    /** Output of a macro expansion (internal to the macro evaluator) */
+    sealed interface ExpansionOutputExpressionOrContinue
+    /** Output of the macro evaluator */
+    sealed interface ExpansionOutputExpression : ExpansionOutputExpressionOrContinue
+
+    /**
+     * Indicates to the macro evaluator that the current expansion did not produce a value this time, but it may
+     * produce more expressions. The macro evaluator should request another expression from that macro.
+     */
+    data object ContinueExpansion : ExpansionOutputExpressionOrContinue
+
+    /** Signals the end of an expansion in the macro evaluator. */
+    data object EndOfExpansion : ExpansionOutputExpression
 
     /**
      * Interface for expressions that are _values_ in the Ion data model.
@@ -69,6 +83,8 @@ sealed interface Expression {
 
     /**
      * A temporary placeholder that is used only while a macro or e-expression is partially compiled.
+     *
+     * TODO: See if we can get rid of this by e.g. using nulls during macro compilation.
      */
     object Placeholder : TemplateBodyExpression, EExpressionBodyExpression
 
@@ -221,21 +237,25 @@ sealed interface Expression {
      */
     data class VariableRef(val signatureIndex: Int) : TemplateBodyExpression
 
+    sealed interface InvokableExpression : HasStartAndEnd, Expression {
+        val macro: Macro
+    }
+
     /**
      * A macro invocation that needs to be expanded.
      */
     data class MacroInvocation(
-        val macro: Macro,
+        override val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
-    ) : TemplateBodyExpression, HasStartAndEnd
+    ) : TemplateBodyExpression, HasStartAndEnd, InvokableExpression
 
     /**
      * An e-expression that needs to be expanded.
      */
     data class EExpression(
-        val macro: Macro,
+        override val macro: Macro,
         override val selfIndex: Int,
         override val endExclusive: Int
-    ) : EExpressionBodyExpression, HasStartAndEnd
+    ) : EExpressionBodyExpression, HasStartAndEnd, InvokableExpression
 }

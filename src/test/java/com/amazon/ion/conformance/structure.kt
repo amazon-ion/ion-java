@@ -162,8 +162,8 @@ private fun ParserState.readExtension(): List<DynamicNode> {
 private fun ParserState.readContinuation(): DynamicNode {
     val continuation = sexp.tailFrom(pos)
 
-    val firstExpression = continuation.first()
-    firstExpression as? SeqElement ?: builder.reportSyntaxError(firstExpression, "continuation")
+    val firstExpression = continuation.firstOrNull()
+    firstExpression as? SeqElement ?: builder.reportSyntaxError(sexp, "continuation")
 
     return continuation.flatMap {
         it as? SeqElement ?: builder.reportSyntaxError(it, "extension")

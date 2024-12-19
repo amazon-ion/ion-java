@@ -231,15 +231,16 @@ public abstract class EExpressionArgsReader {
      * @param expressions receives the expressions as they are materialized.
      */
     protected void readValueAsExpression(boolean isImplicitRest, List<Expression.EExpressionBodyExpression> expressions) {
-        if (isMacroInvocation()) {
+        if (isImplicitRest && !isContainerAnExpressionGroup()) {
+            readStreamAsExpressionGroup(expressions);
+            return;
+        } else if (isMacroInvocation()) {
             collectEExpressionArgs(expressions); // TODO avoid recursion
             return;
         }
         IonType type = reader.encodingType();
         List<SymbolToken> annotations = getAnnotations();
-        if (isImplicitRest && !isContainerAnExpressionGroup()) {
-            readStreamAsExpressionGroup(expressions);
-        } else if (IonType.isContainer(type)) {
+        if (IonType.isContainer(type) && !reader.isNullValue()) {
             readContainerValueAsExpression(type, annotations, expressions);
         } else {
             readScalarValueAsExpression(type, annotations, expressions);
