@@ -953,6 +953,32 @@ public class IonCursorBinaryTest {
     }
 
     /**
+     * Provides Expectations that step the reader into the macro invocation on which it is currently positioned.
+     */
+    static <T extends IonCursorBinary> ExpectationProvider<T> stepInMacroInvocation() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "stepIn macro invocation",
+            cursor -> {
+                cursor.stepIntoEExpression();
+                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+            }
+        ));
+    }
+
+    /**
+     * Provides Expectations that step the reader out of the macro invocation that it is currently reading.
+     */
+    static <T extends IonCursorBinary> ExpectationProvider<T> stepOutMacroInvocation() {
+        return consumer -> consumer.accept(new Expectation<>(
+            "stepOut macro invocation",
+            cursor -> {
+                cursor.stepOutOfEExpression();
+                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+            }
+        ));
+    }
+
+    /**
      * Provides Expectations that advance the reader to the next tagless value and verify that it has the given
      * attributes.
      */
@@ -1066,12 +1092,14 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
+                stepInMacroInvocation(),
                 nextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
                 nextTaglessValue(TaglessEncoding.INT16, IonType.INT, 6, 8),
                 nextTaglessValue(TaglessEncoding.UINT32, IonType.INT, 8, 12),
                 nextTaglessValue(TaglessEncoding.INT64, IonType.INT, 12, 20),
                 nextTaglessValue(TaglessEncoding.FLEX_UINT, IonType.INT, 20, 23),
                 nextTaglessValue(TaglessEncoding.FLEX_INT, IonType.INT, 23, 26),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1090,9 +1118,11 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
+                stepInMacroInvocation(),
                 nextTaglessValue(TaglessEncoding.FLOAT16, IonType.FLOAT, 5, 7),
                 nextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 nextTaglessValue(TaglessEncoding.FLOAT64, IonType.FLOAT, 11, 19),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1112,9 +1142,11 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
+                stepInMacroInvocation(),
                 nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 6, 10),
                 nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 10, 11),
                 nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 13, 13),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1140,12 +1172,14 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
+                stepInMacroInvocation(),
                 nextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
                 nextTaggedValue(IonType.INT, 7, 7),
                 nextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 nextTaggedValue(IonType.FLOAT, 12, 16),
                 nextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 17, 21),
                 nextTaggedValue(IonType.SYMBOL, 22, 26),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1159,12 +1193,14 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0),
+                stepInMacroInvocation(),
                 fillNextTaglessValue(TaglessEncoding.UINT8, IonType.INT, 5, 6),
                 fillScalar(7, 7), type(IonType.INT),
                 fillNextTaglessValue(TaglessEncoding.FLOAT32, IonType.FLOAT, 7, 11),
                 fillScalar(12, 16), type(IonType.FLOAT),
                 fillNextTaglessValue(TaglessEncoding.FLEX_SYM, IonType.SYMBOL, 17, 21),
                 fillScalar(22, 26), type(IonType.SYMBOL),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1241,7 +1277,7 @@ public class IonCursorBinaryTest {
     public void fillTaglessValuesInterspersedWithTaggedValuesIncremental() throws Exception {
         byte[] data = taggedAndTaglessValues();
         List<Instruction> instructions = Arrays.asList(
-            instruction(IonCursorBinary::nextValue, macroInvocation(0)),
+            instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0), stepInMacroInvocation())),
             instruction(
                 cursor -> cursor.nextTaglessValue(TaglessEncoding.UINT8),
                 valueMarker(IonType.INT, 5, 6)
@@ -1291,7 +1327,15 @@ public class IonCursorBinaryTest {
                 valueReady(IonType.SYMBOL, 22, 26)
             ),
             // This is the end of the stream, so the response is not used.
-            instruction(IonCursorBinary::nextValue, null)
+            instruction(
+                cursor -> {
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.nextValue();
+                },
+                null
+            )
         );
         executeIncrementally(data, instructions);
     }
@@ -1300,7 +1344,7 @@ public class IonCursorBinaryTest {
     public void skipTaglessValuesInterspersedWithTaggedValuesIncremental() throws Exception {
         byte[] data = taggedAndTaglessValues();
         List<Instruction> instructions = Arrays.asList(
-            instruction(IonCursorBinary::nextValue, macroInvocation(0)),
+            instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0), stepInMacroInvocation())),
             instruction(
                 cursor -> cursor.nextTaglessValue(TaglessEncoding.UINT8),
                 // 0xFF is skipped.
@@ -1333,7 +1377,15 @@ public class IonCursorBinaryTest {
                 valueMarker(IonType.SYMBOL, 9, 13)
             ),
             // This is the end of the stream, so the response is not used.
-            instruction(IonCursorBinary::nextValue, null)
+            instruction(
+                cursor -> {
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.nextValue();
+                },
+                null
+            )
         );
         executeIncrementally(data, instructions);
     }
@@ -1394,8 +1446,10 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(numberOfBytesInAEB, 5, expectedAEBEndIndex),
                 nextTaggedValue(IonType.INT, expectedAEBEndIndex + 1, expectedAEBEndIndex + 1),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1406,11 +1460,19 @@ public class IonCursorBinaryTest {
         // the AEB starts at index 5.
         int expectedAEBEndIndex = 5 + numberOfBytesInAEB;
         List<Instruction> instructions = Arrays.asList(
-            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0x13), stepInMacroInvocation())),
             instruction(cursor -> cursor.fillArgumentEncodingBitmap(numberOfBytesInAEB), valueMarker(null, 5, expectedAEBEndIndex)),
             instruction(IonCursorBinary::nextValue, valueMarker(IonType.INT, expectedAEBEndIndex + 1, expectedAEBEndIndex + 1)),
             // This is the end of the stream, so the response is not used.
-            instruction(IonCursorBinary::nextValue, null)
+            instruction(
+                cursor -> {
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.nextValue();
+                },
+                null
+            )
         );
         executeIncrementally(data, instructions);
     }
@@ -1496,12 +1558,14 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 nextGroupedValue(IonType.INT, 7, 8),
                 nextGroupedValue(IonType.INT, 9, 10),
                 endOfGroup(),
                 exitArgumentGroup(),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1528,6 +1592,7 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaggedArgumentGroup(),
                 nextGroupedValue(IonType.INT, 8, 8),
@@ -1538,6 +1603,7 @@ public class IonCursorBinaryTest {
                 stepOutOfContainer(),
                 endOfGroup(),
                 exitArgumentGroup(),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1565,6 +1631,7 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaggedArgumentGroup(),
                 nextGroupedValue(IonType.INT, 8, 8),
@@ -1575,6 +1642,7 @@ public class IonCursorBinaryTest {
                 stepOutOfContainer(),
                 endOfGroup(),
                 exitArgumentGroup(),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1600,6 +1668,7 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaggedArgumentGroup(),
                 endOfGroup(),
@@ -1607,6 +1676,7 @@ public class IonCursorBinaryTest {
                 enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 endOfGroup(),
                 exitArgumentGroup(),
+                stepOutMacroInvocation(),
                 endStream()
             );
         }
@@ -1643,6 +1713,7 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaggedArgumentGroup(),
                 nextGroupedValue(IonType.INT, 8, 8),
@@ -1658,6 +1729,7 @@ public class IonCursorBinaryTest {
                 nextGroupedValue(IonType.INT, 16, 17),
                 endOfGroup(),
                 exitArgumentGroup(),
+                stepOutMacroInvocation(),
                 container(
                     scalar(), valueMarker(IonType.INT, 20, 20)
                 ),
@@ -1670,7 +1742,7 @@ public class IonCursorBinaryTest {
     public void twoArgumentGroupsFollowedBySingleValueIncremental() throws Exception {
         byte[] data = twoArgumentGroupsFollowedBySingleValue();
         List<Instruction> instructions = Arrays.asList(
-            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0x13), stepInMacroInvocation())),
             instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
             instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
@@ -1719,6 +1791,9 @@ public class IonCursorBinaryTest {
             ),
             instruction(
                 cursor -> {
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
                     if (cursor.nextValue() == NEEDS_DATA) {
                         return NEEDS_DATA;
                     }
@@ -1751,12 +1826,14 @@ public class IonCursorBinaryTest {
             assertSequence(
                 cursor,
                 nextMacroInvocation(0x13), valueMarker(null, 5, -1),
+                stepInMacroInvocation(),
                 fillArgumentEncodingBitmap(1, 5, 6),
                 enterTaggedArgumentGroup(),
                 nextGroupedValue(IonType.INT, 8, 8),
                 exitArgumentGroup(), // Early exit
                 enterTaglessArgumentGroup(TaglessEncoding.UINT8),
                 exitArgumentGroup(), // Skip over group
+                stepOutMacroInvocation(),
                 container(
                     scalar(), valueMarker(IonType.INT, 20, 20)
                 ),
@@ -1769,7 +1846,7 @@ public class IonCursorBinaryTest {
     public void skipOverArgumentGroupsIncremental() throws Exception {
         byte[] data = twoArgumentGroupsFollowedBySingleValue();
         List<Instruction> instructions = Arrays.asList(
-            instruction(IonCursorBinary::nextValue, macroInvocation(0x13)),
+            instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0x13), stepInMacroInvocation())),
             instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
             instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
@@ -1777,13 +1854,78 @@ public class IonCursorBinaryTest {
             instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
             instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION)),
             // Skip all arguments in the group
-            instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
-            instruction(IonCursorBinary::nextValue, valueMarker(IonType.LIST, 16, 17)),
+            instruction(
+                cursor -> {
+                    if (cursor.exitArgumentGroup() == NEEDS_DATA) {
+                        return NEEDS_DATA;
+                    }
+                    return cursor.stepOutOfEExpression();
+                },
+                event(NEEDS_INSTRUCTION)
+            ),
+            instruction(IonCursorBinary::nextValue, valueMarker(IonType.LIST, 14, 15)),
             // This is the end of the stream, so the response is not used.
             instruction(IonCursorBinary::nextValue, null)
         );
         executeIncrementally(data, instructions);
     }
+
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutPrefixedMacroInvocation(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "F5          | Prefixed macro invocation \n" +
+            "09          | Address 4 (repeat) \n" +
+            "05          | Length 2 \n" +
+            "00          | AEB 0 \n" +
+            "60          | 0 \n" +
+            "93 61 62 63 | \"abc\" \n"
+        )));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            cursor.stepIntoEExpression();
+            cursor.stepOutOfEExpression();
+            assertEquals(START_SCALAR, cursor.nextValue());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutMacroInvocationWithTaglessArgument(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13             | Opcode 0x13 -> macro ID 0x13 \n" +
+            "F9 6E 61 6D 65 | FlexSym with inline text \"name\" \n" +
+            "60             | 0 \n"
+        )));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            cursor.stepIntoEExpression();
+            cursor.nextTaglessValue(TaglessEncoding.FLEX_SYM);
+            cursor.stepOutOfEExpression();
+            assertEquals(START_SCALAR, cursor.nextValue());
+            assertEquals(IonType.INT, cursor.valueTid.type);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutMacroInvocationWithDelimitedArgument(boolean constructFromBytes) throws Exception {
+        byte[] data = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(
+            "13          | Opcode 0x13 -> macro ID 0x13 \n" +
+            "F1 60 F0    | Delimited list [0] \n" +
+            "93 61 62 63 | \"abc\" \n"
+        )));
+        try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
+            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            cursor.stepIntoEExpression();
+            assertEquals(START_CONTAINER, cursor.nextValue());
+            cursor.stepOutOfEExpression();
+            assertEquals(START_SCALAR, cursor.nextValue());
+            assertEquals(IonType.STRING, cursor.valueTid.type);
+        }
+    }
+
 
     // TODO Nest argument groups >8 deep, exercising argument group stack growth.
     // TODO Add more incremental tests for various argument group combinations, improving coverage of NEEDS_DATA cases.

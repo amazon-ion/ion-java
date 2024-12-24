@@ -971,6 +971,11 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     }
 
     @Override
+    protected boolean evaluateUserMacroInvocations() {
+        return true;
+    }
+
+    @Override
     public SymbolTable getSymbolTable() {
         if (cachedReadOnlySymbolTable == null) {
             if (localSymbolMaxOffset < 0 && imports == ION_1_0_IMPORTS) {

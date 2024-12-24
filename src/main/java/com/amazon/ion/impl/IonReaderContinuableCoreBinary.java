@@ -5,7 +5,6 @@ package com.amazon.ion.impl;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonBufferConfiguration;
-import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
@@ -1209,9 +1208,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
     }
 
-    /**
-     * @return the {@link EncodingContext} currently active, or {@code null}.
-     */
+    @Override
     EncodingContext getEncodingContext() {
         return encodingContext;
     }
@@ -1733,16 +1730,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         @Override
         protected PresenceBitmap loadPresenceBitmapIfNecessary(List<Macro.Parameter> signature) {
-            PresenceBitmap presenceBitmap = new PresenceBitmap();
-            presenceBitmap.initialize(signature);
-            if (presenceBitmap.getByteSize() > 0) {
-                if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
-                    throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
-                }
-                presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
-                presenceBitmap.validate();
-            }
-            return presenceBitmap;
+            return IonReaderContinuableCoreBinary.this.loadPresenceBitmap(signature);
         }
 
         @Override
@@ -1788,6 +1776,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         @Override
         protected void stepOutOfEExpression() {
+            validateValueEndIndex(parent.endIndex);
             IonReaderContinuableCoreBinary.super.stepOutOfEExpression();
         }
     }
@@ -1975,6 +1964,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
     }
 
+    /**
+     * @return true if the reader should evaluate user macro invocations; otherwise false. Should be overridden by
+     *   subclasses that support user macros.
+     */
+    protected boolean evaluateUserMacroInvocations() {
+        // The core-level reader does not evaluate macro invocations.
+        return false;
+    }
+
     @Override
     public Event nextValue() {
         lobBytesRead = 0;
@@ -2007,15 +2005,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = super.nextValue();
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
-                if (encodingContext == EncodingContext.getDefault() && !isSystemInvocation()) {
-                    // If the macro evaluator is null, it means there is no active macro table. Do not attempt evaluation,
-                    // but allow the user to do a raw read of the parameters if this is a core-level reader.
-                    // TODO this is used in the tests for the core binary reader. If it cannot be useful elsewhere, remove
-                    //  and refactor the tests.
-                    if (this instanceof IonReaderContinuableApplicationBinary) {
-                        throw new IonException("The user-level binary reader encountered a macro invocation without an active macro table.");
-                    }
-                } else {
+                if (evaluateUserMacroInvocations() || isSystemInvocation()) {
                     expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
                     isEvaluatingEExpression = true;
                     if (evaluateNext()) {
@@ -2055,6 +2045,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public Event stepOutOfContainer() {
         if (isEvaluatingEExpression) {
+            // TODO step out of the macro evaluator only if it's in a container. Otherwise, finish the evaluation early
+            //  and step out of the parent.
             macroEvaluatorIonReader.stepOut();
             event = Event.NEEDS_INSTRUCTION;
             return event;
