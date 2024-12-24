@@ -11,6 +11,10 @@ import com.amazon.ion.IvmNotificationConsumer;
 import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.impl.bin.FlexInt;
 import com.amazon.ion.impl.bin.OpCodes;
+import com.amazon.ion.impl.bin.PresenceBitmap;
+import com.amazon.ion.impl.macro.EncodingContext;
+import com.amazon.ion.impl.macro.Macro;
+import com.amazon.ion.impl.macro.MacroRef;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -18,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.List;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
@@ -54,7 +59,7 @@ class IonCursorBinary implements IonCursor {
     private static final int CONTAINER_STACK_INITIAL_CAPACITY = 8;
 
     // When set as an 'endIndex', indicates that the value is delimited.
-    private static final int DELIMITED_MARKER = -1;
+    static final int DELIMITED_MARKER = -1;
 
     /**
      * The kind of location at which `checkpoint` points.
@@ -769,6 +774,11 @@ class IonCursorBinary implements IonCursor {
                 containerStack[i].endIndex -= shiftAmount;
             }
         }
+        for (int i = argumentGroupIndex; i >= 0; i--) {
+            if (argumentGroupStack[i].pageEndIndex > 0) {
+                argumentGroupStack[i].pageEndIndex -= shiftAmount;
+            }
+        }
     }
 
     /**
@@ -781,7 +791,9 @@ class IonCursorBinary implements IonCursor {
         peekIndex = Math.max(peekIndex - shiftAmount, 0);
         valuePreHeaderIndex -= shiftAmount;
         valueMarker.startIndex -= shiftAmount;
-        valueMarker.endIndex -= shiftAmount;
+        if (valueMarker.endIndex != DELIMITED_MARKER) {
+            valueMarker.endIndex -= shiftAmount;
+        }
         checkpoint -= shiftAmount;
         if (fieldTextMarker.startIndex > -1) {
             fieldTextMarker.startIndex -= shiftAmount;
@@ -842,6 +854,10 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream; otherwise, false.
      */
     private boolean slowSeek(long numberOfBytes) {
+        if (refillableState.pinOffset > -1) {
+            // If data is being pinned, fill the buffer instead of potentially skipping directly from the source.
+            return !fillAt(offset, numberOfBytes);
+        }
         long size = availableAt(offset);
         long unbufferedBytesToSkip = numberOfBytes - size;
         if (unbufferedBytesToSkip <= 0) {
@@ -1888,12 +1904,79 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Loads the presence bitmap for the given signature. Upon calling this method, `peekIndex` must point to the
+     * first byte in the argument encoding bitmap (if applicable for the signature).
+     * @param signature the signature of the macro invocation for which to read a presence bitmap.
+     * @return the presence bitmap.
+     */
+    protected PresenceBitmap loadPresenceBitmap(List<Macro.Parameter> signature) {
+        // TODO performance: reuse or pool the presence bitmaps. Ideally, it would not be necessary to allocate them
+        //  at all, but especially not when an invocation does not even have an argument encoding bitmap.
+        PresenceBitmap presenceBitmap = new PresenceBitmap();
+        presenceBitmap.initialize(signature);
+        if (presenceBitmap.getByteSize() > 0) {
+            if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
+                throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
+            }
+        }
+        // Note: when there is no AEB, the following initializes the presence bitmap to "EXPRESSION" for each parameter.
+        presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
+        presenceBitmap.validate();
+        return presenceBitmap;
+    }
+
+    /**
+     * @return the {@link EncodingContext} currently active, or {@code null}.
+     */
+    EncodingContext getEncodingContext() {
+        throw new IonException("There is no encoding context at the IonCursor level.");
+    }
+
+    /**
+     * Skips past the current macro parameter.
+     * @param parameter the parameter to skip.
+     */
+    private void uncheckedSkipMacroParameter(Macro.Parameter parameter) {
+        switch (parameter.getType()) {
+            case Tagged:
+                uncheckedNextToken();
+                break;
+            case Int8:
+            case Uint8:
+                peekIndex += 1;
+                break;
+            case Int16:
+            case Uint16:
+            case Float16:
+                peekIndex += 2;
+                break;
+            case Int32:
+            case Uint32:
+            case Float32:
+                peekIndex += 4;
+                break;
+            case Int64:
+            case Uint64:
+            case Float64:
+                peekIndex += 8;
+                break;
+            case FlexUint:
+                uncheckedReadFlexUInt_1_1();
+                break;
+            case FlexInt:
+                uncheckedReadFlexInt_1_1();
+                break;
+            case FlexSym:
+                uncheckedReadFlexSym_1_1(valueMarker);
+                break;
+        }
+    }
+
+    /**
      * Skips past the remaining elements of the current delimited container.
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     boolean uncheckedSkipRemainingDelimitedContainerElements_1_1() {
-        // TODO this needs to be updated to handle the case where the container contains non-prefixed macro invocations,
-        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         while (event != Event.END_CONTAINER) {
             event = Event.NEEDS_DATA;
             while (uncheckedNextToken());
@@ -1905,18 +1988,123 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Skips past the current macro parameter, ensuring enough bytes are available in the stream.
+     * @param parameter the parameter to skip.
+     * @return true if the end of the stream was reached before skipping past the parameter; otherwise, false.
+     */
+    private boolean slowSkipMacroParameter(Macro.Parameter parameter) {
+        switch (parameter.getType()) {
+            case Tagged:
+                slowNextToken();
+                if (event == Event.NEEDS_DATA) {
+                    return true;
+                }
+                break;
+            case Int8:
+            case Uint8:
+                if (!fillAt(peekIndex, 1)) {
+                    return true;
+                }
+                peekIndex += 1;
+                break;
+            case Int16:
+            case Uint16:
+            case Float16:
+                if (!fillAt(peekIndex, 2)) {
+                    return true;
+                }
+                peekIndex += 2;
+                break;
+            case Int32:
+            case Uint32:
+            case Float32:
+                if (!fillAt(peekIndex, 4)) {
+                    return true;
+                }
+                peekIndex += 4;
+                break;
+            case Int64:
+            case Uint64:
+            case Float64:
+                if (!fillAt(peekIndex, 8)) {
+                    return true;
+                }
+                peekIndex += 8;
+                break;
+            case FlexUint:
+                if (slowReadFlexUInt_1_1() < 0) {
+                    return true;
+                }
+                break;
+            case FlexInt:
+                if (slowReadFlexInt_1_1(valueMarker)) {
+                    return true;
+                }
+                break;
+            case FlexSym:
+                if (FlexSymType.INCOMPLETE == slowSkipFlexSym_1_1(valueMarker)) {
+                    return true;
+                }
+                break;
+        }
+        return false;
+    }
+
+    /**
+     * Skips past the current macro invocation, ensuring enough bytes are available in the stream.
+     * @return true if the end of the stream was reached before skipping past the invocation; otherwise, false.
+     */
+    private boolean skipMacroInvocation() {
+        EncodingContext context = isSystemInvocation ? EncodingContext.getDefault() : getEncodingContext();
+        Macro macro = context.getMacroTable().get(MacroRef.byId((int) macroInvocationId));
+        if (macro == null) {
+            throw new IonException(String.format("Cannot skip over unknown macro with ID %d.", macroInvocationId));
+        }
+        stepIntoEExpression();
+        List<Macro.Parameter > signature = macro.getSignature();
+        PresenceBitmap presenceBitmap = loadPresenceBitmap(signature);
+        for (int i = 0; i < signature.size(); i++) {
+            Macro.Parameter parameter = signature.get(i);
+            long parameterPresence = presenceBitmap.get(i);
+            if (parameterPresence == PresenceBitmap.VOID) {
+                continue;
+            }
+            if (parameterPresence == PresenceBitmap.GROUP) {
+                Macro.ParameterEncoding encoding = parameter.getType();
+                if (encoding == Macro.ParameterEncoding.Tagged) {
+                    enterTaggedArgumentGroup();
+                } else {
+                    enterTaglessArgumentGroup(encoding.taglessEncodingKind);
+                }
+                if (event == Event.NEEDS_DATA) {
+                    return true;
+                }
+                if (exitArgumentGroup() == Event.NEEDS_DATA) {
+                    return true;
+                }
+            } else {
+                // A single expression
+                if (isSlowMode) {
+                    if (slowSkipMacroParameter(parameter)) {
+                        return true;
+                    }
+                } else {
+                    uncheckedSkipMacroParameter(parameter);
+                }
+            }
+        }
+        stepOutOfEExpression();
+        return false;
+    }
+
+    /**
      * Skips past the remaining elements of the current delimited container, ensuring enough bytes are available in
      * the stream.
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     private boolean slowSkipRemainingDelimitedContainerElements_1_1() {
-        // TODO this needs to be updated ot handle the case where the container contains non-prefixed macro invocations,
-        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
         while (event != Event.END_CONTAINER) {
             slowNextToken();
-            if (event == Event.START_CONTAINER && valueMarker.endIndex == DELIMITED_MARKER) {
-                seekPastDelimitedContainer_1_1();
-            }
             if (event == Event.NEEDS_DATA) {
                 return true;
             }
@@ -2127,17 +2315,24 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the current container has been reached; otherwise, false.
      */
     private boolean checkContainerEnd() {
-        if (peekIndex < valueMarker.endIndex ||  parent.endIndex > peekIndex) {
+        if (
+            // The end of the current value hasn't been reached.
+            peekIndex < valueMarker.endIndex ||
+            // The end of the parent container hasn't been reached.
+            parent.endIndex > peekIndex ||
+            // A container was just encountered, but not yet stepped in.
+            checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER
+        ) {
             return false;
-        }
-        if (parent.endIndex == DELIMITED_MARKER) {
-            return isSlowMode ? slowIsDelimitedEnd_1_1() : uncheckedIsDelimitedEnd_1_1();
         }
         if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
             valueTid = null;
             fieldSid = -1;
             return true;
+        }
+        if (parent.endIndex == DELIMITED_MARKER || parent.typeId.isDelimited) {
+            return isSlowMode ? slowIsDelimitedEnd_1_1() : uncheckedIsDelimitedEnd_1_1();
         }
         throw new IonException("Contained values overflowed the parent container length.");
     }
@@ -2245,6 +2440,22 @@ class IonCursorBinary implements IonCursor {
         if (valueMarker.endIndex >= 0 && endIndex != valueMarker.endIndex) {
             // valueMarker.endIndex refers to the end of the annotation wrapper.
             throw new IonException("Annotation wrapper length does not match the length of the wrapped value.");
+        }
+    }
+
+    /**
+     * Validates that the value on which the cursor is positioned is at the expected location. This may be useful after
+     * traversing a length-prefixed macro invocation's arguments in order to verify that the resulting cursor location
+     * matches the invocation's declared end index.
+     * @param expectedIndex the expected location. If negative (indicating a delimited value), no validation
+     *                      is performed.
+     */
+    void validateValueEndIndex(long expectedIndex) {
+        // Note: the maximum of peekIndex and valueMarker.endIndex is used because 1) peekIndex may be less than
+        // valueMarker.endIndex if the cursor is positioned on a scalar value that has not been consumed, and 2)
+        // valueMarker.endIndex may not have been set if it represented a delimited value.
+        if (expectedIndex >= 0 && Math.max(peekIndex, valueMarker.endIndex) != expectedIndex) {
+            throw new IonException("Value length did not match the length prefix.");
         }
     }
 
@@ -2635,7 +2846,7 @@ class IonCursorBinary implements IonCursor {
         // Push the remaining length onto the stack, seek past the container's header, and increase the depth.
         pushContainer();
         parent.typeId = valueTid;
-        parent.endIndex = valueTid.isDelimited ? DELIMITED_MARKER : valueMarker.endIndex;
+        parent.endIndex = valueMarker.endIndex;
         valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
         reset();
@@ -2662,7 +2873,7 @@ class IonCursorBinary implements IonCursor {
             isSlowMode = false;
         }
         parent.typeId = valueMarker.typeId;
-        parent.endIndex = valueTid.isDelimited ? DELIMITED_MARKER : valueMarker.endIndex;
+        parent.endIndex = valueMarker.endIndex;
         setCheckpointBeforeUnannotatedTypeId();
         valueTid = null;
         hasAnnotations = false;
@@ -2670,17 +2881,27 @@ class IonCursorBinary implements IonCursor {
         return event;
     }
 
+    /**
+     * Exits slow mode if possible, allowing the current container to be read without repetitive buffer boundary checks.
+     * This method should only be called when the cursor is in slow mode.
+     * @return true if the cursor remains in slow mode; false if it exited slow mode.
+     */
+    private boolean checkAndSetContainerMode() {
+        if (containerIndex != refillableState.fillDepth - 1) {
+            if (valueMarker.endIndex > DELIMITED_MARKER && valueMarker.endIndex <= limit) {
+                refillableState.fillDepth = containerIndex + 1;
+            } else {
+                return true;
+            }
+        }
+        isSlowMode = false;
+        return false;
+    }
+
     @Override
     public Event stepIntoContainer() {
-        if (isSlowMode) {
-            if (containerIndex != refillableState.fillDepth - 1) {
-                if (valueMarker.endIndex > DELIMITED_MARKER && valueMarker.endIndex <= limit) {
-                    refillableState.fillDepth = containerIndex + 1;
-                } else {
-                    return slowStepIntoContainer();
-                }
-            }
-            isSlowMode = false;
+        if (isSlowMode && checkAndSetContainerMode()) {
+            return slowStepIntoContainer();
         }
         uncheckedStepIntoContainer();
         return event;
@@ -2688,45 +2909,108 @@ class IonCursorBinary implements IonCursor {
 
     /**
      * Steps into an e-expression, treating it as a logical container.
+     * @return `event`, which conveys the result.
      */
-    void stepIntoEExpression() {
+    Event stepIntoEExpression() {
         if (valueTid == null || !valueTid.isMacroInvocation) {
             throw new IonException("Must be positioned on an e-expression.");
         }
+        if (isSlowMode && checkAndSetContainerMode()) {
+            if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+                return event;
+            }
+        }
         pushContainer();
         parent.typeId = valueTid;
-        // TODO support length prefixed e-expressions.
-        // TODO when the length is known to be within the buffer, exit slow mode.
-        parent.endIndex = DELIMITED_MARKER;
+        // Note: valueMarker.endIndex will be DELIMITED_MARKER for regular e-expressions, and a positive value for
+        // length-prefixed e-expressions.
+        parent.endIndex = valueMarker.endIndex;
         valueTid = null;
+        setCheckpointBeforeUnannotatedTypeId();
         event = Event.NEEDS_INSTRUCTION;
-        reset();
+        return event;
     }
 
     /**
-     * Steps out of an e-expression, restoring the context of the parent container (if any).
+     * Seeks to the end of the value on which the cursor is positioned (if any), or to the end of the e-expression
+     * (if known). Note: it is up to the caller to ensure that the e-expression is at its end when this method is
+     * called.
+     * @return true if not enough data was available in the stream to seek to the target location; otherwise, false.
      */
-    void stepOutOfEExpression() {
+    private boolean slowSeekToEndOfEExpression() {
+        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+            return true;
+        }
+
+        event = Event.NEEDS_DATA;
+        // Seek past any remaining bytes from the previous value.
+        long targetIndex;
+        if (parent.endIndex == DELIMITED_MARKER) {
+            // The e-expression is not length-prefixed and its end has not previously been calculated. Just seek
+            // to the end of the current child value. The caller ensures that this is the last value in the expression.
+            targetIndex = valueMarker.endIndex;
+        } else {
+            targetIndex = parent.endIndex;
+        }
+        if (targetIndex > peekIndex) {
+            if (targetIndex > limit) {
+                if (slowSeek(targetIndex - offset)) {
+                    return true;
+                }
+            } else {
+                peekIndex = targetIndex;
+            }
+        } else if (targetIndex == DELIMITED_MARKER && valueTid != null) {
+            seekPastDelimitedContainer_1_1();
+            return event == Event.NEEDS_DATA;
+        }
+        return false;
+    }
+
+    /**
+     * Seeks to the end of the value on which the cursor is positioned (if any), or to the end of the e-expression
+     * (if known). Note: it is up to the caller to ensure either that the e-expression is buffered in its entirety
+     * and either 1) it is at its end when this method is called, or 2) the end of the e-expression is known due to
+     * being length-prefixed or previously calculated.
+     */
+    private void uncheckedSeekToEndOfEExpression() {
+        if (parent.endIndex == DELIMITED_MARKER) {
+            if (valueMarker.endIndex > peekIndex) {
+                peekIndex = valueMarker.endIndex;
+            } else if (valueMarker.endIndex == DELIMITED_MARKER && valueTid != null) {
+                seekPastDelimitedContainer_1_1();
+            }
+        } else {
+            peekIndex = parent.endIndex;
+        }
+    }
+
+    /**
+     * Steps out of an e-expression, restoring the context of the parent container (if any). Note: it is up to the
+     * caller to ensure either that either 1) the e-expression is at its end when this method is called, or 2) the end
+     * of the e-expression is known due to being length-prefixed or previously calculated. This method will skip any
+     * bytes remaining in the value on which it is currently positioned, then step out of the e-expression. It will
+     * *not* attempt to interpret the e-expression's signature and attempt to find its actual end.
+     * @return NEEDS_INSTRUCTION if successful, or  NEEDS_DATA if more data is required to skip past the value on which
+     *  the cursor is positioned (if any).
+     */
+    Event stepOutOfEExpression() {
         if (parent == null) {
             throw new IonException("Cannot step out at the top level.");
         }
         if (!parent.typeId.isMacroInvocation) {
             throw new IonException("Not positioned within an e-expression.");
         }
-        // TODO support early step-out when support for lazy parsing of e-expressions is added (including continuable
-        //  reading).
-        if (valueMarker.endIndex > peekIndex) {
-            peekIndex = valueMarker.endIndex;
-        }
-        setCheckpointBeforeUnannotatedTypeId();
-        if (--containerIndex >= 0) {
-            parent = containerStack[containerIndex];
+        if (isSlowMode) {
+            if (slowSeekToEndOfEExpression()) {
+                return event;
+            }
+            slowPopContainer();
         } else {
-            parent = null;
-            containerIndex = -1;
+            uncheckedSeekToEndOfEExpression();
+            uncheckedPopContainer();
         }
-        valueTid = null;
-        event = Event.NEEDS_INSTRUCTION;
+        return event;
     }
 
     /**
@@ -2735,6 +3019,29 @@ class IonCursorBinary implements IonCursor {
     private void resumeSlowMode() {
         refillableState.fillDepth = -1;
         isSlowMode = true;
+    }
+
+    /**
+     * Pops from the container stack and resets the cursor's state as necessary, including resuming slow mode if
+     * the cursor's buffer is not known to extend to the remaining values at the stepped-out depth.
+     */
+    private void uncheckedPopContainer() {
+        setCheckpointBeforeUnannotatedTypeId();
+        if (--containerIndex >= 0) {
+            parent = containerStack[containerIndex];
+            if (refillableState != null && containerIndex < refillableState.fillDepth) {
+                resumeSlowMode();
+            }
+        } else {
+            parent = null;
+            containerIndex = -1;
+            if (refillableState != null) {
+                resumeSlowMode();
+            }
+        }
+        valueTid = null;
+        event = Event.NEEDS_INSTRUCTION;
+        hasAnnotations = false;
     }
 
     @Override
@@ -2756,25 +3063,25 @@ class IonCursorBinary implements IonCursor {
         } else {
             peekIndex = parent.endIndex;
         }
-        if (!isSlowMode) {
-            setCheckpointBeforeUnannotatedTypeId();
-        }
+        uncheckedPopContainer();
+        return event;
+    }
+
+    /**
+     * Pops from the container stack and resets the cursor's state as necessary. This method is called when `isSlowMode`
+     * is true. Otherwise, {@link #uncheckedPopContainer()} must be called.
+     */
+    private void slowPopContainer() {
+        setCheckpointBeforeUnannotatedTypeId();
         if (--containerIndex >= 0) {
             parent = containerStack[containerIndex];
-            if (refillableState != null && containerIndex < refillableState.fillDepth) {
-                resumeSlowMode();
-            }
         } else {
             parent = null;
             containerIndex = -1;
-            if (refillableState != null) {
-                resumeSlowMode();
-            }
         }
-
-        valueTid = null;
         event = Event.NEEDS_INSTRUCTION;
-        return event;
+        valueTid = null;
+        hasAnnotations = false;
     }
 
     /**
@@ -2804,16 +3111,7 @@ class IonCursorBinary implements IonCursor {
             }
             peekIndex = offset;
         }
-        setCheckpointBeforeUnannotatedTypeId();
-        if (--containerIndex >= 0) {
-            parent = containerStack[containerIndex];
-        } else {
-            parent = null;
-            containerIndex = -1;
-        }
-        event = Event.NEEDS_INSTRUCTION;
-        valueTid = null;
-        hasAnnotations = false;
+        slowPopContainer();
         return event;
     }
 
@@ -2822,11 +3120,11 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the container has been reached; otherwise, false.
      */
     private boolean uncheckedNextContainedToken() {
-        if (parent.endIndex == DELIMITED_MARKER) {
-            return uncheckedIsDelimitedEnd_1_1();
-        } else if (parent.endIndex == peekIndex) {
+        if (parent.endIndex == peekIndex) {
             event = Event.END_CONTAINER;
             return true;
+        } else if (parent.endIndex == DELIMITED_MARKER || parent.typeId.isDelimited) {
+            return uncheckedIsDelimitedEnd_1_1();
         } else if (parent.endIndex < peekIndex) {
             throw new IonException("Contained values overflowed the parent container length.");
         } else if (parent.typeId.type == IonType.STRUCT) {
@@ -2871,7 +3169,11 @@ class IonCursorBinary implements IonCursor {
      */
     private boolean uncheckedNextToken() {
         if (peekIndex < valueMarker.endIndex) {
+            // TODO length-prefixed macro invocations currently follow this path. However, such invocations may
+            //  expand to system values and need to be checked before being skipped over.
             peekIndex = valueMarker.endIndex;
+        } else if (macroInvocationId >= 0) {
+            skipMacroInvocation();
         } else if (valueTid != null && valueTid.isDelimited) {
             seekPastDelimitedContainer_1_1();
         }
@@ -2986,25 +3288,24 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream; otherwise, false.
      */
     private boolean slowSkipRemainingValueBytes() {
-        // TODO this needs to be updated ot handle the case where the value is a non-prefixed macro invocation,
-        //  as the length of these invocations is unknown to the cursor. Input from the macro evaluator is needed.
-        if (valueMarker.endIndex == DELIMITED_MARKER && valueTid != null && valueTid.isDelimited) {
+        if (macroInvocationId >= 0 && valueMarker.endIndex == DELIMITED_MARKER) {
+            if (skipMacroInvocation()) {
+                return true;
+            }
+        } else if (valueMarker.endIndex == DELIMITED_MARKER && valueTid != null && valueTid.isDelimited) {
             seekPastDelimitedContainer_1_1();
             if (event == Event.NEEDS_DATA) {
                 return true;
             }
-        } else if (refillableState.pinOffset > -1) {
-            // Bytes in the buffer are being pinned, so buffer the remaining bytes instead of seeking past them.
-            if (!fillAt(refillableState.pinOffset, valueMarker.endIndex - refillableState.pinOffset)) {
-                return true;
-            }
-            offset = valueMarker.endIndex;
         } else if (limit >= valueMarker.endIndex) {
             offset = valueMarker.endIndex;
-        } else if (slowSeek(valueMarker.endIndex - offset)) {
-            return true;
+            peekIndex = valueMarker.endIndex;
+        } else {
+            if (slowSeek(valueMarker.endIndex - offset)) {
+                return true;
+            }
+            peekIndex = valueMarker.endIndex;
         }
-        peekIndex = offset;
         valuePreHeaderIndex = peekIndex;
         if (refillableState.fillDepth > containerIndex) {
             // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
@@ -3369,7 +3670,11 @@ class IonCursorBinary implements IonCursor {
                 break;
             case NEEDS_INSTRUCTION:
                 // A macro invocation header has just been read.
-                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                // Note: e-expression checkpoints are currently treated the same as container literal checkpoints.
+                // this could be changed in the future, if necessary, by adding a distinct CheckpointLocation for
+                // AFTER_E_EXPRESSION_HEADER, and potentially a distinct Event type for START_E_EXPRESSION. We will
+                // defer this work until we find it's necessary.
+                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 break;
             default:
                 throw new IllegalStateException();
@@ -3483,14 +3788,10 @@ class IonCursorBinary implements IonCursor {
      * @return true if there was not enough data to complete the seek; otherwise, false.
      */
     private boolean seekToEndOfArgumentGroupPage(ArgumentGroupMarker group) {
-        if (isSlowMode) {
-            if (slowSeek(group.pageEndIndex - offset)) {
-                return true;
-            }
-            peekIndex = offset;
-        } else {
-            peekIndex = group.pageEndIndex;
+        if (isSlowMode && slowSeek(group.pageEndIndex - offset)) {
+            return true;
         }
+        peekIndex = group.pageEndIndex;
         return false;
     }
 
@@ -3573,10 +3874,6 @@ class IonCursorBinary implements IonCursor {
      */
     public Event exitArgumentGroup() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
-        if (group.pageEndIndex >= 0 && peekIndex >= group.pageEndIndex) {
-            event = Event.NEEDS_INSTRUCTION;
-            return event;
-        }
         event = Event.NEEDS_DATA;
         if (group.taglessEncoding == null) {
             return exitTaggedArgumentGroup(group);

@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1585,6 +1586,181 @@ public class EncodingDirectiveCompilationTest {
             assertEquals(1, reader.intValue());
             assertEquals(IonType.INT, reader.next());
             assertEquals(2, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void taglessExpressionGroupInDelimitedStruct(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "value");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignatureFromDatagram(writer, symbols, LOADER.load("uint8::value '*'"));
+        writeVariableExpansion(writer, symbols, "value");
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        Macro expectedMacro = new TemplateMacro(
+            Collections.singletonList(new Macro.Parameter("value", Macro.ParameterEncoding.Uint8, Macro.ParameterCardinality.ZeroOrMore)),
+            Collections.singletonList(new Expression.VariableRef(0))
+        );
+
+        writer.stepInStruct(false);
+        {
+            writer.writeFieldName(SystemSymbols_1_1.EMPTY_TEXT);
+            writer.stepInEExp(0, false, expectedMacro);
+            {
+                writer.stepInExpressionGroup(false);
+                {
+                    writer.writeInt(1);
+                    writer.writeInt(2);
+                }
+                writer.stepOut();
+            }
+            writer.stepOut();
+        }
+        writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+
+        IonReaderBuilder incrementalReaderBuilder = IonReaderBuilder.standard().withIncrementalReadingEnabled(true);
+        Supplier<IonReader> incrementalReaderSupplier = () -> inputType == InputType.BYTE_ARRAY
+            ? incrementalReaderBuilder.build(data)
+            : incrementalReaderBuilder.build(new ByteArrayInputStream(data));
+
+        // Fully traverse the value
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(1, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(2, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+
+        // Skip by early-step out
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+
+        // Skip by step-over
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void taglessParametersInDelimitedStruct(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "foo", "u8", "i16", "u32", "i64");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignatureFromDatagram(
+            writer,
+            symbols,
+            LOADER.load("uint8::u8"),
+            LOADER.load("int16::i16"),
+            LOADER.load("uint32::u32"),
+            LOADER.load("int64::i64")
+        );
+        writer.stepInList(true);
+        writeVariableExpansion(writer, symbols, "u8");
+        writeVariableExpansion(writer, symbols, "i16");
+        writeVariableExpansion(writer, symbols, "u32");
+        writeVariableExpansion(writer, symbols, "i64");
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        Macro expectedMacro = new TemplateMacro(
+            Arrays.asList(
+                new Macro.Parameter("u8", Macro.ParameterEncoding.Uint8, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("i16", Macro.ParameterEncoding.Int16, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("u32", Macro.ParameterEncoding.Uint32, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("i64", Macro.ParameterEncoding.Int64, Macro.ParameterCardinality.ExactlyOne)
+            ),
+            Arrays.asList(
+                new Expression.ListValue(Collections.emptyList(), 0, 5),
+                new Expression.VariableRef(0),
+                new Expression.VariableRef(1),
+                new Expression.VariableRef(2),
+                new Expression.VariableRef(3)
+            )
+        );
+
+        writer.stepInStruct(false);
+        {
+            writer.writeFieldName(SystemSymbols_1_1.EMPTY_TEXT);
+            writer.stepInEExp(0, false, expectedMacro);
+            {
+                writer.writeInt(1);
+                writer.writeInt(2);
+                writer.writeInt(3);
+                writer.writeInt(4);
+            }
+            writer.stepOut();
+        }
+        writer.stepOut();
+        byte[] data = getBytes(writer, out);
+
+        IonReaderBuilder incrementalReaderBuilder = IonReaderBuilder.standard().withIncrementalReadingEnabled(true);
+        Supplier<IonReader> incrementalReaderSupplier = () -> inputType == InputType.BYTE_ARRAY
+            ? incrementalReaderBuilder.build(data)
+            : incrementalReaderBuilder.build(new ByteArrayInputStream(data));
+
+        // Fully traverse the value
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(1, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(2, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(3, reader.intValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(4, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+
+        // Skip by early-step out
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+
+        // Skip by step-over
+        try (IonReader reader = incrementalReaderSupplier.get()) {
+            assertEquals(IonType.STRUCT, reader.next());
             assertNull(reader.next());
         }
     }
