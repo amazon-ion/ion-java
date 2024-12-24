@@ -252,16 +252,16 @@ public abstract class EExpressionArgsReader {
      */
     private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
         Macro macro = loadMacro();
+        stepIntoEExpression();
         List<Macro.Parameter> signature = macro.getSignature();
         PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
         int invocationStartIndex = expressions.size();
         expressions.add(Expression.Placeholder.INSTANCE);
         int numberOfParameters = signature.size();
-        stepIntoEExpression();
         for (int i = 0; i < numberOfParameters; i++) {
             readParameter(
                 signature.get(i),
-                presenceBitmap == null ? 0 : presenceBitmap.get(i),
+                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
                 expressions,
                 i == (numberOfParameters - 1)
             );

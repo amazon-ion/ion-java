@@ -6111,5 +6111,345 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipTopLevelMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0x04, 0x00, // Macro invocation 4 (repeat), AEB 0
+                0x60, // 0
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        // Note: because the macro expands to nothing, it requires only one next() to position on the value that
+        // follows.
+        assertSequence(
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void skipTopLevelPrefixedMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF5, 0x09, 0x05, 0x00, // Macro invocation, address 4 (repeat), length 2, AEB 0
+                0x60, // 0
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        // Note: because the macro expands to nothing, it requires only one next() to position on the value that
+        // follows.
+        assertSequence(
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void topLevelPrefixedMacroInvocationIsInvalidDueToLengthMismatch(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF5, 0x09, 0x0B, // Macro invocation, address 4 (repeat), length 5 (past the end of the invocation)
+                0x00, // AEB 0, indicating that the second argument isn't present, leaving only one argument.
+                0x60, // 0, the argument
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertThrows(IonException.class, () -> reader.next());
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutDelimitedStructThatContainsMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+            0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x04, 0x00, // Macro invocation 4 (repeat), AEB 0
+                0x60, // 0
+                0x01, 0xF0 // Delimited struct end
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            STEP_OUT,
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutDelimitedStructThatContainsPrefixedMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0xF5, 0x09, 0x05, 0x00, // Macro invocation, address 4 (repeat), length 2, AEB 0
+                0x60, // 0
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepOverDelimitedStructThatContainsMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x04, 0x00, // Macro invocation 4 (repeat), AEB 0
+                0x60, // 0
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void traverseDelimitedStructThatContainsMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x04, 0x00, // Macro invocation 4 (repeat), AEB 0
+                0x60, // 0
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            next(null), // This is (:repeat 0), which expands to nothing.
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void stepOverDelimitedStructThatContainsMacroInvocationWithTaggedExpressionGroup(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x06, 0x02, // Macro invocation 6 (delta), AEB 2 (group)
+                0x0D, // 6-byte expression group
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutDelimitedStructThatContainsMacroInvocationWithTaggedExpressionGroup(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x06, 0x02, // Macro invocation 6 (delta), AEB 2 (group)
+                0x0D, // 6-byte expression group
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    // TODO add a test that modifies the above to step out after beginning macro evaluation but before exhausting it.
+    //  This should end evaluation early and step out of the struct.
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void traverseDelimitedStructThatContainsMacroInvocationWithTaggedExpressionGroup(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x06, 0x02, // Macro invocation 6 (delta), AEB 2 (group)
+                0x0D, // 6-byte expression group
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.valueOf(1)), // Note: the current implementation of 'delta' operates on BigInteger only.
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.valueOf(3)),
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.valueOf(6)),
+            next(null),
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void fillNestedDelimitedLists() throws Exception {
+        readerBuilder = readerBuilder.withBufferConfiguration(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(6) // This ensures the entire delimited container is not fully buffered up front.
+                .onData(byteCountingHandler)
+                .build()
+        );
+        reader = readerForIon11(bytes(
+                0xF1, 0xF1, 0xF1, 0xF0, 0xF0, 0xF0
+            ),
+            false
+        );
+        assertSequence(
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void fillNestedEmptyDelimitedList() throws Exception {
+        readerBuilder = readerBuilder.withBufferConfiguration(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(7) // This ensures the entire delimited container is not fully buffered up front.
+                .onData(byteCountingHandler)
+                .build()
+        );
+        reader = readerForIon11(bytes(
+                0xF1, 0xF1, 0xF0, 0xF0,
+                0x60
+            ),
+            false
+        );
+        assertSequence(
+            next(IonType.LIST),
+            next(IonType.INT),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @Test
+    public void fillMultipleNestedDelimitedLists() throws Exception {
+        readerBuilder = readerBuilder.withBufferConfiguration(
+            IonBufferConfiguration.Builder.standard()
+                .withInitialBufferSize(7) // This ensures the entire delimited container is not fully buffered up front.
+                .onData(byteCountingHandler)
+                .build()
+        );
+        reader = readerForIon11(bytes(
+                0xF2,
+                0xF1, 0xF1, 0xF1, 0xF0, 0xF0, 0xF0,
+                0xF1, 0xF1, 0xF1, 0xF0, 0xF0, 0xF0,
+                0xF0
+            ),
+            false
+        );
+        assertSequence(
+            next(IonType.SEXP),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.LIST),
+            STEP_IN,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null),
+            STEP_OUT,
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    // TODO test continuable reading and skipping of non-prefixed macro invocations.
+    // TODO test skipping macro invocations (especially length-prefixed ones) that expand to system values.
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)
 }
