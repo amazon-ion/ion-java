@@ -10,6 +10,7 @@ import com.amazon.ion.util.unreachable
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.IdentityHashMap
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -26,24 +27,16 @@ import java.math.BigInteger
  *
  * ### Implementation Overview:
  *
- * The macro evaluator can be thought of as a stack of containers where each container has a stack of expansion frames
- * (i.e. [ExpansionInfo]). To get the next value at the current depth, the macro evaluator starts with the bottom frame
- * of the top container. Expansion frames may delegate to and/or intercept other expansions that are further up the stack.
+ * The macro evaluator consists of a stack of containers, each of which has an implicit stream (i.e. the
+ * expressions in that container) which is modeled as an expansion frame ([ExpansionInfo]).
  *
- * One might visualize it like this:
- * ```
- * 3. List     : Stream --> Delta --> Variable
- * 2. List     : Stream --> Flatten --> Stream
- * 1. Struct   : Stream --> Variable --> TemplateBody --> Stream --> TemplateBody
- * 0. TopLevel : Stream --> TemplateBody --> TemplateBody
- * ```
- *
- * When calling [expandNext], the evaluator looks at the first expansion frame of the top container in the stack.
- * Then it calls `produceNext` for the first expansion in that container. That expansion may produce a result all on its
- * own, or it may call the next expansion in the chain and return that value (with or without further modification).
- *
- * In practice, it is a little more complex. A single expansion frame may hold more than one child frame sequentially
- * (e.g. `repeat`, `annotate`) or concurrently (e.g. `for`, `flatten`).
+ * When calling [expandNext], the evaluator looks at the top container in the stack and requests the next value from
+ * its expansion frame. That expansion frame may produce a result all on its own (i.e. if the next value is a literal
+ * value), or it may create and delegate to a child expansion frame if the next source expression is something that
+ * needs to be expanded (e.g. macro invocation, variable expansion, etc.). When delegating to a child expansion frame,
+ * the value returned by the child could be intercepted and inspected, modified, or consumed.
+ * In this way, the expansion frames model a lazily constructed expression tree over the flat list of expressions in the
+ * input to the macro evaluator.
  */
 class MacroEvaluator {
 
@@ -60,10 +53,13 @@ class MacroEvaluator {
         private var numExpandedExpressions = 0
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
+        /** Negative view of pool so that we can have O(1) membership checks */
+        private val vendedExpanders: IdentityHashMap<ExpansionInfo, Unit> = IdentityHashMap(32)
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
         fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
             val expansion = expanderPool.removeLastOrNull() ?: ExpansionInfo(this)
+            vendedExpanders[expansion] = Unit
             expansion.expansionKind = expansionKind
             expansion.expressions = expressions
             expansion.i = startInclusive
@@ -76,8 +72,8 @@ class MacroEvaluator {
 
         /** Reclaims an [ExpansionInfo] to the available pool. */
         fun reclaimExpander(ex: ExpansionInfo) {
-            // TODO: This check is O(n). Consider removing this when confident there are no double frees.
-            check(ex !in expanderPool)
+            // Ensure that we are not doubly-adding an ExpansionInfo instance to the pool.
+            check(vendedExpanders.remove(ex, Unit))
             expanderPool.add(ex)
         }
 
@@ -694,6 +690,8 @@ class MacroEvaluator {
      *
      * TODO: "info" is very non-specific; rename to ExpansionFrame next time there's a
      *       non-functional refactoring in this class.
+     *       Alternately, consider ExpansionOperator to reflect the fact that these are
+     *       like operators in an expression tree.
      */
     private class ExpansionInfo(@JvmField val session: Session) {
 
