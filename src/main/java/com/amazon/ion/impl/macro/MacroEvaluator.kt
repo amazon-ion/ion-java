@@ -250,7 +250,7 @@ class MacroEvaluator {
                     when (it) {
                         is StringValue -> newSymbolToken(it.value)
                         is SymbolValue -> it.value
-                        is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
+                        is DataModelValue -> throw IonException("Invalid argument type for 'annotate': ${it.type}")
                         else -> unreachable("Unreachable without stepping in to a container")
                     }
                 }
