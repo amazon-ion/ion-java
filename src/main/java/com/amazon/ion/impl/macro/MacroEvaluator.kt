@@ -6,9 +6,11 @@ import com.amazon.ion.*
 import com.amazon.ion.impl._Private_RecyclingStack
 import com.amazon.ion.impl._Private_Utils.newSymbolToken
 import com.amazon.ion.impl.macro.Expression.*
+import com.amazon.ion.util.unreachable
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.IdentityHashMap
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -21,543 +23,811 @@ import java.math.BigInteger
  *  - Call [stepIn] when positioned on a container to step into that container.
  *  - Call [stepOut] to step out of the current container.
  *
- *  TODO: Add expansion limit
+ * TODO: Make expansion limit configurable.
+ *
+ * ### Implementation Overview:
+ *
+ * The macro evaluator consists of a stack of containers, each of which has an implicit stream (i.e. the
+ * expressions in that container) which is modeled as an expansion frame ([ExpansionInfo]).
+ *
+ * When calling [expandNext], the evaluator looks at the top container in the stack and requests the next value from
+ * its expansion frame. That expansion frame may produce a result all on its own (i.e. if the next value is a literal
+ * value), or it may create and delegate to a child expansion frame if the next source expression is something that
+ * needs to be expanded (e.g. macro invocation, variable expansion, etc.). When delegating to a child expansion frame,
+ * the value returned by the child could be intercepted and inspected, modified, or consumed.
+ * In this way, the expansion frames model a lazily constructed expression tree over the flat list of expressions in the
+ * input to the macro evaluator.
  */
 class MacroEvaluator {
 
     /**
-     * Implementations must update [ExpansionInfo.i] in order for [ExpansionInfo.hasNext] to work properly.
+     * Holds state that is shared across all macro evaluations that are part of this evaluator.
+     * This state pertains to a single "session" of the macro evaluator, and is reset every time [initExpansion] is called.
+     * For now, this includes managing the pool of [ExpansionInfo] and tracking the expansion step limit.
      */
-    private fun interface Expander {
-        fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression
+    private class Session(
+        /** Number of expansion steps at which the evaluation session should be aborted. */
+        private val expansionLimit: Int = 1_000_000
+    ) {
+        /** Internal state for tracking the number of expansion steps. */
+        private var numExpandedExpressions = 0
+        /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
+        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
+        /** Negative view of pool so that we can have O(1) membership checks */
+        private val vendedExpanders: IdentityHashMap<ExpansionInfo, Unit> = IdentityHashMap(32)
 
-        /**
-         * Read the expanded values from one argument, returning exactly one value.
-         * Throws an exception if there is not exactly one expanded value.
-         */
-        fun readExactlyOneExpandedArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression {
-            return readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, argName)
-                ?: throw IonException("Argument $argName expanded to nothing.")
+        /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
+        fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
+            val expansion = expanderPool.removeLastOrNull() ?: ExpansionInfo(this)
+            vendedExpanders[expansion] = Unit
+            expansion.expansionKind = expansionKind
+            expansion.expressions = expressions
+            expansion.i = startInclusive
+            expansion.endExclusive = endExclusive
+            expansion.environment = environment
+            expansion.additionalState = null
+            expansion.childExpansion = null
+            return expansion
         }
 
-        /**
-         * Read the expanded values from one argument, returning zero or one values.
-         * Throws an exception if there is more than one expanded value.
-         */
-        fun readZeroOrOneExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, argName: String): DataModelExpression? {
-            var value: DataModelExpression? = null
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                if (value == null) {
-                    value = it
-                } else {
-                    throw IonException("Too many values for argument $argName")
-                }
-                true // Continue expansion
-            }
-            return value
+        /** Reclaims an [ExpansionInfo] to the available pool. */
+        fun reclaimExpander(ex: ExpansionInfo) {
+            // Ensure that we are not doubly-adding an ExpansionInfo instance to the pool.
+            check(vendedExpanders.remove(ex, Unit))
+            expanderPool.add(ex)
         }
 
-        /**
-         * Reads the expanded values from one argument.
-         *
-         * The callback should return true to continue the expansion or false to abandon the expansion early.
-         */
-        fun readExpandedArgumentValues(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator, callback: (DataModelExpression) -> Boolean) {
-            val i = expansionInfo.i
-            expansionInfo.nextSourceExpression()
-
-            macroEvaluator.pushExpansion(
-                expansionKind = ExpansionKind.Values,
-                argsStartInclusive = i,
-                // There can only be one top-level expression for an argument (it's either a value, macro, or
-                // expression group) so we can set the end to one more than the start.
-                argsEndExclusive = i + 1,
-                environment = expansionInfo.environment ?: Environment.EMPTY,
-                expressions = expansionInfo.expressions!!,
-            )
-
-            val depth = macroEvaluator.expansionStack.size()
-            var expr = macroEvaluator.expandNext(depth)
-            var continueExpansion: Boolean
-            while (expr != null) {
-                continueExpansion = callback(expr)
-                if (!continueExpansion) break
-                expr = macroEvaluator.expandNext(depth)
-            }
-            // Step back out to the original depth (in case we exited the expansion early)
-            while (macroEvaluator.expansionStack.size() > depth) {
-                macroEvaluator.expansionStack.pop()
+        fun incrementStepCounter() {
+            numExpandedExpressions++
+            if (numExpandedExpressions > expansionLimit) {
+                // Technically, we are not counting "steps" because we don't have a true definition of what a "step" is,
+                // but this is probably a more user-friendly message than trying to explain what we're actually counting.
+                throw IonException("Macro expansion exceeded limit of $expansionLimit steps.")
             }
         }
 
-        /**
-         * Reads the first expanded value from one argument.
-         *
-         * Does not perform any sort of cardinality check, and leaves the evaluator stepped into the level of the
-         * returned expression. Returns null if the argument expansion produces no values.
-         */
-        fun readFirstExpandedArgumentValue(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): DataModelExpression? {
-            val i = expansionInfo.i
-            expansionInfo.nextSourceExpression()
-
-            macroEvaluator.pushExpansion(
-                expansionKind = ExpansionKind.Values,
-                argsStartInclusive = i,
-                // There can only be one top-level expression for an argument (it's either a value, macro, or
-                // expression group) so we can set the end to one more than the start.
-                argsEndExclusive = i + 1,
-                environment = expansionInfo.environment ?: Environment.EMPTY,
-                expressions = expansionInfo.expressions!!,
-            )
-
-            val depth = macroEvaluator.expansionStack.size()
-            return macroEvaluator.expandNext(depth)
+        fun reset() {
+            numExpandedExpressions = 0
         }
     }
 
-    private object SimpleExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            return expansionInfo.nextSourceExpression()
+    /**
+     * A container in the macro evaluator's [containerStack].
+     */
+    private data class ContainerInfo(var type: Type = Type.Uninitialized, private var _expansion: ExpansionInfo? = null) {
+        enum class Type { TopLevel, List, Sexp, Struct, Uninitialized }
+
+        fun close() {
+            _expansion?.close()
+            _expansion = null
+            type = Type.Uninitialized
+        }
+
+        var expansion: ExpansionInfo
+            get() = _expansion!!
+            set(value) { _expansion = value }
+
+        fun produceNext(): ExpansionOutputExpression {
+            return expansion.produceNext()
         }
     }
 
-    private object AnnotateExpander : Expander {
-        // TODO: Handle edge cases mentioned in https://github.com/amazon-ion/ion-docs/issues/347
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val annotations = mutableListOf<SymbolToken>()
-
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                when (it) {
-                    is StringValue -> annotations.add(newSymbolToken(it.value))
-                    is SymbolValue -> annotations.add(it.value)
-                    is DataModelValue -> throw IonException("Annotation arguments must be string or symbol; found: ${it.type}")
-                    is FieldName -> TODO("Unreachable. Must encounter a StructValue first.")
-                }
-            }
-
-            val valueToAnnotate = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.Annotate.signature[1].variableName)
-
-            // It cannot be a FieldName expression because we haven't stepped into a struct, so it must be DataModelValue
-            valueToAnnotate as DataModelValue
-            // Combine the annotations
-            annotations.addAll(valueToAnnotate.annotations)
-            return valueToAnnotate.withAnnotations(annotations)
-        }
-    }
-
-    private object MakeStringExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val sb = StringBuilder()
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                when (it) {
-                    is StringValue -> sb.append(it.value)
-                    is SymbolValue -> sb.append(it.value.assumeText())
-                    is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
-                    is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
-                }
-                true // continue expansion
-            }
-            return StringValue(value = sb.toString())
-        }
-    }
-
-    private object MakeSymbolExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val sb = StringBuilder()
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                when (it) {
-                    is StringValue -> sb.append(it.value)
-                    is SymbolValue -> sb.append(it.value.assumeText())
-                    is DataModelValue -> throw IonException("Invalid argument type for 'make_symbol': ${it.type}")
-                    is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
-                }
-                true // continue expansion
-            }
-            return SymbolValue(value = newSymbolToken(sb.toString()))
-        }
-    }
-
-    private object MakeBlobExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            // TODO: See if we can create a `ByteArrayView` or similar class based on the principles of a Persistent
-            //       Collection in order to minimize copying (and therefore allocation).
-            val baos = ByteArrayOutputStream()
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                when (it) {
-                    is LobValue -> baos.write(it.value)
-                    is DataModelValue -> throw IonException("Invalid argument type for 'make_blob': ${it.type}")
-                    is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
-                }
-                true // continue expansion
-            }
-            return BlobValue(value = baos.toByteArray())
-        }
-    }
-
-    private object MakeDecimalExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val coefficient = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[0].variableName)
-                .let { it as? IntValue }
-                ?.bigIntegerValue
-                ?: throw IonException("Coefficient must be an integer")
-            val exponent = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeDecimal.signature[1].variableName)
-                .let { it as? IntValue }
-                ?.bigIntegerValue
-                ?: throw IonException("Exponent must be an integer")
-
-            return DecimalValue(value = BigDecimal(coefficient, -1 * exponent.intValueExact()))
-        }
-    }
-
-    private object MakeTimestampExpander : Expander {
-        private fun readOptionalIntArg(
-            signatureIndex: Int,
-            expansionInfo: ExpansionInfo,
-            macroEvaluator: MacroEvaluator
-        ): Int? {
-            if (expansionInfo.i == expansionInfo.endExclusive) return null
-            val parameterName = SystemMacro.MakeTimestamp.signature[signatureIndex].variableName
-            val arg = readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, parameterName)
-            return arg?.let {
-                it as? IntValue ?: throw IonException("$parameterName must be an integer")
-                it.longValue.toInt()
-            }
-        }
-
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val year = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, SystemMacro.MakeTimestamp.signature[0].variableName)
-                .let { it as? IntValue ?: throw IonException("year must be an integer") }
-                .longValue.toInt()
-            val month = readOptionalIntArg(1, expansionInfo, macroEvaluator)
-            val day = readOptionalIntArg(2, expansionInfo, macroEvaluator)
-            val hour = readOptionalIntArg(3, expansionInfo, macroEvaluator)
-            val minute = readOptionalIntArg(4, expansionInfo, macroEvaluator)
-            val second = if (expansionInfo.i == expansionInfo.endExclusive) {
-                null
-            } else when (val arg = readZeroOrOneExpandedArgumentValues(expansionInfo, macroEvaluator, SystemMacro.MakeTimestamp.signature[5].variableName)) {
-                null -> null
-                is DecimalValue -> arg.value
-                is IntValue -> arg.longValue.toBigDecimal()
-                else -> throw IonException("second must be a decimal")
-            }
-            val offsetMinutes = readOptionalIntArg(6, expansionInfo, macroEvaluator)
-
-            try {
-                val ts = if (second != null) {
-                    month ?: throw IonException("make_timestamp: month is required when second is present")
-                    day ?: throw IonException("make_timestamp: day is required when second is present")
-                    hour ?: throw IonException("make_timestamp: hour is required when second is present")
-                    minute ?: throw IonException("make_timestamp: minute is required when second is present")
-                    Timestamp.forSecond(year, month, day, hour, minute, second, offsetMinutes)
-                } else if (minute != null) {
-                    month ?: throw IonException("make_timestamp: month is required when minute is present")
-                    day ?: throw IonException("make_timestamp: day is required when minute is present")
-                    hour ?: throw IonException("make_timestamp: hour is required when minute is present")
-                    Timestamp.forMinute(year, month, day, hour, minute, offsetMinutes)
-                } else if (hour != null) {
-                    throw IonException("make_timestamp: minute is required when hour is present")
-                } else {
-                    if (offsetMinutes != null) throw IonException("make_timestamp: offset_minutes is prohibited when hours and minute are not present")
-                    if (day != null) {
-                        month ?: throw IonException("make_timestamp: month is required when day is present")
-                        Timestamp.forDay(year, month, day)
-                    } else if (month != null) {
-                        Timestamp.forMonth(year, month)
-                    } else {
-                        Timestamp.forYear(year)
-                    }
-                }
-                return TimestampValue(value = ts)
-            } catch (e: IllegalArgumentException) {
-                throw IonException(e.message)
-            }
-        }
-    }
-
-    private object SumExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val a = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "a")
-            val b = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "b")
-            if (a !is IntValue || b !is IntValue) throw IonException("operands of sum must be integers")
-            // TODO: Use LongIntValue when possible.
-            return BigIntValue(value = a.bigIntegerValue + b.bigIntegerValue)
-        }
-    }
-
-    private object DeltaExpander : Expander {
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            // TODO: Optimize to use Long and only fallback to BigInteger if needed.
-            // TODO: Optimize for lazy evaluation
-            if (expansionInfo.additionalState == null) {
-                val position = expansionInfo.i
-                var runningTotal = BigInteger.ZERO
-                val values = ArrayDeque<BigInteger>()
-                readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                    when (it) {
-                        is IntValue -> {
-                            runningTotal += it.bigIntegerValue
-                            values += runningTotal
+    /**
+     * Stateless functions that operate on the expansion frames (i.e. [ExpansionInfo]).
+     */
+    // TODO(PERF): It might be possible to optimize this by changing it to an enum without any methods (or even a set of
+    //             integer constants) and converting all their implementations to static methods.
+    private enum class ExpansionKind {
+        Uninitialized {
+            override fun produceNext(thisExpansion: ExpansionInfo): Nothing = throw IllegalStateException("ExpansionInfo not initialized.")
+        },
+        Empty {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue = EndOfExpansion
+        },
+        Stream {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                // If there's a delegate, we'll try that first.
+                val delegate = thisExpansion.childExpansion
+                check(thisExpansion != delegate)
+                if (delegate != null) {
+                    return when (val result = delegate.produceNext()) {
+                        is DataModelExpression -> result
+                        EndOfExpansion -> {
+                            delegate.close()
+                            thisExpansion.childExpansion = null
+                            ContinueExpansion
                         }
-                        is DataModelValue -> throw IonException("Invalid argument type for 'delta': ${it.type}")
-                        is FieldName -> TODO("Unreachable. We shouldn't be able to get here without first encountering a StructValue.")
                     }
-                    true // continue expansion
                 }
 
-                if (values.isEmpty()) {
-                    // Return fake, empty expression group
-                    return ExpressionGroup(position, position)
+                if (thisExpansion.i >= thisExpansion.endExclusive) {
+                    thisExpansion.expansionKind = Empty
+                    return ContinueExpansion
                 }
 
-                expansionInfo.additionalState = values
-                expansionInfo.i = position
-            }
+                val next = thisExpansion.expressions[thisExpansion.i]
+                thisExpansion.i++
+                if (next is HasStartAndEnd) thisExpansion.i = next.endExclusive
 
-            val valueQueue = expansionInfo.additionalState as ArrayDeque<BigInteger>
-            val nextValue = valueQueue.removeFirst()
-            if (valueQueue.isEmpty()) {
-                expansionInfo.i = expansionInfo.endExclusive
-            }
-            return BigIntValue(value = nextValue)
-        }
-    }
+                return when (next) {
+                    is DataModelExpression -> next
+                    is InvokableExpression -> {
+                        val macro = next.macro
+                        val argIndices = calculateArgumentIndices(macro, thisExpansion.expressions, next.startInclusive, next.endExclusive)
+                        val newEnvironment = thisExpansion.environment.createChild(thisExpansion.expressions, argIndices)
+                        val expansionKind = ExpansionKind.forMacro(macro)
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = expansionKind,
+                            expressions = macro.body ?: emptyList(),
+                            startInclusive = 0,
+                            endExclusive = macro.body?.size ?: 0,
+                            environment = newEnvironment,
+                        )
+                        ContinueExpansion
+                    }
+                    is ExpressionGroup -> {
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = ExprGroup,
+                            expressions = thisExpansion.expressions,
+                            startInclusive = next.startInclusive,
+                            endExclusive = next.endExclusive,
+                            environment = thisExpansion.environment,
+                        )
 
-    private enum class IfExpander(private val minInclusive: Int, private val maxExclusive: Int) : Expander {
-        IF_NONE(0, 1),
-        IF_SOME(1, -1),
-        IF_SINGLE(1, 2),
-        IF_MULTI(2, -1),
-        ;
+                        ContinueExpansion
+                    }
 
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            var n = 0
-            readExpandedArgumentValues(expansionInfo, macroEvaluator) {
-                n++
-                // If there's no max, then we'll only continue the expansion if we haven't yet reached the min
-                // If there is a max, then we'll continue the expansion until we reach the max
-                if (maxExclusive < 0) n < minInclusive else n < maxExclusive
+                    is VariableRef -> {
+                        thisExpansion.childExpansion = thisExpansion.readArgument(next)
+                        ContinueExpansion
+                    }
+                    Placeholder -> unreachable()
+                }
             }
-            val isConditionTrue = n >= minInclusive && (maxExclusive < 0 || n < maxExclusive)
-            // Save the current expansion index. This is the index of the "true" expression
-            val trueExpressionPosition = expansionInfo.i
-            // Now we are positioned on the "false" expression
-            expansionInfo.nextSourceExpression()
-            if (isConditionTrue) {
-                // If the condition is true, we can set the EXCLUSIVE END of this expansion to the position of the
-                // "false" expression, and then we reset the current index to the position of the "true" expression.
-                expansionInfo.endExclusive = expansionInfo.i
-                expansionInfo.i = trueExpressionPosition
+        },
+        /** Alias of [Stream] to aid in debugging */
+        Variable {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                return Stream.produceNext(thisExpansion)
             }
-            return expansionInfo.nextSourceExpression()
-        }
-    }
+        },
+        /** Alias of [Stream] to aid in debugging */
+        TemplateBody {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                return Stream.produceNext(thisExpansion)
+            }
+        },
+        /** Alias of [Stream] to aid in debugging */
+        ExprGroup {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                return Stream.produceNext(thisExpansion)
+            }
+        },
+        ExactlyOneValueStream {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                if (thisExpansion.additionalState != 1) {
+                    return when (val firstValue = Stream.produceNext(thisExpansion)) {
+                        is DataModelExpression -> {
+                            thisExpansion.additionalState = 1
+                            firstValue
+                        }
+                        ContinueExpansion -> ContinueExpansion
+                        EndOfExpansion -> throw IonException("Expected one value, found 0")
+                    }
+                } else {
+                    return when (val secondValue = Stream.produceNext(thisExpansion)) {
+                        is DataModelExpression -> throw IonException("Expected one value, found multiple")
+                        ContinueExpansion -> ContinueExpansion
+                        EndOfExpansion -> secondValue
+                    }
+                }
+            }
+        },
 
-    private object RepeatExpander : Expander {
+        IfNone {
+            override fun produceNext(thisExpansion: ExpansionInfo) = thisExpansion.branchIf { it == 0 }
+        },
+        IfSome {
+            override fun produceNext(thisExpansion: ExpansionInfo) = thisExpansion.branchIf { it > 0 }
+        },
+        IfSingle {
+            override fun produceNext(thisExpansion: ExpansionInfo) = thisExpansion.branchIf { it == 1 }
+        },
+        IfMulti {
+            override fun produceNext(thisExpansion: ExpansionInfo) = thisExpansion.branchIf { it > 1 }
+        },
+        Annotate {
+
+            private val ANNOTATIONS_ARG = VariableRef(0)
+            private val VALUE_TO_ANNOTATE_ARG = VariableRef(1)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val annotations = thisExpansion.map(ANNOTATIONS_ARG) {
+                    when (it) {
+                        is StringValue -> newSymbolToken(it.value)
+                        is SymbolValue -> it.value
+                        is DataModelValue -> throw IonException("Invalid argument type for 'annotate': ${it.type}")
+                        else -> unreachable("Unreachable without stepping in to a container")
+                    }
+                }
+
+                val valueToAnnotateExpansion = thisExpansion.readArgument(VALUE_TO_ANNOTATE_ARG)
+
+                val annotatedExpression = valueToAnnotateExpansion.produceNext().let {
+                    it as? DataModelValue ?: throw IonException("Required at least one value.")
+                    it.withAnnotations(annotations + it.annotations)
+                }
+                if (valueToAnnotateExpansion.produceNext() != EndOfExpansion) {
+                    throw IonException("Can only annotate exactly one value")
+                }
+
+                return annotatedExpression.also {
+                    thisExpansion.tailCall(valueToAnnotateExpansion)
+                }
+            }
+        },
+        MakeString {
+            private val STRINGS_ARG = VariableRef(0)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val sb = StringBuilder()
+                thisExpansion.forEach(STRINGS_ARG) {
+                    when (it) {
+                        is StringValue -> sb.append(it.value)
+                        is SymbolValue -> sb.append(it.value.assumeText())
+                        is DataModelValue -> throw IonException("Invalid argument type for 'make_string': ${it.type}")
+                        is FieldName -> unreachable()
+                    }
+                }
+                thisExpansion.expansionKind = Empty
+                return StringValue(value = sb.toString())
+            }
+        },
+        MakeSymbol {
+            private val STRINGS_ARG = VariableRef(0)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                if (thisExpansion.additionalState != null) return EndOfExpansion
+                thisExpansion.additionalState = Unit
+
+                val sb = StringBuilder()
+                thisExpansion.forEach(STRINGS_ARG) {
+                    when (it) {
+                        is StringValue -> sb.append(it.value)
+                        is SymbolValue -> sb.append(it.value.assumeText())
+                        is DataModelValue -> throw IonException("Invalid argument type for 'make_symbol': ${it.type}")
+                        is FieldName -> unreachable()
+                    }
+                }
+                return SymbolValue(value = newSymbolToken(sb.toString()))
+            }
+        },
+        MakeBlob {
+            private val LOB_ARG = VariableRef(0)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val baos = ByteArrayOutputStream()
+                thisExpansion.forEach(LOB_ARG) {
+                    when (it) {
+                        is LobValue -> baos.write(it.value)
+                        is DataModelValue -> throw IonException("Invalid argument type for 'make_blob': ${it.type}")
+                        is FieldName -> unreachable()
+                    }
+                }
+                thisExpansion.expansionKind = Empty
+                return BlobValue(value = baos.toByteArray())
+            }
+        },
+        MakeDecimal {
+            private val COEFFICIENT_ARG = VariableRef(0)
+            private val EXPONENT_ARG = VariableRef(1)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val coefficient = thisExpansion.readExactlyOneArgument<IntValue>(COEFFICIENT_ARG).bigIntegerValue
+                val exponent = thisExpansion.readExactlyOneArgument<IntValue>(EXPONENT_ARG).bigIntegerValue
+                thisExpansion.expansionKind = Empty
+                return DecimalValue(value = BigDecimal(coefficient, -1 * exponent.intValueExact()))
+            }
+        },
+        MakeTimestamp {
+            private val YEAR_ARG = VariableRef(0)
+            private val MONTH_ARG = VariableRef(1)
+            private val DAY_ARG = VariableRef(2)
+            private val HOUR_ARG = VariableRef(3)
+            private val MINUTE_ARG = VariableRef(4)
+            private val SECOND_ARG = VariableRef(5)
+            private val OFFSET_ARG = VariableRef(6)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val year = thisExpansion.readExactlyOneArgument<IntValue>(YEAR_ARG).longValue.toInt()
+                val month = thisExpansion.readZeroOrOneArgument<IntValue>(MONTH_ARG)?.longValue?.toInt()
+                val day = thisExpansion.readZeroOrOneArgument<IntValue>(DAY_ARG)?.longValue?.toInt()
+                val hour = thisExpansion.readZeroOrOneArgument<IntValue>(HOUR_ARG)?.longValue?.toInt()
+                val minute = thisExpansion.readZeroOrOneArgument<IntValue>(MINUTE_ARG)?.longValue?.toInt()
+                val second = thisExpansion.readZeroOrOneArgument<DataModelValue>(SECOND_ARG)?.let {
+                    when (it) {
+                        is DecimalValue -> it.value
+                        is IntValue -> it.longValue.toBigDecimal()
+                        else -> throw IonException("second must be an integer or decimal")
+                    }
+                }
+
+                val offsetMinutes = thisExpansion.readZeroOrOneArgument<IntValue>(OFFSET_ARG)?.longValue?.toInt()
+
+                try {
+                    val ts = if (second != null) {
+                        month ?: throw IonException("make_timestamp: month is required when second is present")
+                        day ?: throw IonException("make_timestamp: day is required when second is present")
+                        hour ?: throw IonException("make_timestamp: hour is required when second is present")
+                        minute ?: throw IonException("make_timestamp: minute is required when second is present")
+                        Timestamp.forSecond(year, month, day, hour, minute, second, offsetMinutes)
+                    } else if (minute != null) {
+                        month ?: throw IonException("make_timestamp: month is required when minute is present")
+                        day ?: throw IonException("make_timestamp: day is required when minute is present")
+                        hour ?: throw IonException("make_timestamp: hour is required when minute is present")
+                        Timestamp.forMinute(year, month, day, hour, minute, offsetMinutes)
+                    } else if (hour != null) {
+                        throw IonException("make_timestamp: minute is required when hour is present")
+                    } else {
+                        if (offsetMinutes != null) throw IonException("make_timestamp: offset_minutes is prohibited when hours and minute are not present")
+                        if (day != null) {
+                            month ?: throw IonException("make_timestamp: month is required when day is present")
+                            Timestamp.forDay(year, month, day)
+                        } else if (month != null) {
+                            Timestamp.forMonth(year, month)
+                        } else {
+                            Timestamp.forYear(year)
+                        }
+                    }
+                    thisExpansion.expansionKind = Empty
+                    return TimestampValue(value = ts)
+                } catch (e: IllegalArgumentException) {
+                    throw IonException(e.message)
+                }
+            }
+        },
+        _Private_MakeFieldNameAndValue {
+            private val FIELD_NAME = VariableRef(0)
+            private val FIELD_VALUE = VariableRef(1)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val fieldName = thisExpansion.readExactlyOneArgument<TextValue>(FIELD_NAME)
+                val fieldNameExpression = when (fieldName) {
+                    is SymbolValue -> FieldName(fieldName.value)
+                    is StringValue -> FieldName(newSymbolToken(fieldName.value))
+                }
+
+                thisExpansion.readExactlyOneArgument<DataModelValue>(FIELD_VALUE)
+
+                val valueExpansion = thisExpansion.readArgument(FIELD_VALUE)
+
+                return fieldNameExpression.also {
+                    thisExpansion.tailCall(valueExpansion)
+                    thisExpansion.expansionKind = ExactlyOneValueStream
+                }
+            }
+        },
+
+        _Private_FlattenStruct {
+            private val STRUCTS = VariableRef(0)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                var argumentExpansion: ExpansionInfo? = thisExpansion.additionalState as ExpansionInfo?
+                if (argumentExpansion == null) {
+                    argumentExpansion = thisExpansion.readArgument(STRUCTS)
+                    thisExpansion.additionalState = argumentExpansion
+                }
+
+                val currentChildExpansion = thisExpansion.childExpansion
+
+                return when (val next = currentChildExpansion?.produceNext()) {
+                    is DataModelExpression -> next
+                    EndOfExpansion -> thisExpansion.closeDelegateAndContinue()
+                    // Only possible if expansionDelegate is null
+                    null -> when (val nextSequence = argumentExpansion.produceNext()) {
+                        is StructValue -> {
+                            thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                                expansionKind = Stream,
+                                expressions = argumentExpansion.top().expressions,
+                                startInclusive = nextSequence.startInclusive,
+                                endExclusive = nextSequence.endExclusive,
+                                environment = argumentExpansion.top().environment,
+                            )
+                            ContinueExpansion
+                        }
+                        EndOfExpansion -> EndOfExpansion
+                        is DataModelExpression -> throw IonException("invalid argument; make_struct expects structs")
+                    }
+                }
+            }
+        },
+
         /**
-         * Initializes the counter of the number of iterations remaining.
-         * [ExpansionInfo.additionalState] is the number of iterations remaining. Once initialized, it is always `Int`.
+         * Iterates over the sequences, returning the values contained in the sequences.
+         * The expansion for the sequences argument is stored in [ExpansionInfo.additionalState].
+         * When
          */
-        private fun init(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Int {
-            val nExpression = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "n")
-            var iterationsRemaining = when (nExpression) {
-                is LongIntValue -> nExpression.value.toInt()
-                is BigIntValue -> {
-                    if (nExpression.value.bitLength() >= Int.SIZE_BITS) {
-                        throw IonException("ion-java does not support repeats of more than ${Int.MAX_VALUE}")
+        Flatten {
+            private val SEQUENCES = VariableRef(0)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                var argumentExpansion: ExpansionInfo? = thisExpansion.additionalState as ExpansionInfo?
+                if (argumentExpansion == null) {
+                    argumentExpansion = thisExpansion.readArgument(SEQUENCES)
+                    thisExpansion.additionalState = argumentExpansion
+                }
+
+                val currentChildExpansion = thisExpansion.childExpansion
+
+                return when (val next = currentChildExpansion?.produceNext()) {
+                    is DataModelExpression -> next
+                    EndOfExpansion -> thisExpansion.closeDelegateAndContinue()
+                    // Only possible if expansionDelegate is null
+                    null -> when (val nextSequence = argumentExpansion.produceNext()) {
+                        is StructValue -> throw IonException("invalid argument; flatten expects sequences")
+                        is DataModelContainer -> {
+                            thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                                expansionKind = Stream,
+                                expressions = argumentExpansion.top().expressions,
+                                startInclusive = nextSequence.startInclusive,
+                                endExclusive = nextSequence.endExclusive,
+                                environment = argumentExpansion.top().environment,
+                            )
+
+                            ContinueExpansion
+                        }
+                        EndOfExpansion -> EndOfExpansion
+                        is DataModelExpression -> throw IonException("invalid argument; flatten expects sequences")
                     }
-                    nExpression.value.intValueExact()
                 }
-                else -> throw IonException("The first argument of repeat must be a non-negative integer")
             }
-            if (iterationsRemaining < 0) {
-                throw IonException("The first argument of repeat must be a non-negative integer")
+        },
+        Sum {
+            private val ARG_A = VariableRef(0)
+            private val ARG_B = VariableRef(1)
+
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                // TODO(PERF): consider checking whether the value would fit in a long and returning a `LongIntValue`.
+                val a = thisExpansion.readExactlyOneArgument<IntValue>(ARG_A).bigIntegerValue
+                val b = thisExpansion.readExactlyOneArgument<IntValue>(ARG_B).bigIntegerValue
+                thisExpansion.expansionKind = Empty
+                return BigIntValue(value = a + b)
             }
-            // Decrement because we're starting the first iteration right away.
-            iterationsRemaining--
-            expansionInfo.additionalState = iterationsRemaining
-            return iterationsRemaining
-        }
+        },
+        Delta {
+            private val ARGS = VariableRef(0)
 
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            val repeatsRemainingAfterTheCurrentOne = expansionInfo.additionalState as? Int
-                ?: init(expansionInfo, macroEvaluator)
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                // TODO(PERF): Optimize to use LongIntValue when possible
+                var delegate = thisExpansion.childExpansion
+                val runningTotal = thisExpansion.additionalState as? BigInteger ?: BigInteger.ZERO
+                if (delegate == null) {
+                    delegate = thisExpansion.readArgument(ARGS)
+                    thisExpansion.childExpansion = delegate
+                }
 
-            if (repeatsRemainingAfterTheCurrentOne < 0) {
-                expansionInfo.nextSourceExpression()
-                return ExpressionGroup(0, 0)
-            }
-
-            val repeatedExpressionIndex = expansionInfo.i
-            val next = readFirstExpandedArgumentValue(expansionInfo, macroEvaluator)
-            next ?: return ExpressionGroup(0, 0)
-            if (repeatsRemainingAfterTheCurrentOne > 0) {
-                expansionInfo.additionalState = repeatsRemainingAfterTheCurrentOne - 1
-                expansionInfo.i = repeatedExpressionIndex
-            }
-            return next
-        }
-    }
-
-    private object MakeFieldExpander : Expander {
-        // This is wrong!
-        override fun nextExpression(expansionInfo: ExpansionInfo, macroEvaluator: MacroEvaluator): Expression {
-            /**
-             * Uses [ExpansionInfo.additionalState] to track whether the expansion is on the field name or value.
-             * If unset, reads the field name. If set to 0, reads the field value.
-             */
-            return when (expansionInfo.additionalState) {
-                // First time, get the field name
-                null -> {
-                    val fieldName = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "field_name")
-                    val fieldNameExpression = when (fieldName) {
-                        is SymbolValue -> FieldName(fieldName.value)
-                        else -> throw IonException("the first argument of make_field must expand to exactly one symbol value")
+                when (val nextExpandedArg = delegate.produceNext()) {
+                    is IntValue -> {
+                        val nextDelta = nextExpandedArg.bigIntegerValue
+                        val nextOutput = runningTotal + nextDelta
+                        thisExpansion.additionalState = nextOutput
+                        return BigIntValue(value = nextOutput)
                     }
-                    expansionInfo.additionalState = 0
-                    fieldNameExpression
+                    EndOfExpansion -> return EndOfExpansion
+                    else -> throw IonException("delta arguments must be integers")
                 }
-                0 -> {
-                    val value = readExactlyOneExpandedArgumentValue(expansionInfo, macroEvaluator, "value")
-                    expansionInfo.additionalState = 1
-                    value
-                }
-                else -> throw IllegalStateException("Unreachable")
             }
-        }
-    }
+        },
+        Repeat {
+            private val COUNT_ARG = VariableRef(0)
+            private val THING_TO_REPEAT = VariableRef(1)
 
-    private enum class ExpansionKind(val expander: Expander) {
-        Container(SimpleExpander),
-        TemplateBody(SimpleExpander),
-        Values(SimpleExpander),
-        Annotate(AnnotateExpander),
-        MakeString(MakeStringExpander),
-        MakeSymbol(MakeSymbolExpander),
-        MakeBlob(MakeBlobExpander),
-        MakeDecimal(MakeDecimalExpander),
-        MakeTimestamp(MakeTimestampExpander),
-        MakeField(MakeFieldExpander),
-        Sum(SumExpander),
-        Delta(DeltaExpander),
-        IfNone(IfExpander.IF_NONE),
-        IfSome(IfExpander.IF_SOME),
-        IfSingle(IfExpander.IF_SINGLE),
-        IfMulti(IfExpander.IF_MULTI),
-        Repeat(RepeatExpander),
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                var n = thisExpansion.additionalState as Long?
+                if (n == null) {
+                    n = thisExpansion.readExactlyOneArgument<IntValue>(COUNT_ARG).longValue
+                    if (n < 0) throw IonException("invalid argument; 'n' must be non-negative")
+                    thisExpansion.additionalState = n
+                }
+
+                if (thisExpansion.childExpansion == null) {
+                    if (n > 0) {
+                        thisExpansion.childExpansion = thisExpansion.readArgument(THING_TO_REPEAT)
+                        thisExpansion.additionalState = n - 1
+                    } else {
+                        return EndOfExpansion
+                    }
+                }
+
+                val repeated = thisExpansion.childExpansion!!
+                return when (val maybeNext = repeated.produceNext()) {
+                    is DataModelExpression -> maybeNext
+                    EndOfExpansion -> thisExpansion.closeDelegateAndContinue()
+                }
+            }
+        },
         ;
+
+        /**
+         * Produces the next value, [EndOfExpansion], or [ContinueExpansion].
+         * Each enum variant must implement this method.
+         */
+        abstract fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue
+
+        /** Helper function for the `if_*` macros */
+        inline fun ExpansionInfo.branchIf(condition: (Int) -> Boolean): ContinueExpansion {
+            val argToTest = VariableRef(0)
+            val trueBranch = VariableRef(1)
+            val falseBranch = VariableRef(2)
+
+            val testArg = readArgument(argToTest)
+            var n = 0
+            while (n < 2) {
+                if (testArg.produceNext() is EndOfExpansion) break
+                n++
+            }
+            testArg.close()
+
+            val branch = if (condition(n)) trueBranch else falseBranch
+
+            tailCall(readArgument(branch))
+            return ContinueExpansion
+        }
+
+        /**
+         * Returns an expansion for the given variable.
+         */
+        fun ExpansionInfo.readArgument(variableRef: VariableRef): ExpansionInfo {
+            val argIndex = environment.argumentIndices[variableRef.signatureIndex]
+            if (argIndex < 0) {
+                // Argument was elided.
+                return session.getExpander(Empty, emptyList(), 0, 0, Environment.EMPTY)
+            }
+            val firstArgExpression = environment.arguments[argIndex]
+            return session.getExpander(
+                expansionKind = Variable,
+                expressions = environment.arguments,
+                startInclusive = if (firstArgExpression is ExpressionGroup) firstArgExpression.startInclusive else argIndex,
+                endExclusive = if (firstArgExpression is HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
+                environment = environment.parentEnvironment!!
+            )
+        }
+
+        /**
+         * Performs the given [action] for each value produced by the expansion of [variableRef].
+         */
+        inline fun ExpansionInfo.forEach(variableRef: VariableRef, action: (DataModelExpression) -> Unit) {
+            val variableExpansion = readArgument(variableRef)
+            while (true) {
+                when (val next = variableExpansion.produceNext()) {
+                    EndOfExpansion -> return
+                    is DataModelExpression -> action(next)
+                }
+            }
+        }
+
+        /**
+         * Performs the given [transform] on each value produced by the expansion of [variableRef], returning a list
+         * of the results.
+         */
+        inline fun <T> ExpansionInfo.map(variableRef: VariableRef, transform: (DataModelExpression) -> T): List<T> {
+            val variableExpansion = readArgument(variableRef)
+            val result = mutableListOf<T>()
+            while (true) {
+                when (val next = variableExpansion.produceNext()) {
+                    EndOfExpansion -> return result
+                    is DataModelExpression -> result.add(transform(next))
+                }
+            }
+        }
+
+        /**
+         * Reads and returns zero or one values from the expansion of the given [variableRef].
+         * Throws an [IonException] if more than one value is present in the variable expansion.
+         * Throws an [IonException] if the value is not the expected type [T].
+         */
+        inline fun <reified T : DataModelValue> ExpansionInfo.readZeroOrOneArgument(variableRef: VariableRef): T? {
+            val argExpansion = readArgument(variableRef)
+            var argValue: T? = null
+            while (true) {
+                when (val it = argExpansion.produceNext()) {
+                    is T -> if (argValue == null) {
+                        argValue = it
+                    } else {
+                        throw IonException("invalid argument; too many values")
+                    }
+                    is DataModelValue -> throw IonException("invalid argument; found ${it.type}")
+                    EndOfExpansion -> break
+                    is FieldName -> unreachable("Unreachable without stepping into a container")
+                }
+            }
+            argExpansion.close()
+            return argValue
+        }
+
+        /**
+         * Reads and returns exactly one value from the expansion of the given [variableRef].
+         * Throws an [IonException] if the expansion of [variableRef] does not produce exactly one value.
+         * Throws an [IonException] if the value is not the expected type [T].
+         */
+        inline fun <reified T : DataModelValue> ExpansionInfo.readExactlyOneArgument(variableRef: VariableRef): T {
+            return readZeroOrOneArgument<T>(variableRef) ?: throw IonException("invalid argument; no value when one is expected")
+        }
 
         companion object {
+            /**
+             * Gets the [ExpansionKind] for the given [macro].
+             */
             @JvmStatic
-            fun forSystemMacro(macro: SystemMacro): ExpansionKind {
-                return when (macro) {
+            fun forMacro(macro: Macro): ExpansionKind {
+                return if (macro.body != null) {
+                    TemplateBody
+                } else when (macro as SystemMacro) {
                     SystemMacro.IfNone -> IfNone
                     SystemMacro.IfSome -> IfSome
                     SystemMacro.IfSingle -> IfSingle
                     SystemMacro.IfMulti -> IfMulti
-                    SystemMacro.None -> Values // "none" takes no args, so we can treat it as an empty "values" expansion
-                    SystemMacro.Values -> Values
                     SystemMacro.Annotate -> Annotate
                     SystemMacro.MakeString -> MakeString
                     SystemMacro.MakeSymbol -> MakeSymbol
                     SystemMacro.MakeDecimal -> MakeDecimal
                     SystemMacro.MakeTimestamp -> MakeTimestamp
                     SystemMacro.MakeBlob -> MakeBlob
-                    SystemMacro.MakeField -> MakeField
                     SystemMacro.Repeat -> Repeat
                     SystemMacro.Sum -> Sum
                     SystemMacro.Delta -> Delta
-                    else -> if (macro.body != null) {
-                        TemplateBody
-                    } else {
-                        TODO("System macro ${macro.macroName} needs either a template body or a hard-coded expander.")
-                    }
+                    SystemMacro.Flatten -> Flatten
+                    SystemMacro._Private_FlattenStruct -> _Private_FlattenStruct
+                    SystemMacro._Private_MakeFieldNameAndValue -> _Private_MakeFieldNameAndValue
+                    else -> TODO("Not implemented yet: ${macro.name}")
                 }
             }
         }
     }
 
-    private inner class ExpansionInfo : Iterator<Expression> {
+    /**
+     * Represents a frame in the expansion stack for a particular container.
+     *
+     * TODO: "info" is very non-specific; rename to ExpansionFrame next time there's a
+     *       non-functional refactoring in this class.
+     *       Alternately, consider ExpansionOperator to reflect the fact that these are
+     *       like operators in an expression tree.
+     */
+    private class ExpansionInfo(@JvmField val session: Session) {
+
         /** The [ExpansionKind]. */
-        @JvmField var expansionKind: ExpansionKind = ExpansionKind.Values
+        @JvmField var expansionKind: ExpansionKind = ExpansionKind.Uninitialized
         /**
          * The evaluation [Environment]—i.e. variable bindings.
          */
-        @JvmField var environment: Environment? = null
+        @JvmField var environment: Environment = Environment.EMPTY
         /**
          * The [Expression]s being expanded. This MUST be the original list, not a sublist because
          * (a) we don't want to be allocating new sublists all the time, and (b) the
          * start and end indices of the expressions may be incorrect if a sublist is taken.
          */
-        @JvmField var expressions: List<Expression>? = null
-        // /** Start of [expressions] that are applicable for this [ExpansionInfo] */
-        // TODO: Do we actually need this for anything other than debugging?
-        // @JvmField var startInclusive: Int = 0
+        @JvmField var expressions: List<Expression> = emptyList()
         /** End of [expressions] that are applicable for this [ExpansionInfo] */
         @JvmField var endExclusive: Int = 0
         /** Current position within [expressions] of this expansion */
         @JvmField var i: Int = 0
 
         /**
-         * Field for storing any additional state required in an expander.
-         *
-         * TODO: Once all system macros are implemented, see if we can make this an int instead
-         *
-         * There is currently some lost space in ExpansionInfo. We can add one more `additionalState` field without
-         * actually increasing the object size.
+         * Field for storing any additional state required by an ExpansionKind.
          */
         @JvmField
         var additionalState: Any? = null
 
-        /** Checks if this expansion can produce any more expressions */
-        override fun hasNext(): Boolean = i < endExclusive
+        /**
+         * Additional state in the form of a child [ExpansionInfo].
+         */
+        var childExpansion: ExpansionInfo? = null
+            // TODO: if childExpansion == this, it will cause an infinite loop or stack overflow somewhere.
+            // In practice, it should never happen, so we may wish to remove the custom setter to avoid any performance impact.
+            set(value) {
+                check(value != this)
+                field = value
+            }
 
-        /** Returns the next expression from this expansion */
-        override fun next(): Expression {
-            return expansionKind.expander.nextExpression(this, this@MacroEvaluator)
+        /**
+         * Convenience function to close the [childExpansion] and return it to the pool.
+         */
+        fun closeDelegateAndContinue(): ContinueExpansion {
+            childExpansion?.close()
+            childExpansion = null
+            return ContinueExpansion
         }
 
         /**
-         * Returns the next expression from the input expressions ([expressions]) of this Expansion.
-         * This is intended for use in [Expander] implementations.
+         * Gets the [ExpansionInfo] at the top of the stack of [childExpansion]s.
          */
-        fun nextSourceExpression(): Expression {
-            val next = expressions!![i]
-            i++
-            if (next is HasStartAndEnd) i = next.endExclusive
-            return next
+        fun top(): ExpansionInfo = childExpansion?.top() ?: this
+
+        /**
+         * Returns this [ExpansionInfo] to the expander pool, recursively closing [childExpansion]s in the process.
+         * Could also be thought of as a `free` function.
+         */
+        fun close() {
+            expansionKind = ExpansionKind.Uninitialized
+            environment = Environment.EMPTY
+            expressions = emptyList()
+            additionalState?.let { if (it is ExpansionInfo) it.close() }
+            additionalState = null
+            childExpansion?.close()
+            childExpansion = null
+            session.reclaimExpander(this)
+        }
+
+        /**
+         * Replaces the state of `this` [ExpansionInfo] with the state of [other]—effectively a tail-call optimization.
+         * After transferring the state, `other` is returned to the expansion pool.
+         */
+        fun tailCall(other: ExpansionInfo) {
+            this.expansionKind = other.expansionKind
+            this.expressions = other.expressions
+            this.i = other.i
+            this.endExclusive = other.endExclusive
+            this.childExpansion = other.childExpansion
+            this.additionalState = other.additionalState
+            this.environment = other.environment
+            // Close `other`
+            other.childExpansion = null
+            other.close()
+        }
+
+        /**
+         * Produces the next value from this expansion.
+         */
+        fun produceNext(): ExpansionOutputExpression {
+            while (true) {
+                val next = expansionKind.produceNext(this)
+                if (next is ContinueExpansion) continue
+                // This the only place where we count the expansion steps.
+                // It is theoretically possible to have macro expansions that are millions of levels deep because this
+                // only counts macro invocations at the end of their expansion, but this will still work to catch things
+                // like a  billion laughs attack because it does place a limit on the number of _values_ produced.
+                // This counts every value _at every level_, so most values will be counted multiple times. If possible
+                // without impacting performance, count values only once in order to have more predictable behavior.
+                session.incrementStepCounter()
+                return next as ExpansionOutputExpression
+            }
         }
 
         override fun toString() = """
         |ExpansionInfo(
         |    expansionKind: $expansionKind,
-        |    environment: $environment,
+        |    environment: ${environment.toString().lines().joinToString("\n|        ")},
         |    expressions: [
-        |        ${expressions!!.joinToString(",\n|        ") { it.toString() } }
+        |        ${expressions.mapIndexed { i, expr -> "$i. $expr" }.joinToString(",\n|        ") }
         |    ],
         |    endExclusive: $endExclusive,
         |    i: $i,
+        |    child: ${childExpansion?.expansionKind}
+        |    additionalState: $additionalState,
         |)
         """.trimMargin()
     }
 
-    private val expansionStack = _Private_RecyclingStack(8) { ExpansionInfo() }
-
+    private val session = Session(expansionLimit = 1_000_000)
+    private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
     private var currentExpr: DataModelExpression? = null
-
-    /**
-     * Initialize the macro evaluator with an E-Expression.
-     */
-    fun initExpansion(encodingExpressions: List<EExpressionBodyExpression>) {
-        // Pretend that the whole thing is a "values" expansion so that we don't have to care about what
-        // the first expression actually is.
-        pushExpansion(ExpansionKind.Values, 0, encodingExpressions.size, Environment.EMPTY, encodingExpressions)
-    }
 
     /**
      * Returns the e-expression argument expressions that this MacroEvaluator would evaluate.
      */
     fun getArguments(): List<Expression> {
-        return expansionStack.peek().expressions!!
+        return containerStack.iterator().next().expansion.expressions
+    }
+
+    /**
+     * Initialize the macro evaluator with an E-Expression.
+     */
+    fun initExpansion(encodingExpressions: List<EExpressionBodyExpression>) {
+        session.reset()
+        containerStack.push { ci ->
+            ci.type = ContainerInfo.Type.TopLevel
+            ci.expansion = session.getExpander(ExpansionKind.Stream, encodingExpressions, 0, encodingExpressions.size, Environment.EMPTY)
+        }
     }
 
     /**
@@ -565,62 +835,14 @@ class MacroEvaluator {
      * Returns null if at the end of a container or at the end of the expansion.
      */
     fun expandNext(): DataModelExpression? {
-        return expandNext(-1)
-    }
-
-    /**
-     * Evaluate the macro expansion until the next [DataModelExpression] can be returned.
-     * Returns null if at the end of a container or at the end of the expansion.
-     *
-     * Treats [minDepth] as the minimum expansion depth allowed—i.e. it will not step out any further than
-     * [minDepth]. This is used for built-in macros when they need to delegate something to the macro evaluator
-     * but don't want the macro evaluator to step out beyond the invoking built-in macro.
-     */
-    private fun expandNext(minDepth: Int): DataModelExpression? {
-
-        /*  ==== Evaluation Algorithm ====
-        01 | Check the top expansion in the expansion stack
-        02 |     If there is none, return null (macro expansion is over)
-        03 |     If there is one, but it has no more expressions...
-        04 |         If the expansion kind is a data-model container type, return null (user needs to step out)
-        05 |         If the expansion kind is not a data-model container type, automatically step out
-        06 |     If there is one, and it has more expressions...
-        07 |         If it is a scalar, return that
-        08 |         If it is a container, return that (user needs to step in)
-        09 |         If it is a variable, using parent Environment, push variable ExpansionInfo onto the stack and goto 1
-        10 |         If it is an expression group, using current Environment, push expression group ExpansionInfo onto the stack and goto 1
-        11 |         If it is a macro invocation, create updated Environment, push ExpansionInfo onto stack, and goto 1
-        12 |         If it is an e-expression, using empty Environment, push ExpansionInfo onto stack and goto 1
-        */
-
         currentExpr = null
-        while (!expansionStack.isEmpty) {
-            if (!expansionStack.peek().hasNext()) {
-                if (expansionStack.peek().expansionKind == ExpansionKind.Container) {
-                    // End of container. User needs to step out.
-                    // TODO: Do we need something to distinguish End-Of-Expansion from End-Of-Container?
-                    return null
-                } else {
-                    // End of a macro invocation or something else that is not part of the data model,
-                    // so we seamlessly close this out and continue with the parent expansion.
-                    if (expansionStack.size() > minDepth) {
-                        expansionStack.pop()
-                        continue
-                    } else {
-                        // End of expansion for something internal.
-                        return null
-                    }
-                }
-            }
-            when (val currentExpr = expansionStack.peek().next()) {
-                Placeholder -> TODO("unreachable")
-                is MacroInvocation -> pushTdlMacroExpansion(currentExpr)
-                is EExpression -> pushEExpressionExpansion(currentExpr)
-                is VariableRef -> pushVariableExpansion(currentExpr)
-                is ExpressionGroup -> pushExpressionGroup(currentExpr)
-                is DataModelExpression -> {
-                    this.currentExpr = currentExpr
-                    break
+        val currentContainer = containerStack.peek()
+        when (val nextExpansionOutput = currentContainer.produceNext()) {
+            is DataModelExpression -> currentExpr = nextExpansionOutput
+            EndOfExpansion -> {
+                if (currentContainer.type == ContainerInfo.Type.TopLevel) {
+                    currentContainer.close()
+                    containerStack.pop()
                 }
             }
         }
@@ -631,10 +853,10 @@ class MacroEvaluator {
      * Steps out of the current [DataModelContainer].
      */
     fun stepOut() {
-        // step out of anything we find until we have stepped out of a container.
-        while (expansionStack.pop()?.expansionKind != ExpansionKind.Container) {
-            if (expansionStack.isEmpty) throw IonException("Nothing to step out of.")
-        }
+        // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
+        if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
+        val popped = containerStack.pop()
+        popped.close()
     }
 
     /**
@@ -643,162 +865,74 @@ class MacroEvaluator {
      */
     fun stepIn() {
         val expression = requireNotNull(currentExpr) { "Not positioned on a value" }
-        expression as? DataModelContainer ?: throw IonException("Not positioned on a container.")
-        val currentExpansion = expansionStack.peek()
-        pushExpansion(ExpansionKind.Container, expression.startInclusive, expression.endExclusive, currentExpansion.environment!!, currentExpansion.expressions!!)
-    }
-
-    /**
-     * Push a variable onto the expansion stack.
-     *
-     * Variables are a little bit different from other expansions. There is only one (top) expression
-     * in a variable expansion. It can be another variable, a value, a macro invocation, or an expression group.
-     * Furthermore, the current environment becomes the "source expressions" for the expansion, and the
-     * parent of the current environment becomes the environment in which the variable is expanded (thus
-     * maintaining the proper scope of variables).
-     */
-    private fun pushVariableExpansion(expression: VariableRef) {
-        val currentEnvironment = expansionStack.peek().environment ?: Environment.EMPTY
-        val argumentExpressionIndex = currentEnvironment.argumentIndices[expression.signatureIndex]
-
-        // Argument was elided; don't push anything so that we skip the empty expansion
-        if (argumentExpressionIndex < 0) return
-
-        pushExpansion(
-            expansionKind = ExpansionKind.Values,
-            argsStartInclusive = argumentExpressionIndex,
-            // There can only be one expression for an argument. It's either a value, macro, or expression group.
-            argsEndExclusive = argumentExpressionIndex + 1,
-            environment = currentEnvironment.parentEnvironment ?: Environment.EMPTY,
-            expressions = currentEnvironment.arguments
-        )
-    }
-
-    private fun pushExpressionGroup(expr: ExpressionGroup) {
-        val currentExpansion = expansionStack.peek()
-        pushExpansion(ExpansionKind.Values, expr.startInclusive, expr.endExclusive, currentExpansion.environment!!, currentExpansion.expressions!!)
-    }
-
-    /**
-     * Push a macro from a TDL macro invocation, found in the current expansion, to the expansion stack
-     */
-    private fun pushTdlMacroExpansion(expression: MacroInvocation) {
-        val currentExpansion = expansionStack.peek()
-        pushMacro(
-            macro = expression.macro,
-            argsStartInclusive = expression.startInclusive,
-            argsEndExclusive = expression.endExclusive,
-            currentExpansion.environment!!,
-            encodingExpressions = currentExpansion.expressions!!,
-        )
-    }
-
-    /**
-     * Push a macro from the e-expression [expression] onto the expansionStack, handling concerns such as
-     * looking up the macro reference, setting up the environment, etc.
-     */
-    private fun pushEExpressionExpansion(expression: EExpression) {
-        val currentExpansion = expansionStack.peek()
-        pushMacro(
-            macro = expression.macro,
-            argsStartInclusive = expression.startInclusive,
-            argsEndExclusive = expression.endExclusive,
-            environment = Environment.EMPTY,
-            encodingExpressions = currentExpansion.expressions!!,
-        )
-    }
-
-    /**
-     * Pushes a macro invocation to the expansionStack
-     */
-    private fun pushMacro(
-        macro: Macro,
-        argsStartInclusive: Int,
-        argsEndExclusive: Int,
-        environment: Environment,
-        encodingExpressions: List<Expression>,
-    ) {
-        val argIndices = calculateArgumentIndices(macro, encodingExpressions, argsStartInclusive, argsEndExclusive)
-        val templateBody = macro.body
-        if (templateBody == null) {
-            // If there's no template body, it must be a system macro.
-            macro as SystemMacro
-            val kind = ExpansionKind.forSystemMacro(macro)
-            pushExpansion(kind, argsStartInclusive, argsEndExclusive, environment, encodingExpressions)
-        } else {
-            pushExpansion(
-                ExpansionKind.TemplateBody,
-                argsStartInclusive = 0,
-                argsEndExclusive = templateBody.size,
-                expressions = templateBody,
-                environment = environment.createChild(encodingExpressions, argIndices)
-            )
-        }
-    }
-
-    /**
-     * Pushes an expansion to the expansion stack.
-     */
-    private fun pushExpansion(
-        expansionKind: ExpansionKind,
-        argsStartInclusive: Int,
-        argsEndExclusive: Int,
-        environment: Environment,
-        expressions: List<Expression>,
-    ) {
-        expansionStack.push {
-            it.expansionKind = expansionKind
-            it.environment = environment
-            it.expressions = expressions
-            it.i = argsStartInclusive
-            it.endExclusive = argsEndExclusive
-            it.additionalState = null
-        }
-    }
-
-    /**
-     * Given a [Macro] (or more specifically, its signature), calculates the position of each of its arguments
-     * in [encodingExpressions]. The result is a list that can be used to map from a parameter's
-     * signature index to the encoding expression index. Any trailing, optional arguments that are
-     * elided have a value of -1.
-     *
-     * This function also validates that the correct number of parameters are present. If there are
-     * too many parameters or too few parameters, this will throw [IonException].
-     */
-    private fun calculateArgumentIndices(
-        macro: Macro,
-        encodingExpressions: List<Expression>,
-        argsStartInclusive: Int,
-        argsEndExclusive: Int
-    ): List<Int> {
-        // TODO: For TDL macro invocations, see if we can calculate this during the "compile" step.
-        var numArgs = 0
-        val argsIndices = IntArray(macro.signature.size)
-        var currentArgIndex = argsStartInclusive
-        for (p in macro.signature) {
-            if (currentArgIndex >= argsEndExclusive) {
-                if (!p.cardinality.canBeVoid) throw IonException("No value provided for parameter ${p.variableName}")
-                // Elided rest parameter.
-                argsIndices[numArgs] = -1
-            } else {
-                argsIndices[numArgs] = currentArgIndex
-                currentArgIndex = when (val expr = encodingExpressions[currentArgIndex]) {
-                    is HasStartAndEnd -> expr.endExclusive
-                    else -> currentArgIndex + 1
+        if (expression is DataModelContainer) {
+            val currentContainer = containerStack.peek()
+            val topExpansion = currentContainer.expansion.top()
+            containerStack.push { ci ->
+                ci.type = when (expression.type) {
+                    IonType.LIST -> ContainerInfo.Type.List
+                    IonType.SEXP -> ContainerInfo.Type.Sexp
+                    IonType.STRUCT -> ContainerInfo.Type.Struct
+                    else -> unreachable()
                 }
+                ci.expansion = session.getExpander(
+                    expansionKind = ExpansionKind.Stream,
+                    expressions = topExpansion.expressions,
+                    startInclusive = expression.startInclusive,
+                    endExclusive = expression.endExclusive,
+                    environment = topExpansion.environment,
+                )
             }
-            numArgs++
+            currentExpr = null
+        } else {
+            throw IonException("Not positioned on a container.")
         }
-        while (currentArgIndex < argsEndExclusive) {
+    }
+}
+
+/**
+ * Given a [Macro] (or more specifically, its signature), calculates the position of each of its arguments
+ * in [encodingExpressions]. The result is a list that can be used to map from a parameter's
+ * signature index to the encoding expression index. Any trailing, optional arguments that are
+ * elided have a value of -1.
+ *
+ * This function also validates that the correct number of parameters are present. If there are
+ * too many parameters or too few parameters, this will throw [IonException].
+ */
+private fun calculateArgumentIndices(
+    macro: Macro,
+    encodingExpressions: List<Expression>,
+    argsStartInclusive: Int,
+    argsEndExclusive: Int
+): List<Int> {
+    // TODO: For TDL macro invocations, see if we can calculate this during the "compile" step.
+    var numArgs = 0
+    val argsIndices = IntArray(macro.signature.size)
+    var currentArgIndex = argsStartInclusive
+
+    for (p in macro.signature) {
+        if (currentArgIndex >= argsEndExclusive) {
+            if (!p.cardinality.canBeVoid) throw IonException("No value provided for parameter ${p.variableName}")
+            // Elided rest parameter.
+            argsIndices[numArgs] = -1
+        } else {
+            argsIndices[numArgs] = currentArgIndex
             currentArgIndex = when (val expr = encodingExpressions[currentArgIndex]) {
                 is HasStartAndEnd -> expr.endExclusive
                 else -> currentArgIndex + 1
             }
-            numArgs++
         }
-        if (numArgs > macro.signature.size) {
-            throw IonException("Too many arguments. Expected ${macro.signature.size}, but found $numArgs")
-        }
-        return argsIndices.toList()
+        numArgs++
     }
+    while (currentArgIndex < argsEndExclusive) {
+        currentArgIndex = when (val expr = encodingExpressions[currentArgIndex]) {
+            is HasStartAndEnd -> expr.endExclusive
+            else -> currentArgIndex + 1
+        }
+        numArgs++
+    }
+    if (numArgs > macro.signature.size) {
+        throw IonException("Too many arguments. Expected ${macro.signature.size}, but found $numArgs")
+    }
+    return argsIndices.toList()
 }

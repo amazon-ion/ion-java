@@ -15,6 +15,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
+import org.opentest4j.TestAbortedException
 
 class IonRawTextWriterTest_1_1 {
 
@@ -712,6 +713,11 @@ class IonRawTextWriterTest_1_1 {
     @ParameterizedTest
     @EnumSource(SystemMacro::class)
     fun `write system macro E-expression by name`(systemMacro: SystemMacro) {
+        try {
+            systemMacro.systemSymbol
+        } catch (e: IllegalStateException) {
+            throw TestAbortedException("Skip this test for unaddressable macros")
+        }
         assertWriterOutputEquals("(:\$ion::${systemMacro.macroName})") {
             stepInEExp(systemMacro)
             stepOut()
