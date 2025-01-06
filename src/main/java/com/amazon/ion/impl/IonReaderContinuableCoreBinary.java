@@ -2045,11 +2045,18 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public Event stepOutOfContainer() {
         if (isEvaluatingEExpression) {
-            // TODO step out of the macro evaluator only if it's in a container. Otherwise, finish the evaluation early
-            //  and step out of the parent.
-            macroEvaluatorIonReader.stepOut();
-            event = Event.NEEDS_INSTRUCTION;
-            return event;
+            if (macroEvaluatorIonReader.getDepth() > 0) {
+                // The user has stepped into a container produced by the evaluator. Therefore, this stepOut() call
+                // must step out of that evaluated container.
+                macroEvaluatorIonReader.stepOut();
+                event = Event.NEEDS_INSTRUCTION;
+                return event;
+            } else {
+                // The evaluator is not producing a container value. Therefore, the user intends for this stepOut() call
+                // to step out of the parent container of the e-expression being evaluated. This terminates e-expression
+                // evaluation.
+                isEvaluatingEExpression = false;
+            }
         }
         return super.stepOutOfContainer();
     }

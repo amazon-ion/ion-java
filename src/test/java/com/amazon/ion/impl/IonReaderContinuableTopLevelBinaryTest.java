@@ -6309,8 +6309,35 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
-    // TODO add a test that modifies the above to step out after beginning macro evaluation but before exhausting it.
-    //  This should end evaluation early and step out of the struct.
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void partialEvaluationOfMacroInvocationInDelimitedContainer(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xF3, // Delimited struct start
+                0xFF, 'a', // FlexSym field name 'a'
+                0x06, 0x02, // Macro invocation 6 (delta), AEB 2 (group)
+                0x0D, // 6-byte expression group
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0xF0, // Delimited struct end
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.STRUCT),
+            STEP_IN,
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.ONE),
+            // Step out before exhausting all values produced by the 'delta' invocation.
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
@@ -6447,6 +6474,69 @@ public class IonReaderContinuableTopLevelBinaryTest {
             STEP_OUT,
             next(null),
             STEP_OUT,
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void partialEvaluationOfMacroInvocationInPrefixedContainer(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0xB9, // List length 9
+                0x06, 0x02, // Macro invocation 6 (delta), AEB 2 (group)
+                0x0D, // 6-byte expression group
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0x02, // Macro invocation 1 (values), AEB 2 (group)
+                0x09, // 4-byte expression group
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.ONE),
+            // Step out before exhausting all values produced by the 'delta' invocation.
+            STEP_OUT,
+            next(IonType.STRING),
+            stringValue("abc"),
+            next(null)
+        );
+        closeAndCount();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void earlyStepOutOfContainerInMacroInvocation(boolean constructFromBytes) throws Exception {
+        reader = readerForIon11(bytes(
+                0x01, 0x02, // Macro invocation 1 (values), AEB 2 (group)
+                0x0F, // 7-byte expression group
+                0xB4, // 4-byte list
+                0x61, 0x01, // 1
+                0x61, 0x02, // 2
+                0x61, 0x03, // 3
+                0x01, 0x02, // Macro invocation 1 (values), AEB 2 (group)
+                0x09, // 4-byte expression group
+                0x93, 'a', 'b', 'c'
+            ),
+            constructFromBytes
+        );
+        assertSequence(
+            next(IonType.LIST),
+            STEP_IN,
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.ONE),
+            // Step out before exhausting all values in the list.
+            STEP_OUT,
+            next(IonType.INT),
+            bigIntegerValue(BigInteger.valueOf(3)),
+            // This ends the 'values' invocation.
+            next(IonType.STRING),
+            stringValue("abc"),
             next(null)
         );
         closeAndCount();
