@@ -1994,59 +1994,40 @@ class IonCursorBinary implements IonCursor {
      */
     private boolean slowSkipMacroParameter(Macro.Parameter parameter) {
         switch (parameter.getType()) {
-            case Tagged:
-                slowNextToken();
-                if (event == Event.NEEDS_DATA) {
-                    return true;
-                }
-                break;
             case Int8:
             case Uint8:
-                if (!fillAt(peekIndex, 1)) {
-                    return true;
-                }
-                peekIndex += 1;
-                break;
+                return fillAndUpdatePeekIndex(1);
             case Int16:
             case Uint16:
             case Float16:
-                if (!fillAt(peekIndex, 2)) {
-                    return true;
-                }
-                peekIndex += 2;
-                break;
+                return fillAndUpdatePeekIndex(2);
             case Int32:
             case Uint32:
             case Float32:
-                if (!fillAt(peekIndex, 4)) {
-                    return true;
-                }
-                peekIndex += 4;
-                break;
+                return fillAndUpdatePeekIndex(4);
             case Int64:
             case Uint64:
             case Float64:
-                if (!fillAt(peekIndex, 8)) {
-                    return true;
-                }
-                peekIndex += 8;
-                break;
+                return fillAndUpdatePeekIndex(8);
             case FlexUint:
-                if (slowReadFlexUInt_1_1() < 0) {
-                    return true;
-                }
-                break;
+                return slowReadFlexUInt_1_1() < 0;
             case FlexInt:
-                if (slowReadFlexInt_1_1(valueMarker)) {
-                    return true;
-                }
-                break;
+                return slowReadFlexInt_1_1(valueMarker);
             case FlexSym:
-                if (FlexSymType.INCOMPLETE == slowSkipFlexSym_1_1(valueMarker)) {
-                    return true;
-                }
-                break;
+                return FlexSymType.INCOMPLETE == slowSkipFlexSym_1_1(valueMarker);
+            case Tagged:
+                slowNextToken();
+                return event == Event.NEEDS_DATA;
+            default:
+                return false;
         }
+    }
+
+    private boolean fillAndUpdatePeekIndex(int numberOfBytes) {
+        if (!fillAt(peekIndex, numberOfBytes)) {
+            return true;
+        }
+        peekIndex += numberOfBytes;
         return false;
     }
 
@@ -3001,14 +2982,12 @@ class IonCursorBinary implements IonCursor {
         if (!parent.typeId.isMacroInvocation) {
             throw new IonException("Not positioned within an e-expression.");
         }
-        if (isSlowMode) {
-            if (slowSeekToEndOfEExpression()) {
-                return event;
-            }
-            slowPopContainer();
-        } else {
+        if (!isSlowMode) {
             uncheckedSeekToEndOfEExpression();
             uncheckedPopContainer();
+        } else if (!slowSeekToEndOfEExpression()) {
+            // we had enough data to seek to the end of the expression
+            slowPopContainer();
         }
         return event;
     }
@@ -3075,7 +3054,7 @@ class IonCursorBinary implements IonCursor {
         setCheckpointBeforeUnannotatedTypeId();
         if (--containerIndex >= 0) {
             parent = containerStack[containerIndex];
-        } else {
+        } else { // we're at top level
             parent = null;
             containerIndex = -1;
         }
