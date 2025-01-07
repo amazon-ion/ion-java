@@ -6350,7 +6350,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void fillNestedDelimitedLists() throws Exception {
         readerBuilder = readerBuilder.withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
-                .withInitialBufferSize(6) // This ensures the entire delimited container is not fully buffered up front.
+                // Buffer cuts off before we've seen all the start-container bytes
+                .withInitialBufferSize(6)
                 .onData(byteCountingHandler)
                 .build()
         );
@@ -6381,7 +6382,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void fillNestedEmptyDelimitedList() throws Exception {
         readerBuilder = readerBuilder.withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
-                .withInitialBufferSize(7) // This ensures the entire delimited container is not fully buffered up front.
+                // Buffer cuts off before we've seen all the end-container bytes
+                .withInitialBufferSize(7)
                 .onData(byteCountingHandler)
                 .build()
         );
@@ -6403,7 +6405,8 @@ public class IonReaderContinuableTopLevelBinaryTest {
     public void fillMultipleNestedDelimitedLists() throws Exception {
         readerBuilder = readerBuilder.withBufferConfiguration(
             IonBufferConfiguration.Builder.standard()
-                .withInitialBufferSize(7) // This ensures the entire delimited container is not fully buffered up front.
+                // Buffer cuts off before we've seen all the start-container bytes
+                .withInitialBufferSize(7)
                 .onData(byteCountingHandler)
                 .build()
         );
