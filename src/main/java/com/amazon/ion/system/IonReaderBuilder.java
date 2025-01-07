@@ -19,7 +19,10 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 
 /**
@@ -38,11 +41,9 @@ public abstract class IonReaderBuilder
     // Default stream interceptors, which always begin with the GZIP interceptor.
     private static final List<InputStreamInterceptor> DEFAULT_STREAM_INTERCEPTORS = Collections.singletonList(GZIPStreamInterceptor.INSTANCE);
 
-    // Detected stream interceptors. Each thread may have its own list because each thread may have a different
-    // context class loader. This list could be an instance variable, but since there may be use cases that require
-    // creating many IonReaderBuilder instances per thread, we prefer to inspect the classpath once per thread instead
-    // of once per instance.
-    private static final ThreadLocal<List<InputStreamInterceptor>> DETECTED_STREAM_INTERCEPTORS = new ThreadLocal<>();
+    // Detected ServiceLoaders. Each ClassLoader may have its own ServiceLoader; these are cached to avoid repetitive
+    // loading. Once instantiated, ServiceLoaders maintain a cache of the providers they have loaded.
+    private static final Map<ClassLoader, ServiceLoader<InputStreamInterceptor>> SERVICE_LOADERS = Collections.synchronizedMap(new IdentityHashMap<>());
 
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
@@ -309,24 +310,23 @@ public abstract class IonReaderBuilder
      * @return the stream interceptors.
      */
     private static List<InputStreamInterceptor> detectStreamInterceptorsOnClasspath(ClassLoader classLoader) {
+        ServiceLoader<InputStreamInterceptor> loader = SERVICE_LOADERS.computeIfAbsent(
+            classLoader,
+            cl -> ServiceLoader.load(InputStreamInterceptor.class, cl)
+        );
+        Iterator<InputStreamInterceptor> interceptorIterator = loader.iterator();
+        if (!interceptorIterator.hasNext()) {
+            // Avoid allocating a new list in the common case: no custom interceptors detected.
+            return DEFAULT_STREAM_INTERCEPTORS;
+        }
+        // Note: this causes a new list to be allocated each time this method is called when custom interceptors are
+        // detected. This happens on every call to `build()`. If this becomes a performance bottleneck in an
+        // application, the application owner should be encouraged to manually specify stream interceptors using
+        // `addInputStreamInterceptor()`, causing this method to be bypassed.
         List<InputStreamInterceptor> interceptorsOnClasspath = new ArrayList<>(4); // 4 is arbitrary, but more would be very rare.
         interceptorsOnClasspath.addAll(DEFAULT_STREAM_INTERCEPTORS);
-        ServiceLoader.load(InputStreamInterceptor.class, classLoader).iterator().forEachRemaining(interceptorsOnClasspath::add);
+        interceptorIterator.forEachRemaining(interceptorsOnClasspath::add);
         return Collections.unmodifiableList(interceptorsOnClasspath);
-    }
-
-    /**
-     * Detects implementations of {@link InputStreamInterceptor} using the default {@link ClassLoader}, appending any
-     * implementations found to the list of stream interceptors enabled by default.
-     * @return the stream interceptors.
-     */
-    private static List<InputStreamInterceptor> detectStreamInterceptorsOnDefaultClasspath() {
-        List<InputStreamInterceptor> detectedStreamInterceptors = DETECTED_STREAM_INTERCEPTORS.get();
-        if (detectedStreamInterceptors == null) {
-            detectedStreamInterceptors = detectStreamInterceptorsOnClasspath(Thread.currentThread().getContextClassLoader());
-            DETECTED_STREAM_INTERCEPTORS.set(detectedStreamInterceptors);
-        }
-        return detectedStreamInterceptors;
     }
 
     /**
@@ -340,9 +340,10 @@ public abstract class IonReaderBuilder
      */
     public List<InputStreamInterceptor> getInputStreamInterceptors() {
         if (streamInterceptors == null) {
-            return customClassLoader == null
-                ? detectStreamInterceptorsOnDefaultClasspath()
-                : detectStreamInterceptorsOnClasspath(customClassLoader);
+            return detectStreamInterceptorsOnClasspath(customClassLoader == null
+                ? Thread.currentThread().getContextClassLoader()
+                : customClassLoader
+            );
         }
         return Collections.unmodifiableList(streamInterceptors);
     }

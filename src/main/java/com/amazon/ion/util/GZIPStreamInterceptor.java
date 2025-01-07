@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
 
 /**
- * The interceptor for GZIP streams.
+ * The interceptor for GZIP streams. This is a singleton that may be accessed using {@link #INSTANCE}.
  */
 public enum GZIPStreamInterceptor implements InputStreamInterceptor {
 

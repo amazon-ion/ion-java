@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.util;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
@@ -27,11 +28,13 @@ import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.github.luben.zstd.ZstdInputStream;
 import com.github.luben.zstd.ZstdOutputStream;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -245,7 +248,7 @@ public class ZstdStreamInterceptorTest {
         }
 
         @Override
-        public InputStream newInputStream(InputStream interceptedStream){
+        public InputStream newInputStream(InputStream interceptedStream) {
             return null;
         }
     }
@@ -286,5 +289,57 @@ public class ZstdStreamInterceptorTest {
 
         withDefaultClassLoader.join();
         withCustomClassLoader.join();
+    }
+
+    private static class LengthTooLongInterceptor implements InputStreamInterceptor {
+
+        private final int length;
+
+        LengthTooLongInterceptor(int length) {
+            this.length = length;
+        }
+
+        @Override
+        public String formatName() {
+            return null;
+        }
+
+        @Override
+        public int headerMatchLength() {
+            return length;
+        }
+
+        @Override
+        public boolean matchesHeader(byte[] candidate, int offset, int length) {
+            return Assertions.fail("This method should be unreachable.");
+        }
+
+        @Override
+        public InputStream newInputStream(InputStream interceptedStream) {
+            return Assertions.fail("This method should be unreachable.");
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(ZstdStream.class)
+    public void notInterceptedWhenStreamLengthIsLessThanHeaderLength(ZstdStream stream) throws IOException {
+        IonReaderBuilder builder = IonReaderBuilder.standard()
+            // The LengthTooLongInterceptor should be skipped, then the ZstdStreamInterceptor matched.
+            .addInputStreamInterceptor(new LengthTooLongInterceptor(1000)) // None of the test data is this long.
+            .addInputStreamInterceptor(new ZstdStreamInterceptor());
+        try (IonReader reader = stream.newReader(builder)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(123, reader.intValue());
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(ZstdStream.class)
+    public void expectFailureWhenHeaderLengthIsInvalid(ZstdStream stream) {
+        IonReaderBuilder builder = IonReaderBuilder.standard()
+            // This header length is invalid because an array of that size cannot be allocated.
+            .addInputStreamInterceptor(new LengthTooLongInterceptor(Integer.MAX_VALUE))
+            .addInputStreamInterceptor(new ZstdStreamInterceptor());
+        assertThrows(IonException.class, () -> stream.newReader(builder));
     }
 }

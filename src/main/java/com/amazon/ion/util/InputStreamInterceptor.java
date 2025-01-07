@@ -26,7 +26,9 @@ public interface InputStreamInterceptor {
 
     /**
      * The number of bytes required to be read from the beginning of the stream in order to determine whether
-     * it matches this format.
+     * it matches this format. If a stream contains fewer than the number of bytes returned by this method, then
+     * {@link #matchesHeader(byte[], int, int)} will never be called and this interceptor will not be considered
+     * a match.
      * @return the length in bytes.
      */
     int headerMatchLength();
@@ -35,8 +37,8 @@ public interface InputStreamInterceptor {
      * Determines whether the given candidate byte sequence matches this format.
      * @param candidate the candidate byte sequence.
      * @param offset the offset into the candidate bytes to begin matching.
-     * @param length the number of bytes (beginning at 'offset') in `candidate`. If this is less than
-     *               {@link #headerMatchLength()}, then the candidate cannot be a match.
+     * @param length the number of bytes (beginning at 'offset') in `candidate`. Must be greater than or equal to
+     *               {@link #headerMatchLength()}.
      * @return true if the candidate byte sequence matches; otherwise, false.
      */
     boolean matchesHeader(byte[] candidate, int offset, int length);

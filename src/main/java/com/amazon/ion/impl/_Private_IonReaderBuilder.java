@@ -16,6 +16,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.util.Collections;
+import java.util.List;
 
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
@@ -205,6 +207,18 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReader makeReader(_Private_IonReaderBuilder builder, byte[] ionData, int offset, int length);
     }
 
+    private static void validateHeaderLength(int maxHeaderLength) {
+        if (maxHeaderLength > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+            // Note: we could choose an arbitrary limit lower than this. The purpose at this point is to avoid OOM
+            // in the case where Java cannot allocate an array of the requested size.
+            throw new IonException(String.format(
+                "The maximum header length %d exceeds the maximum array size %d.",
+                maxHeaderLength,
+                _Private_IonConstants.ARRAY_MAXIMUM_SIZE
+            ));
+        }
+    }
+
     static IonReader buildReader(
         _Private_IonReaderBuilder builder,
         byte[] ionData,
@@ -213,14 +227,25 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReaderFromBytesFactoryBinary binary,
         IonReaderFromBytesFactoryText text
     ) {
-        for (InputStreamInterceptor streamInterceptor : builder.getInputStreamInterceptors()) {
+        List<InputStreamInterceptor> streamInterceptors = builder.getInputStreamInterceptors();
+        for (InputStreamInterceptor streamInterceptor : streamInterceptors) {
+            int headerLength = streamInterceptor.headerMatchLength();
+            validateHeaderLength(headerLength);
+            if (length < headerLength) {
+                continue;
+            }
             if (streamInterceptor.matchesHeader(ionData, offset, length)) {
                 try {
                     return buildReader(
                         builder,
                         streamInterceptor.newInputStream(new ByteArrayInputStream(ionData, offset, length)),
                         _Private_IonReaderFactory::makeReaderBinary,
-                        _Private_IonReaderFactory::makeReaderText
+                        _Private_IonReaderFactory::makeReaderText,
+                        // The builder provides only one level of detection, e.g. GZIP-compressed binary Ion *or*
+                        // zstd-compressed binary Ion; *not* GZIP-compressed zstd-compressed binary Ion. Users that
+                        // need to intercept multiple format layers can provide a custom InputStreamInterceptor to
+                        // achieve this.
+                        /*inputStreamInterceptors=*/ Collections.emptyList()
                     );
                 } catch (IOException e) {
                     throw new IonException(e);
@@ -276,15 +301,17 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         _Private_IonReaderBuilder builder,
         InputStream source,
         IonReaderFromInputStreamFactoryBinary binary,
-        IonReaderFromInputStreamFactoryText text
+        IonReaderFromInputStreamFactoryText text,
+        List<InputStreamInterceptor> inputStreamInterceptors
     ) {
         if (source == null) {
             throw new NullPointerException("Cannot build a reader from a null InputStream.");
         }
         int maxHeaderLength = Math.max(
             _Private_IonConstants.BINARY_VERSION_MARKER_SIZE,
-            builder.getInputStreamInterceptors().stream().mapToInt(InputStreamInterceptor::headerMatchLength).max().orElse(0)
+            inputStreamInterceptors.stream().mapToInt(InputStreamInterceptor::headerMatchLength).max().orElse(0)
         );
+        validateHeaderLength(maxHeaderLength);
         // Note: this can create a lot of layers of InputStream wrappers. For example, if this method is called
         // from build(byte[]) and the bytes contain GZIP, the chain will be SequenceInputStream(ByteArrayInputStream,
         // GZIPInputStream -> PushbackInputStream -> ByteArrayInputStream). If this creates a drag on efficiency,
@@ -306,7 +333,10 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
         // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
         // (which has always been unsupported).
-        for (InputStreamInterceptor streamInterceptor : builder.getInputStreamInterceptors()) {
+        for (InputStreamInterceptor streamInterceptor : inputStreamInterceptors) {
+            if (bytesRead < streamInterceptor.headerMatchLength()) {
+                continue;
+            }
             if (streamInterceptor.matchesHeader(possibleIVM, 0, bytesRead)) {
                 try {
                     ionData = streamInterceptor.newInputStream(
@@ -346,7 +376,8 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             this,
             source,
             _Private_IonReaderFactory::makeReaderBinary,
-            _Private_IonReaderFactory::makeReaderText
+            _Private_IonReaderFactory::makeReaderText,
+            getInputStreamInterceptors()
         );
     }
 
