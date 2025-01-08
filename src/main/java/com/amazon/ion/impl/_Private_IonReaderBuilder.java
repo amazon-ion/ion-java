@@ -12,7 +12,6 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
 import java.io.ByteArrayInputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -297,6 +296,38 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReader makeReader(_Private_IonReaderBuilder builder, InputStream source, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen);
     }
 
+    /**
+     * Reads from the given source into the given byte array, stopping once either
+     * <ol>
+     *     <li>`length` bytes have been read, or</li>
+     *     <li>the end of the source stream has been reached, or</li>
+     *     <li>the source stream throws an exception.</li>
+     * </ol>
+     * @param source the source of the bytes to read.
+     * @param destination the destination for the bytes read.
+     * @param length the number of bytes to attempt to read.
+     * @return the number of bytes read into `destination`.
+     */
+    private static int fillToLengthOrStreamEnd(InputStream source, byte[] destination, int length) {
+        int bytesRead = 0;
+        while (bytesRead < length) {
+            int bytesToRead = length - bytesRead;
+            int bytesReadThisIteration;
+            try {
+                bytesReadThisIteration = source.read(destination, bytesRead, bytesToRead);
+            } catch (IOException e) {
+                // Some InputStream implementations throw IOExceptions (e.g. EOFException) in certain cases to convey
+                // that the end of the stream has been reached.
+                break;
+            }
+            if (bytesReadThisIteration < 0) { // This indicates the end of the stream.
+                break;
+            }
+            bytesRead += bytesReadThisIteration;
+        }
+        return bytesRead;
+    }
+
     static IonReader buildReader(
         _Private_IonReaderBuilder builder,
         InputStream source,
@@ -318,12 +349,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // alternatives should be evaluated.
         byte[] possibleIVM = new byte[maxHeaderLength];
         InputStream ionData = source;
-        int bytesRead;
-        try {
-            bytesRead = ionData.read(possibleIVM);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        int bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, maxHeaderLength);
         // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
         // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
         // If it can't, fall back to text.
@@ -342,12 +368,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
                     ionData = streamInterceptor.newInputStream(
                         new TwoElementSequenceInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
                     );
-                    try {
-                        bytesRead = ionData.read(possibleIVM);
-                    } catch (EOFException e) {
-                        // Only a compression format header was available, so this may be a binary Ion stream.
-                        bytesRead = 0;
-                    }
+                    bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
                 } catch (IOException e) {
                     throw new IonException(e);
                 }

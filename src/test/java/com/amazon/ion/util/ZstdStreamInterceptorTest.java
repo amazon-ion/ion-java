@@ -342,4 +342,38 @@ public class ZstdStreamInterceptorTest {
             .addInputStreamInterceptor(new ZstdStreamInterceptor());
         assertThrows(IonException.class, () -> stream.newReader(builder));
     }
+
+    private static class OneBytePerReadInputStream extends InputStream {
+
+        private final InputStream delegate;
+
+        OneBytePerReadInputStream(InputStream delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int read() throws IOException {
+            return delegate.read();
+        }
+
+        @Override
+        public int read(byte[] bytes, int off, int len) throws IOException {
+            int b = delegate.read();
+            if (b < 0) {
+                return -1;
+            }
+            bytes[off] = (byte) b;
+            return 1;
+        }
+    }
+
+    @Test
+    public void headerRequiresMultipleInputStreamReads() throws IOException {
+        IonReaderBuilder builder = IonReaderBuilder.standard()
+            .addInputStreamInterceptor(new ZstdStreamInterceptor());
+        try (IonReader reader = builder.build(new OneBytePerReadInputStream(new ByteArrayInputStream(ZstdStream.BINARY_BYTES)))) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(123, reader.intValue());
+        }
+    }
 }
