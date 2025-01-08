@@ -12,6 +12,7 @@ import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -113,7 +114,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
      * The TwoElementSequenceInputStream allows the second delegate InputStream to return valid data if it subsequently
      * receives more data, which is common when performing continuable reads.
      */
-    private static final class TwoElementSequenceInputStream extends InputStream {
+    private static final class TwoElementInputStream extends InputStream {
 
         /**
          * The first InputStream in the sequence.
@@ -135,7 +136,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
          * @param first first InputStream in the sequence.
          * @param last last InputStream in the sequence.
          */
-        private TwoElementSequenceInputStream(final InputStream first, final InputStream last) {
+        private TwoElementInputStream(final InputStream first, final InputStream last) {
             this.first = first;
             this.last = last;
             this.in = first;
@@ -315,10 +316,12 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             int bytesReadThisIteration;
             try {
                 bytesReadThisIteration = source.read(destination, bytesRead, bytesToRead);
-            } catch (IOException e) {
-                // Some InputStream implementations throw IOExceptions (e.g. EOFException) in certain cases to convey
+            } catch (EOFException e) {
+                // Some InputStream implementations throw EOFException in certain cases to convey
                 // that the end of the stream has been reached.
                 break;
+            } catch (IOException e) {
+                throw new IonException(e);
             }
             if (bytesReadThisIteration < 0) { // This indicates the end of the stream.
                 break;
@@ -366,12 +369,12 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             if (streamInterceptor.matchesHeader(possibleIVM, 0, bytesRead)) {
                 try {
                     ionData = streamInterceptor.newInputStream(
-                        new TwoElementSequenceInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
+                        new TwoElementInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
                     );
-                    bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
                 } catch (IOException e) {
                     throw new IonException(e);
                 }
+                bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
                 break;
             }
         }
@@ -380,7 +383,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
         InputStream wrapper;
         if (bytesRead > 0) {
-            wrapper = new TwoElementSequenceInputStream(
+            wrapper = new TwoElementInputStream(
                 new ByteArrayInputStream(possibleIVM, 0, bytesRead),
                 ionData
             );

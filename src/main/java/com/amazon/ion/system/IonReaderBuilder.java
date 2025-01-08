@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.WeakHashMap;
 
 /**
  * Build a new {@link IonReader} from the given {@link IonCatalog} and data
@@ -43,7 +44,9 @@ public abstract class IonReaderBuilder
 
     // Detected ServiceLoaders. Each ClassLoader may have its own ServiceLoader; these are cached to avoid repetitive
     // loading. Once instantiated, ServiceLoaders maintain a cache of the providers they have loaded.
-    private static final Map<ClassLoader, ServiceLoader<InputStreamInterceptor>> SERVICE_LOADERS = Collections.synchronizedMap(new IdentityHashMap<>());
+    // Note: using WeakHashMap allows ClassLoaders to be garbage collected normally when all references (besides the
+    // one in this map) go out of scope.
+    private static final Map<ClassLoader, ServiceLoader<InputStreamInterceptor>> SERVICE_LOADERS = Collections.synchronizedMap(new WeakHashMap<>());
 
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
@@ -61,7 +64,7 @@ public abstract class IonReaderBuilder
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
         this.streamInterceptors = that.streamInterceptors == null ? null : new ArrayList<>(that.streamInterceptors);
-        this.customClassLoader = that.customClassLoader == null ? null : that.customClassLoader;
+        this.customClassLoader = that.customClassLoader;
     }
 
     /**
