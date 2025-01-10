@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
-import com.amazon.ion.util.GZIPStreamInterceptor;
+import com.amazon.ion.util.GzipStreamInterceptor;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -19,12 +19,9 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.ServiceLoader;
-import java.util.WeakHashMap;
 
 /**
  * Build a new {@link IonReader} from the given {@link IonCatalog} and data
@@ -40,19 +37,19 @@ public abstract class IonReaderBuilder
 {
 
     // Default stream interceptors, which always begin with the GZIP interceptor.
-    private static final List<InputStreamInterceptor> DEFAULT_STREAM_INTERCEPTORS = Collections.singletonList(GZIPStreamInterceptor.INSTANCE);
+    private static final List<InputStreamInterceptor> DEFAULT_STREAM_INTERCEPTORS = Collections.singletonList(GzipStreamInterceptor.INSTANCE);
 
-    // Detected ServiceLoaders. Each ClassLoader may have its own ServiceLoader; these are cached to avoid repetitive
-    // loading. Once instantiated, ServiceLoaders maintain a cache of the providers they have loaded.
-    // Note: using WeakHashMap allows ClassLoaders to be garbage collected normally when all references (besides the
-    // one in this map) go out of scope.
-    private static final Map<ClassLoader, ServiceLoader<InputStreamInterceptor>> SERVICE_LOADERS = Collections.synchronizedMap(new WeakHashMap<>());
+    // Stream interceptors detected by the ClassLoader.
+    // Note: each ClassLoader may have access to a different list of detected interceptors, but static initialization
+    // is performed once per load of the class, and is guaranteed thread-safe. Therefore, there is no need to manually
+    // maintain a thread-safe cache of detected interceptors.
+    private static final List<InputStreamInterceptor> DETECTED_STREAM_INTERCEPTORS = Collections.unmodifiableList(detectStreamInterceptorsOnClasspath());
+
 
     private IonCatalog catalog = null;
     private boolean isIncrementalReadingEnabled = false;
     private IonBufferConfiguration bufferConfiguration = IonBufferConfiguration.DEFAULT;
     private List<InputStreamInterceptor> streamInterceptors = null;
-    protected ClassLoader customClassLoader = null;
 
     protected IonReaderBuilder()
     {
@@ -64,7 +61,6 @@ public abstract class IonReaderBuilder
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
         this.streamInterceptors = that.streamInterceptors == null ? null : new ArrayList<>(that.streamInterceptors);
-        this.customClassLoader = that.customClassLoader;
     }
 
     /**
@@ -276,14 +272,14 @@ public abstract class IonReaderBuilder
     /**
      * Adds an {@link InputStreamInterceptor} to the end of the list that the builder will apply
      * to each stream before creating {@link IonReader} instances over that stream.
-     * {@link GZIPStreamInterceptor} is always consulted first, and need not be added.
+     * {@link GzipStreamInterceptor} is always consulted first, and need not be added.
      * <p>
      * As an alternative to adding stream interceptors manually using this method, users
      * may register implementations as service providers on the classpath.
      * See {@link ServiceLoader} for details about how to do this.
      * <p>
      * The list of stream interceptors available to the reader always begins with
-     * {@link GZIPStreamInterceptor} and is followed by either:
+     * {@link GzipStreamInterceptor} and is followed by either:
      * <ol>
      *     <li>any stream interceptor(s) added by calling this method, if this method was
      *     called at least once on this builder instance, OR</li>
@@ -307,29 +303,25 @@ public abstract class IonReaderBuilder
     }
 
     /**
-     * Detects implementations of {@link InputStreamInterceptor} using the given {@link ClassLoader}, appending any
-     * implementations found to the list of stream interceptors enabled by default.
-     * @param classLoader the ClassLoader to use to locate stream interceptor instances.
+     * Detects implementations of {@link InputStreamInterceptor} available to the {@link ClassLoader} that loaded
+     * this class, appending any implementations found to the list of stream interceptors enabled by default.
      * @return the stream interceptors.
      */
-    private static List<InputStreamInterceptor> detectStreamInterceptorsOnClasspath(ClassLoader classLoader) {
-        ServiceLoader<InputStreamInterceptor> loader = SERVICE_LOADERS.computeIfAbsent(
-            classLoader,
-            cl -> ServiceLoader.load(InputStreamInterceptor.class, cl)
+    private static List<InputStreamInterceptor> detectStreamInterceptorsOnClasspath() {
+        ServiceLoader<InputStreamInterceptor> loader = ServiceLoader.load(
+            InputStreamInterceptor.class,
+            // The ClassLoader used to load this class. Each ClassLoader may have access to different resources.
+            IonReaderBuilder.class.getClassLoader()
         );
         Iterator<InputStreamInterceptor> interceptorIterator = loader.iterator();
         if (!interceptorIterator.hasNext()) {
             // Avoid allocating a new list in the common case: no custom interceptors detected.
             return DEFAULT_STREAM_INTERCEPTORS;
         }
-        // Note: this causes a new list to be allocated each time this method is called when custom interceptors are
-        // detected. This happens on every call to `build()`. If this becomes a performance bottleneck in an
-        // application, the application owner should be encouraged to manually specify stream interceptors using
-        // `addInputStreamInterceptor()`, causing this method to be bypassed.
         List<InputStreamInterceptor> interceptorsOnClasspath = new ArrayList<>(4); // 4 is arbitrary, but more would be very rare.
         interceptorsOnClasspath.addAll(DEFAULT_STREAM_INTERCEPTORS);
         interceptorIterator.forEachRemaining(interceptorsOnClasspath::add);
-        return Collections.unmodifiableList(interceptorsOnClasspath);
+        return interceptorsOnClasspath;
     }
 
     /**
@@ -343,10 +335,7 @@ public abstract class IonReaderBuilder
      */
     public List<InputStreamInterceptor> getInputStreamInterceptors() {
         if (streamInterceptors == null) {
-            return detectStreamInterceptorsOnClasspath(customClassLoader == null
-                ? Thread.currentThread().getContextClassLoader()
-                : customClassLoader
-            );
+            return DETECTED_STREAM_INTERCEPTORS;
         }
         return Collections.unmodifiableList(streamInterceptors);
     }

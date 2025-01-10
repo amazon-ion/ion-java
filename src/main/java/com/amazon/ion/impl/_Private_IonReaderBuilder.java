@@ -68,20 +68,6 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
     }
 
-    /**
-     * Configures the builder to use a custom {@link ClassLoader} for loading resources, such as
-     * {@link InputStreamInterceptor} instances. This method is internal only; users should configure
-     * stream interceptors using either {@link #addInputStreamInterceptor(InputStreamInterceptor)} or by
-     * making instances available for discovery by the default ClassLoader.
-     * @param customClassLoader the ClassLoader to use when loading resources.
-     * @return this builder instance, if mutable; otherwise, a mutable copy of this builder.
-     */
-    public IonReaderBuilder withCustomClassLoader(ClassLoader customClassLoader) {
-        _Private_IonReaderBuilder b = (_Private_IonReaderBuilder) mutable();
-        b.customClassLoader = customClassLoader;
-        return b;
-    }
-
     public static class Mutable extends _Private_IonReaderBuilder {
 
         public Mutable() {

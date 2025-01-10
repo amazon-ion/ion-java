@@ -3,6 +3,7 @@
 package com.amazon.ion.util;
 
 import com.amazon.ion.IonException;
+import com.amazon.ion.IonSystem;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
@@ -15,6 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
@@ -23,12 +26,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
-import com.amazon.ion.impl._Private_IonReaderBuilder;
 import com.github.luben.zstd.ZstdInputStream;
 import com.github.luben.zstd.ZstdOutputStream;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -78,89 +84,55 @@ public class ZstdStreamInterceptorTest {
     }
 
     public enum ZstdStream {
-        BINARY_STREAM_READER {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return builder.build(new ByteArrayInputStream(BINARY_BYTES));
-            }
-        },
-        TEXT_STREAM_READER {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return builder.build(new ByteArrayInputStream(TEXT_BYTES));
-            }
-        },
-        BINARY_BYTES_READER {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return builder.build(BINARY_BYTES);
-            }
-        },
-        TEXT_BYTES_READER {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return builder.build(TEXT_BYTES);
-            }
-        },
-        BINARY_STREAM_SYSTEM {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return IonSystemBuilder.standard()
-                    .withReaderBuilder(builder)
-                    .build()
-                    .newReader(new ByteArrayInputStream(BINARY_BYTES));
-            }
-        },
-        TEXT_STREAM_SYSTEM {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return IonSystemBuilder.standard()
-                    .withReaderBuilder(builder)
-                    .build()
-                    .newReader(new ByteArrayInputStream(TEXT_BYTES));
-            }
-        },
-        BINARY_BYTES_SYSTEM {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return IonSystemBuilder.standard()
-                    .withReaderBuilder(builder)
-                    .build()
-                    .newReader(BINARY_BYTES);
-            }
-        },
-        TEXT_BYTES_SYSTEM {
-            @Override
-            IonReader newReader(IonReaderBuilder builder) {
-                return IonSystemBuilder.standard()
-                    .withReaderBuilder(builder)
-                    .build()
-                    .newReader(TEXT_BYTES);
-            }
-        };
+        BINARY_STREAM_READER(builder -> builder.build(stream(binaryBytes()))),
+        TEXT_STREAM_READER(builder -> builder.build(stream(textBytes()))),
+        BINARY_BYTES_READER(builder -> builder.build(binaryBytes())),
+        TEXT_BYTES_READER(builder -> builder.build(textBytes())),
+        BINARY_STREAM_SYSTEM(builder -> system(builder).newReader((stream(binaryBytes())))),
+        TEXT_STREAM_SYSTEM(builder -> system(builder).newReader((stream(textBytes())))),
+        BINARY_BYTES_SYSTEM(builder -> system(builder).newReader(binaryBytes())),
+        TEXT_BYTES_SYSTEM(builder -> system(builder).newReader(textBytes()));
 
-        abstract IonReader newReader(IonReaderBuilder builder);
+        private final Function<IonReaderBuilder, IonReader> readerFactory;
 
-        private static byte[] writeCompressedStream(boolean isText) {
+        ZstdStream(Function<IonReaderBuilder, IonReader> readerFactory) {
+            this.readerFactory = readerFactory;
+        }
+
+        IonReader newReader(IonReaderBuilder builder) {
+            return readerFactory.apply(builder);
+        }
+
+        static IonSystem system(IonReaderBuilder builder) {
+            return IonSystemBuilder.standard().withReaderBuilder(builder).build();
+        }
+
+        static byte[] textBytes() {
+            return writeCompressedStream(IonTextWriterBuilder.standard()::build);
+        }
+
+        static byte[] binaryBytes() {
+            return writeCompressedStream(IonBinaryWriterBuilder.standard()::build);
+        }
+
+        static InputStream stream(byte[] bytes) {
+            return new ByteArrayInputStream(bytes);
+        }
+
+        private static byte[] writeCompressedStream(Function<OutputStream, IonWriter> writerBuilder) {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            try (IonWriter writer = isText
-                ? IonTextWriterBuilder.standard().build(new ZstdOutputStream(bytes))
-                : IonBinaryWriterBuilder.standard().build(new ZstdOutputStream(bytes))
-            ) {
+            try (IonWriter writer = writerBuilder.apply(new ZstdOutputStream(bytes))) {
                 writer.writeInt(123);
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
             return bytes.toByteArray();
         }
-
-        private static final byte[] TEXT_BYTES = writeCompressedStream(true);
-        private static final byte[] BINARY_BYTES = writeCompressedStream(false);
     }
 
     @ParameterizedTest
     @EnumSource(ZstdStream.class)
-    public void interceptedWhenAddedManually(ZstdStream stream) throws IOException {
+    public void interceptorsFunctionProperly(ZstdStream stream) throws IOException {
         IonReaderBuilder builder = IonReaderBuilder.standard().addInputStreamInterceptor(new ZstdStreamInterceptor());
         try (IonReader reader = stream.newReader(builder)) {
             assertEquals(IonType.INT, reader.next());
@@ -171,7 +143,16 @@ public class ZstdStreamInterceptorTest {
     public static class CustomInterceptorClassLoader extends URLClassLoader {
 
         public CustomInterceptorClassLoader() {
-            super(new URL[0], InputStreamInterceptor.class.getClassLoader());
+            // Allow this ClassLoader to load all classes relevant to the builder and custom InputStreamInterceptor
+            // implementations being tested.
+            super(
+                new URL[] {
+                    IonReaderBuilder.class.getProtectionDomain().getCodeSource().getLocation(),
+                    ZstdStreamInterceptor.class.getProtectionDomain().getCodeSource().getLocation(),
+                    ZstdInputStream.class.getProtectionDomain().getCodeSource().getLocation()
+                },
+                IonReaderBuilder.class.getClassLoader().getParent()
+            );
         }
 
         @Override
@@ -199,22 +180,59 @@ public class ZstdStreamInterceptorTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(ZstdStream.class)
-    public void interceptedWhenDetectedOnClasspath(ZstdStream stream) throws IOException {
-        IonReaderBuilder builder = ((_Private_IonReaderBuilder) IonReaderBuilder.standard())
-            .withCustomClassLoader(new CustomInterceptorClassLoader());
-        try (IonReader reader = stream.newReader(builder)) {
-            assertEquals(IonType.INT, reader.next());
-            assertEquals(123, reader.intValue());
+    /**
+     * Asserts that the given IonReaderBuilder has a GzipStreamInterceptor followed an InputStreamInterceptor of the
+     * given type.
+     * @param readerBuilder the builder.
+     * @param interceptorType the type of the InputStreamInterceptor to follow GzipStreamInterceptor.
+     */
+    private static void assertGzipThen(IonReaderBuilder readerBuilder, Class<? extends InputStreamInterceptor> interceptorType) {
+        List<InputStreamInterceptor> streamInterceptors = readerBuilder.getInputStreamInterceptors();
+        assertEquals(2, streamInterceptors.size());
+        assertSame(GzipStreamInterceptor.INSTANCE, streamInterceptors.get(0));
+        assertTrue(streamInterceptors.get(1).getClass().isAssignableFrom(interceptorType));
+    }
+
+    /**
+     * Asserts that the given IonReaderBuilder has a GzipStreamInterceptor followed an InputStreamInterceptor of the
+     * given type, performing all accesses via reflection. This must be used when an instance has been manually
+     * loaded by a custom ClassLoader, as such instances are not compatible with vanilla Java written in this context
+     * (for example, a manually loaded `IonReaderBuilder` would throw a `ClassCastException` if assigned to
+     * `IonReaderBuilder` in this test).
+     * @param builderClass the Class that represents the custom-loaded IonReaderBuilder.
+     * @param builderInstance the builder instance.
+     * @param interceptorType the type of the InputStreamInterceptor to follow GzipStreamInterceptor.
+     */
+    private static List<?> assertGzipThen(Class<?> builderClass, Object builderInstance, Class<?> interceptorType) {
+        try {
+            Method getInputStreamInterceptorsMethod = builderClass.getMethod("getInputStreamInterceptors");
+            List<?> streamInterceptors = (List<?>) getInputStreamInterceptorsMethod.invoke(builderInstance);
+            assertEquals(2, streamInterceptors.size());
+            assertEquals(GzipStreamInterceptor.class.getName(), streamInterceptors.get(0).getClass().getName());
+            assertEquals(interceptorType.getName(), streamInterceptors.get(1).getClass().getName());
+            return streamInterceptors;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private static void assertGzipThen(IonReaderBuilder readerBuilder, Class<? extends InputStreamInterceptor> interceptorType) {
-        List<InputStreamInterceptor> streamInterceptorsAddedManually = readerBuilder.getInputStreamInterceptors();
-        assertEquals(2, streamInterceptorsAddedManually.size());
-        assertSame(GZIPStreamInterceptor.INSTANCE, streamInterceptorsAddedManually.get(0));
-        assertTrue(streamInterceptorsAddedManually.get(1).getClass().isAssignableFrom(interceptorType));
+    /**
+     * Executes the given target using an IonReaderBuilder instance loaded from the given custom ClassLoader.
+     * @param classLoader the custom ClassLoader to use.
+     * @param target the code to execute.
+     */
+    private void executeWithCustomClassLoader(ClassLoader classLoader, BiConsumer<Class<?>, Object> target) {
+        Class<?> ionReaderBuilderClass;
+        Object ionReaderBuilderInstance;
+        try {
+            // Note: below, 'true' forces static initialization.
+            ionReaderBuilderClass = Class.forName(IonReaderBuilder.class.getName(), true, classLoader);
+            Method factoryMethod = ionReaderBuilderClass.getMethod("standard");
+            ionReaderBuilderInstance = factoryMethod.invoke(null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        target.accept(ionReaderBuilderClass, ionReaderBuilderInstance);
     }
 
     @Test
@@ -225,77 +243,110 @@ public class ZstdStreamInterceptorTest {
 
     @Test
     public void gzipAlwaysAvailableWhenZstdDetectedOnClasspath() {
-        IonReaderBuilder builder = ((_Private_IonReaderBuilder) IonReaderBuilder.standard())
-            .withCustomClassLoader(new CustomInterceptorClassLoader());
-        assertGzipThen(builder, ZstdStreamInterceptor.class);
-    }
-
-    private static class DummyInterceptor implements InputStreamInterceptor {
-
-        @Override
-        public String formatName() {
-            return null;
-        }
-
-        @Override
-        public int headerMatchLength() {
-            return 0;
-        }
-
-        @Override
-        public boolean matchesHeader(byte[] candidate, int offset, int length) {
-            return false;
-        }
-
-        @Override
-        public InputStream newInputStream(InputStream interceptedStream) {
-            return null;
-        }
+        executeWithCustomClassLoader(
+            new CustomInterceptorClassLoader(),
+            (builderClass, builder) -> assertGzipThen(builderClass, builder, ZstdStreamInterceptor.class)
+        );
     }
 
     @Test
     public void addingManuallyTakesPrecedenceOverClasspath() {
-        IonReaderBuilder builder = ((_Private_IonReaderBuilder) IonReaderBuilder.standard())
-            .withCustomClassLoader(new CustomInterceptorClassLoader()) // This would add Zstd if classpath detection were used.
-            .addInputStreamInterceptor(new DummyInterceptor());
-        assertGzipThen(builder, DummyInterceptor.class);
+        executeWithCustomClassLoader(
+            new CustomInterceptorClassLoader(),
+            (builderClass, builder) -> {
+                // The custom ClassLoader adds Zstd, but this is not used since a stream interceptor is specified manually.
+                try {
+                    Class<?> dummyInterceptorClass = builderClass.getClassLoader().loadClass(LengthTooLongInterceptor.class.getName());
+                    Object dummyInterceptorInstance = dummyInterceptorClass.getConstructor(int.class).newInstance(0);
+                    // Manually load the interface with the same ClassLoader so that it's compatible with the instance.
+                    Class<?> inputStreamInterceptorInterface = builderClass.getClassLoader().loadClass(InputStreamInterceptor.class.getName());
+                    Method addInterceptor = builderClass.getMethod("addInputStreamInterceptor", inputStreamInterceptorInterface);
+                    assertGzipThen(
+                        builderClass,
+                        addInterceptor.invoke(builder, dummyInterceptorInstance),
+                        dummyInterceptorClass
+                    );
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
     }
 
-    @Test
+    /**
+     * Configures the given thread to capture any uncaught exceptions thrown during execution of the thread.
+     * @param thread the thread to configure.
+     * @return a reference to the exception thrown (if any) during execution of the thread.
+     */
+    private AtomicReference<Throwable> registerExceptionHandler(Thread thread) {
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        thread.setUncaughtExceptionHandler((t, e) -> error.set(e));
+        return error;
+    }
+
+    /**
+     * Fails the test if the given reference points to any exception.
+     * @param error an error reference.
+     */
+    private void failOnAnyError(AtomicReference<Throwable> error) {
+        Throwable t = error.get();
+        if (t != null) {
+            Assertions.fail(t);
+        }
+    }
+
+    // This is a multithreaded test; execute multiple times to increase the chances of triggering a race condition if
+    // one exists.
+    @RepeatedTest(100)
     public void differentClassLoadersInEachThread() throws Exception {
         Thread withDefaultClassLoader = new Thread(() -> {
             IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
             List<InputStreamInterceptor> streamInterceptors = readerBuilder.getInputStreamInterceptors();
             assertEquals(1, streamInterceptors.size());
-            assertSame(GZIPStreamInterceptor.INSTANCE, streamInterceptors.get(0));
+            assertSame(GzipStreamInterceptor.INSTANCE, streamInterceptors.get(0));
         });
+        AtomicReference<Throwable> withDefaultClassLoaderError = registerExceptionHandler(withDefaultClassLoader);
         Thread withCustomClassLoader = new Thread(() -> {
-            IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
-            List<InputStreamInterceptor> streamInterceptors = readerBuilder.getInputStreamInterceptors();
-            assertGzipThen(readerBuilder, ZstdStreamInterceptor.class);
+            AtomicReference<List<?>> streamInterceptors = new AtomicReference<>();
+            executeWithCustomClassLoader(
+                Thread.currentThread().getContextClassLoader(), // This will be our custom ClassLoader (set below)
+                (builderClass, builder) -> {
+                    streamInterceptors.set(assertGzipThen(builderClass, builder, ZstdStreamInterceptor.class));
+                }
+            );
             // Verify that a new IonReaderBuilder instance does not re-detect the interceptors applicable to this
-            // thread.
-            readerBuilder = IonReaderBuilder.standard();
-            assertSame(streamInterceptors, readerBuilder.getInputStreamInterceptors());
+            // ClassLoader.
+            executeWithCustomClassLoader(
+                Thread.currentThread().getContextClassLoader(), // This will be our custom ClassLoader (set below)
+                (builderClass, builder) -> {
+                    assertSame(
+                        streamInterceptors.get(),
+                        assertGzipThen(builderClass, builder, ZstdStreamInterceptor.class)
+                    );
+                }
+            );
         });
+        AtomicReference<Throwable> withCustomClassLoaderError = registerExceptionHandler(withCustomClassLoader);
         withCustomClassLoader.setContextClassLoader(new CustomInterceptorClassLoader());
 
         withDefaultClassLoader.start();
         withCustomClassLoader.start();
 
         // While the spawned threads are working, verify they do not affect the parent thread.
-        IonReaderBuilder builder = IonReaderBuilder.standard().addInputStreamInterceptor(new DummyInterceptor());
-        assertGzipThen(builder, DummyInterceptor.class);
+        IonReaderBuilder builder = IonReaderBuilder.standard().addInputStreamInterceptor(new LengthTooLongInterceptor(0));
+        assertGzipThen(builder, LengthTooLongInterceptor.class);
 
         withDefaultClassLoader.join();
         withCustomClassLoader.join();
+
+        failOnAnyError(withDefaultClassLoaderError);
+        failOnAnyError(withCustomClassLoaderError);
     }
 
-    private static class LengthTooLongInterceptor implements InputStreamInterceptor {
+    public static class LengthTooLongInterceptor implements InputStreamInterceptor {
 
         private final int length;
 
-        LengthTooLongInterceptor(int length) {
+        public LengthTooLongInterceptor(int length) {
             this.length = length;
         }
 
@@ -371,7 +422,7 @@ public class ZstdStreamInterceptorTest {
     public void headerRequiresMultipleInputStreamReads() throws IOException {
         IonReaderBuilder builder = IonReaderBuilder.standard()
             .addInputStreamInterceptor(new ZstdStreamInterceptor());
-        try (IonReader reader = builder.build(new OneBytePerReadInputStream(new ByteArrayInputStream(ZstdStream.BINARY_BYTES)))) {
+        try (IonReader reader = builder.build(new OneBytePerReadInputStream(new ByteArrayInputStream(ZstdStream.binaryBytes())))) {
             assertEquals(IonType.INT, reader.next());
             assertEquals(123, reader.intValue());
         }

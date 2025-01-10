@@ -13,7 +13,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.amazon.ion.BitUtils;
-import com.amazon.ion.util.GZIPStreamInterceptor;
+import com.amazon.ion.util.GzipStreamInterceptor;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
@@ -229,9 +229,9 @@ public class IonReaderBuilderTest
         IonReaderBuilder builder = IonReaderBuilder.standard();
         List<InputStreamInterceptor> interceptors = builder.getInputStreamInterceptors();
         assertEquals(1, interceptors.size());
-        assertEquals(GZIPStreamInterceptor.INSTANCE.formatName(), interceptors.get(0).formatName());
+        assertEquals(GzipStreamInterceptor.INSTANCE.formatName(), interceptors.get(0).formatName());
         // The list returned from IonReaderBuilder.getStreamInterceptors() is unmodifiable.
-        assertThrows(UnsupportedOperationException.class, () -> interceptors.add(GZIPStreamInterceptor.INSTANCE));
+        assertThrows(UnsupportedOperationException.class, () -> interceptors.add(GzipStreamInterceptor.INSTANCE));
     }
 
 }
