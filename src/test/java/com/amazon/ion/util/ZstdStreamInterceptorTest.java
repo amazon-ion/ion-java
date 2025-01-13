@@ -201,15 +201,18 @@ public class ZstdStreamInterceptorTest {
      * `IonReaderBuilder` in this test).
      * @param builderClass the Class that represents the custom-loaded IonReaderBuilder.
      * @param builderInstance the builder instance.
-     * @param interceptorType the type of the InputStreamInterceptor to follow GzipStreamInterceptor.
+     * @param interceptorTypes the type of the InputStreamInterceptor(s) to follow GzipStreamInterceptor.
      */
-    private static List<?> assertGzipThen(Class<?> builderClass, Object builderInstance, Class<?> interceptorType) {
+    private static List<?> assertGzipThen(Class<?> builderClass, Object builderInstance, Class<?>... interceptorTypes) {
         try {
             Method getInputStreamInterceptorsMethod = builderClass.getMethod("getInputStreamInterceptors");
             List<?> streamInterceptors = (List<?>) getInputStreamInterceptorsMethod.invoke(builderInstance);
-            assertEquals(2, streamInterceptors.size());
+            assertEquals(interceptorTypes.length + 1, streamInterceptors.size());
             assertEquals(GzipStreamInterceptor.class.getName(), streamInterceptors.get(0).getClass().getName());
-            assertEquals(interceptorType.getName(), streamInterceptors.get(1).getClass().getName());
+            for (int i = 0; i < interceptorTypes.length; i++) {
+                Class<?> interceptorType = interceptorTypes[i];
+                assertEquals(interceptorType.getName(), streamInterceptors.get(i + 1).getClass().getName());
+            }
             return streamInterceptors;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -250,12 +253,14 @@ public class ZstdStreamInterceptorTest {
     }
 
     @Test
-    public void addingManuallyTakesPrecedenceOverClasspath() {
+    public void manuallyAddedInterceptorsComeAfterDetectedInterceptors() {
         executeWithCustomClassLoader(
             new CustomInterceptorClassLoader(),
             (builderClass, builder) -> {
-                // The custom ClassLoader adds Zstd, but this is not used since a stream interceptor is specified manually.
+                // The custom ClassLoader adds Zstd. This should occur after GZIP (the default) but before the one
+                // added manually.
                 try {
+                    Class<?> zstdInterceptorClass = builderClass.getClassLoader().loadClass(ZstdStreamInterceptor.class.getName());
                     Class<?> dummyInterceptorClass = builderClass.getClassLoader().loadClass(LengthTooLongInterceptor.class.getName());
                     Object dummyInterceptorInstance = dummyInterceptorClass.getConstructor(int.class).newInstance(0);
                     // Manually load the interface with the same ClassLoader so that it's compatible with the instance.
@@ -264,7 +269,8 @@ public class ZstdStreamInterceptorTest {
                     assertGzipThen(
                         builderClass,
                         addInterceptor.invoke(builder, dummyInterceptorInstance),
-                        dummyInterceptorClass
+                        zstdInterceptorClass, // Zstd is the first to follow GZIP because it was detected on the classpath.
+                        dummyInterceptorClass // Manually added interceptors come last.
                     );
                 } catch (Exception e) {
                     throw new RuntimeException(e);

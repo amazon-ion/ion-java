@@ -270,22 +270,23 @@ public abstract class IonReaderBuilder
     }
 
     /**
-     * Adds an {@link InputStreamInterceptor} to the end of the list that the builder will apply
-     * to each stream before creating {@link IonReader} instances over that stream.
-     * {@link GzipStreamInterceptor} is always consulted first, and need not be added.
+     * Adds an {@link InputStreamInterceptor} to the end of the list that the builder will attempt
+     * to apply to a stream before creating {@link IonReader} instances over that stream.
+     * {@link GzipStreamInterceptor} is always consulted first, and need not be added. The first
+     * interceptor in the list that matches the stream will be used; if any chaining of interceptors
+     * is required, it is up to the caller to provide a custom interceptor implementation to
+     * achieve this.
      * <p>
-     * As an alternative to adding stream interceptors manually using this method, users
-     * may register implementations as service providers on the classpath.
+     * As an alternative, or in addition, to adding stream interceptors manually using this method,
+     * users may register implementations as service providers on the classpath.
      * See {@link ServiceLoader} for details about how to do this.
      * <p>
      * The list of stream interceptors available to the reader always begins with
-     * {@link GzipStreamInterceptor} and is followed by either:
+     * {@link GzipStreamInterceptor} and is followed by:
      * <ol>
-     *     <li>any stream interceptor(s) added by calling this method, if this method was
-     *     called at least once on this builder instance, OR</li>
      *     <li>any stream interceptors detected on the classpath using
-     *     {@link ServiceLoader#load(Class)}, if this method was not called on this builder
-     *     instance.</li>
+     *     {@link ServiceLoader#load(Class)}, then</li>
+     *     <li>any stream interceptor(s) added by calling this method.</li>
      * </ol>
      *
      * @param streamInterceptor the stream interceptor to add.
@@ -296,7 +297,9 @@ public abstract class IonReaderBuilder
     public IonReaderBuilder addInputStreamInterceptor(InputStreamInterceptor streamInterceptor) {
         IonReaderBuilder b = mutable();
         if (b.streamInterceptors == null) {
-            b.streamInterceptors = new ArrayList<>(DEFAULT_STREAM_INTERCEPTORS);
+            // 4 is arbitrary, but more would be very rare.
+            b.streamInterceptors = new ArrayList<>(DETECTED_STREAM_INTERCEPTORS.size() + 4);
+            b.streamInterceptors.addAll(DETECTED_STREAM_INTERCEPTORS);
         }
         b.streamInterceptors.add(streamInterceptor);
         return b;
@@ -325,12 +328,10 @@ public abstract class IonReaderBuilder
     }
 
     /**
-     * Gets the {@link InputStreamInterceptor} instances available to this builder. If any instances were added using
-     * {@link #addInputStreamInterceptor(InputStreamInterceptor)}, then the returned list will be the default stream
-     * interceptor, which detects GZIP, followed by the stream interceptor(s) manually added. If no instances were
-     * manually added, the returned list will be the default stream interceptor followed by any stream interceptor(s)
-     * detected on the classpath by {@link ServiceLoader#load(Class)}.
-     * @see #addInputStreamInterceptor(InputStreamInterceptor)
+     * Gets the {@link InputStreamInterceptor} instances available to this builder. The returned list will always begin
+     * with the default stream interceptor, which detects GZIP. Any stream interceptor(s) detected on the classpath
+     * by {@link ServiceLoader#load(Class)} will immediately follow. Any stream interceptor(s) manually added using
+     * {@link #addInputStreamInterceptor(InputStreamInterceptor)} will occur at the end of the list.
      * @return an unmodifiable view of the stream interceptors currently configured.
      */
     public List<InputStreamInterceptor> getInputStreamInterceptors() {
