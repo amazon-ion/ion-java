@@ -32,14 +32,14 @@ import java.util.function.Function;
 
 import com.github.luben.zstd.ZstdInputStream;
 import com.github.luben.zstd.ZstdOutputStream;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,7 +55,7 @@ public class ZstdStreamInterceptorTest {
 
         @Override
         public String formatName() {
-            return "Zstd";
+            return "zstd";
         }
 
         @Override
@@ -310,7 +310,9 @@ public class ZstdStreamInterceptorTest {
             assertEquals(1, streamInterceptors.size());
             assertSame(GzipStreamInterceptor.INSTANCE, streamInterceptors.get(0));
         });
+
         AtomicReference<Throwable> withDefaultClassLoaderError = registerExceptionHandler(withDefaultClassLoader);
+
         Thread withCustomClassLoader = new Thread(() -> {
             AtomicReference<List<?>> streamInterceptors = new AtomicReference<>();
             executeWithCustomClassLoader(
@@ -331,6 +333,7 @@ public class ZstdStreamInterceptorTest {
                 }
             );
         });
+
         AtomicReference<Throwable> withCustomClassLoaderError = registerExceptionHandler(withCustomClassLoader);
         withCustomClassLoader.setContextClassLoader(new CustomInterceptorClassLoader());
 

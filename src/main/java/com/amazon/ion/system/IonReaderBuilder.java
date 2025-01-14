@@ -277,8 +277,7 @@ public abstract class IonReaderBuilder
      * is required, it is up to the caller to provide a custom interceptor implementation to
      * achieve this.
      * <p>
-     * As an alternative, or in addition, to adding stream interceptors manually using this method,
-     * users may register implementations as service providers on the classpath.
+     * Users may also or instead register implementations as service providers on the classpath.
      * See {@link ServiceLoader} for details about how to do this.
      * <p>
      * The list of stream interceptors available to the reader always begins with
