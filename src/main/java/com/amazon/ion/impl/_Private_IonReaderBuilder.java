@@ -215,12 +215,12 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
     ) {
         List<InputStreamInterceptor> streamInterceptors = builder.getInputStreamInterceptors();
         for (InputStreamInterceptor streamInterceptor : streamInterceptors) {
-            int headerLength = streamInterceptor.headerMatchLength();
+            int headerLength = streamInterceptor.numberOfBytesNeededToDetermineMatch();
             validateHeaderLength(headerLength);
             if (length < headerLength) {
                 continue;
             }
-            if (streamInterceptor.matchesHeader(ionData, offset, length)) {
+            if (streamInterceptor.isMatch(ionData, offset, length)) {
                 try {
                     return buildReader(
                         builder,
@@ -329,7 +329,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
         int maxHeaderLength = Math.max(
             _Private_IonConstants.BINARY_VERSION_MARKER_SIZE,
-            inputStreamInterceptors.stream().mapToInt(InputStreamInterceptor::headerMatchLength).max().orElse(0)
+            inputStreamInterceptors.stream().mapToInt(InputStreamInterceptor::numberOfBytesNeededToDetermineMatch).max().orElse(0)
         );
         validateHeaderLength(maxHeaderLength);
         // Note: this can create a lot of layers of InputStream wrappers. For example, if this method is called
@@ -349,10 +349,10 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
         // (which has always been unsupported).
         for (InputStreamInterceptor streamInterceptor : inputStreamInterceptors) {
-            if (bytesRead < streamInterceptor.headerMatchLength()) {
+            if (bytesRead < streamInterceptor.numberOfBytesNeededToDetermineMatch()) {
                 continue;
             }
-            if (streamInterceptor.matchesHeader(possibleIVM, 0, bytesRead)) {
+            if (streamInterceptor.isMatch(possibleIVM, 0, bytesRead)) {
                 try {
                     ionData = streamInterceptor.newInputStream(
                         new TwoElementInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)

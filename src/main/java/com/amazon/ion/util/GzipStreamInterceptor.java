@@ -21,12 +21,12 @@ public enum GzipStreamInterceptor implements InputStreamInterceptor {
     }
 
     @Override
-    public int headerMatchLength() {
+    public int numberOfBytesNeededToDetermineMatch() {
         return GZIP_HEADER.length;
     }
 
     @Override
-    public boolean matchesHeader(byte[] candidate, int offset, int length) {
+    public boolean isMatch(byte[] candidate, int offset, int length) {
         if (candidate == null || length < GZIP_HEADER.length) {
             return false;
         }

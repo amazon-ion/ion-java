@@ -59,12 +59,12 @@ public class ZstdStreamInterceptorTest {
         }
 
         @Override
-        public int headerMatchLength() {
+        public int numberOfBytesNeededToDetermineMatch() {
             return ZSTD_HEADER.length;
         }
 
         @Override
-        public boolean matchesHeader(byte[] candidate, int offset, int length) {
+        public boolean isMatch(byte[] candidate, int offset, int length) {
             if (candidate == null || length < ZSTD_HEADER.length) {
                 return false;
             }
@@ -362,12 +362,12 @@ public class ZstdStreamInterceptorTest {
         }
 
         @Override
-        public int headerMatchLength() {
+        public int numberOfBytesNeededToDetermineMatch() {
             return length;
         }
 
         @Override
-        public boolean matchesHeader(byte[] candidate, int offset, int length) {
+        public boolean isMatch(byte[] candidate, int offset, int length) {
             return Assertions.fail("This method should be unreachable.");
         }
 
