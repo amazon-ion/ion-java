@@ -10,7 +10,6 @@ import com.amazon.ion.util.unreachable
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.IdentityHashMap
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -53,13 +52,11 @@ class MacroEvaluator {
         private var numExpandedExpressions = 0
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
-        /** Negative view of pool so that we can have O(1) membership checks */
-        private val vendedExpanders: IdentityHashMap<ExpansionInfo, Unit> = IdentityHashMap(32)
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
         fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
             val expansion = expanderPool.removeLastOrNull() ?: ExpansionInfo(this)
-            vendedExpanders[expansion] = Unit
+            expansion.isInPool = false
             expansion.expansionKind = expansionKind
             expansion.expressions = expressions
             expansion.i = startInclusive
@@ -73,8 +70,10 @@ class MacroEvaluator {
         /** Reclaims an [ExpansionInfo] to the available pool. */
         fun reclaimExpander(ex: ExpansionInfo) {
             // Ensure that we are not doubly-adding an ExpansionInfo instance to the pool.
-            check(vendedExpanders.remove(ex, Unit))
-            expanderPool.add(ex)
+            if (!ex.isInPool) {
+                ex.isInPool = true
+                expanderPool.add(ex)
+            }
         }
 
         fun incrementStepCounter() {
@@ -717,6 +716,9 @@ class MacroEvaluator {
          */
         @JvmField
         var additionalState: Any? = null
+
+        @JvmField
+        var isInPool = false
 
         /**
          * Additional state in the form of a child [ExpansionInfo].
