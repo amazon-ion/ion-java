@@ -906,10 +906,10 @@ private fun calculateArgumentIndices(
     encodingExpressions: List<Expression>,
     argsStartInclusive: Int,
     argsEndExclusive: Int
-): List<Int> {
+): IntArray {
     // TODO: For TDL macro invocations, see if we can calculate this during the "compile" step.
     var numArgs = 0
-    val argsIndices = IntArray(macro.signature.size)
+    val argsIndices = IntArray(macro.signature.size) // TODO performance: pool these
     var currentArgIndex = argsStartInclusive
 
     for (p in macro.signature) {
@@ -936,5 +936,5 @@ private fun calculateArgumentIndices(
     if (numArgs > macro.signature.size) {
         throw IonException("Too many arguments. Expected ${macro.signature.size}, but found $numArgs")
     }
-    return argsIndices.toList()
+    return argsIndices
 }
