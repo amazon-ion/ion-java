@@ -42,8 +42,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
@@ -1308,6 +1310,11 @@ public class EncodingDirectiveCompilationTest {
             String[] annotation = reader.getTypeAnnotations();
             assertEquals(1, annotation.length);
             assertEquals("foo", annotation[0]);
+            Iterator<String> annotationIterator = reader.iterateTypeAnnotations();
+            assertTrue(annotationIterator.hasNext());
+            assertEquals("foo", annotationIterator.next());
+            assertFalse(annotationIterator.hasNext());
+            assertThrows(NoSuchElementException.class, () -> annotationIterator.next());
             assertNull(reader.next());
         }
     }

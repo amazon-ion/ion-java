@@ -148,10 +148,33 @@ class MacroEvaluatorAsIonReader(
 
     override fun getTypeAnnotations(): Array<String>? = currentValueExpression?.annotations?.let { Array(it.size) { i -> it[i].assumeText() } }
     override fun getTypeAnnotationSymbols(): Array<SymbolToken>? = currentValueExpression?.annotations?.toTypedArray()
-    // TODO: Make this into an iterator that unwraps the SymbolTokens as it goes instead of allocating a new list
+
+    private class SymbolTokenAsStringIterator(val tokens: List<SymbolToken>) : MutableIterator<String> {
+
+        var index = 0
+
+        override fun hasNext(): Boolean {
+            return index < tokens.size
+        }
+
+        override fun next(): String {
+            if (index >= tokens.size) {
+                throw NoSuchElementException()
+            }
+            return tokens[index++].assumeText()
+        }
+
+        override fun remove() {
+            throw UnsupportedOperationException("This iterator does not support removal")
+        }
+    }
+
     override fun iterateTypeAnnotations(): MutableIterator<String> {
-        return currentValueExpression?.annotations?.mapTo(mutableListOf()) { it.assumeText() }?.iterator()
-            ?: return Collections.emptyIterator()
+        return if (currentValueExpression?.annotations?.isNotEmpty() == true) {
+            SymbolTokenAsStringIterator(currentValueExpression!!.annotations)
+        } else {
+            Collections.emptyIterator()
+        }
     }
 
     override fun isInStruct(): Boolean = containerStack.peek()?.container?.type == IonType.STRUCT
