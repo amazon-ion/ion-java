@@ -1602,9 +1602,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         /**
          * Reads a single (non-grouped) expression.
          * @param parameter the parameter.
-         * @param expressions receives the expressions as they are materialized.
          */
-        private void readSingleExpression(Macro.Parameter parameter, List<Expression.EExpressionBodyExpression> expressions) {
+        private void readSingleExpression(Macro.Parameter parameter) {
             Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 IonReaderContinuableCoreBinary.super.nextValue();
@@ -1614,15 +1613,14 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (event == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            readValueAsExpression(false, expressions);
+            readValueAsExpression(false);
         }
 
         /**
          * Reads a group expression.
          * @param parameter the parameter.
-         * @param expressions receives the expressions as they are materialized.
          */
-        private void readGroupExpression(Macro.Parameter parameter, List<Expression.EExpressionBodyExpression> expressions, boolean requireSingleton) {
+        private void readGroupExpression(Macro.Parameter parameter, boolean requireSingleton) {
             Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 enterTaggedArgumentGroup();
@@ -1636,7 +1634,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             expressions.add(Expression.Placeholder.INSTANCE);
             boolean isSingleton = true;
             while (nextGroupedValue() != Event.NEEDS_INSTRUCTION || isMacroInvocation()) {
-                readValueAsExpression(false, expressions);
+                readValueAsExpression(false);
                 isSingleton = false;
             }
             if (requireSingleton && !isSingleton) {
@@ -1654,36 +1652,35 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         /**
          * Adds an expression that conveys that the parameter was not present (void).
-         * @param expressions receives the expressions as they are materialized.
          */
-        private void addVoidExpression(List<Expression.EExpressionBodyExpression> expressions) {
+        private void addVoidExpression() {
             int startIndex = expressions.size();
             expressions.add(new Expression.ExpressionGroup(startIndex, startIndex + 1));
         }
 
         @Override
-        protected void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing) {
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence, boolean isTrailing) {
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(parameter, expressions);
+                        readSingleExpression(parameter);
                     } else if (parameterPresence == PresenceBitmap.VOID) {
-                        addVoidExpression(expressions);
+                        addVoidExpression();
                     } else if (parameterPresence == PresenceBitmap.GROUP) {
-                        readGroupExpression(parameter, expressions, true);
+                        readGroupExpression(parameter, true);
                     } else {
                         throw new IllegalStateException("Unreachable: presence bitmap validated but reserved bits found.");
                     }
                     break;
                 case ExactlyOne:
                     // TODO determine if a group with a single element is valid here.
-                    readSingleExpression(parameter, expressions);
+                    readSingleExpression(parameter);
                     break;
                 case OneOrMore:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(parameter, expressions);
+                        readSingleExpression(parameter);
                     } else if (parameterPresence == PresenceBitmap.GROUP) {
-                        readGroupExpression(parameter, expressions, false);
+                        readGroupExpression(parameter, false);
                     } else {
                         throw new IonException(String.format(
                             "Invalid void argument for non-voidable parameter: %s",
@@ -1693,11 +1690,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     break;
                 case ZeroOrMore:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
-                        readSingleExpression(parameter, expressions);
+                        readSingleExpression(parameter);
                     } else if (parameterPresence == PresenceBitmap.GROUP) {
-                        readGroupExpression(parameter, expressions, false);
+                        readGroupExpression(parameter, false);
                     } else if (parameterPresence == PresenceBitmap.VOID) {
-                        addVoidExpression(expressions);
+                        addVoidExpression();
                     } else {
                         throw new IllegalStateException("Unreachable: presence bitmap validated but reserved bits found.");
                     }

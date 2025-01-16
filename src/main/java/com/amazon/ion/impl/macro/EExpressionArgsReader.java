@@ -25,6 +25,9 @@ public abstract class EExpressionArgsReader {
 
     private final ReaderAdapter reader;
 
+    // Reusable sink for expressions.
+    protected final List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>(16);
+
     /**
      * Constructor.
      * @param reader the {@link ReaderAdapter} from which to read {@link Expression}s.
@@ -82,10 +85,9 @@ public abstract class EExpressionArgsReader {
      * Reads a single parameter to a macro invocation.
      * @param parameter information about the parameter from the macro signature.
      * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
-     * @param expressions receives the expressions as they are materialized.
      * @param isTrailing true if this parameter is the last one in the signature; otherwise, false (unused in binary).
      */
-    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, List<Expression.EExpressionBodyExpression> expressions, boolean isTrailing);
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, boolean isTrailing);
 
     /**
      * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
@@ -104,12 +106,10 @@ public abstract class EExpressionArgsReader {
      * Reads a scalar value from the stream into an expression.
      * @param type the type of scalar.
      * @param annotations any annotations on the scalar.
-     * @param expressions receives the expressions as they are materialized.
      */
     private void readScalarValueAsExpression(
         IonType type,
-        List<SymbolToken> annotations,
-        List<Expression.EExpressionBodyExpression> expressions
+        List<SymbolToken> annotations
     ) {
         Expression.EExpressionBodyExpression expression;
         if (reader.isNullValue()) {
@@ -165,12 +165,10 @@ public abstract class EExpressionArgsReader {
      * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
      * @param type the type of container.
      * @param annotations any annotations on the container.
-     * @param expressions receives the expressions as they are materialized.
      */
     private void readContainerValueAsExpression(
         IonType type,
-        List<SymbolToken> annotations,
-        List<Expression.EExpressionBodyExpression> expressions
+        List<SymbolToken> annotations
     ) {
         int startIndex = expressions.size();
         expressions.add(Expression.Placeholder.INSTANCE);
@@ -181,7 +179,7 @@ public abstract class EExpressionArgsReader {
             if (type == IonType.STRUCT) {
                 expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
             }
-            readValueAsExpression(false, expressions); // TODO avoid recursion
+            readValueAsExpression(false); // TODO avoid recursion
         }
         stepOutRaw();
         // Overwrite the placeholder with an expression representing the actual type of the container and the
@@ -210,15 +208,12 @@ public abstract class EExpressionArgsReader {
 
     /**
      * Reads the rest of the stream into a single expression group.
-     * @param expressions receives the expressions as they are materialized.
      */
-    private void readStreamAsExpressionGroup(
-        List<Expression.EExpressionBodyExpression> expressions
-    ) {
+    private void readStreamAsExpressionGroup() {
         int startIndex = expressions.size();
         expressions.add(Expression.Placeholder.INSTANCE);
         do {
-            readValueAsExpression(false, expressions); // TODO avoid recursion
+            readValueAsExpression(false); // TODO avoid recursion
         } while (nextRaw());
         expressions.set(startIndex, new Expression.ExpressionGroup(startIndex, expressions.size()));
     }
@@ -228,30 +223,28 @@ public abstract class EExpressionArgsReader {
      * responsible for evaluating the e-expression to which this value belongs.
      * @param isImplicitRest true if this is the final parameter in the signature, it is variadic, and the format
      *                       supports implicit rest parameters (text only); otherwise, false.
-     * @param expressions receives the expressions as they are materialized.
      */
-    protected void readValueAsExpression(boolean isImplicitRest, List<Expression.EExpressionBodyExpression> expressions) {
+    protected void readValueAsExpression(boolean isImplicitRest) {
         if (isImplicitRest && !isContainerAnExpressionGroup()) {
-            readStreamAsExpressionGroup(expressions);
+            readStreamAsExpressionGroup();
             return;
         } else if (isMacroInvocation()) {
-            collectEExpressionArgs(expressions); // TODO avoid recursion
+            collectEExpressionArgs(); // TODO avoid recursion
             return;
         }
         IonType type = reader.encodingType();
         List<SymbolToken> annotations = getAnnotations();
         if (IonType.isContainer(type) && !reader.isNullValue()) {
-            readContainerValueAsExpression(type, annotations, expressions);
+            readContainerValueAsExpression(type, annotations);
         } else {
-            readScalarValueAsExpression(type, annotations, expressions);
+            readScalarValueAsExpression(type, annotations);
         }
     }
 
     /**
      * Collects the expressions that compose the current macro invocation.
-     * @param expressions receives the expressions as they are materialized.
      */
-    private void collectEExpressionArgs(List<Expression.EExpressionBodyExpression> expressions) {
+    private void collectEExpressionArgs() {
         Macro macro = loadMacro();
         stepIntoEExpression();
         List<Macro.Parameter> signature = macro.getSignature();
@@ -263,7 +256,6 @@ public abstract class EExpressionArgsReader {
             readParameter(
                 signature.get(i),
                 presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
-                expressions,
                 i == (numberOfParameters - 1)
             );
         }
@@ -276,13 +268,12 @@ public abstract class EExpressionArgsReader {
      * them to the macro evaluator.
      */
     public void beginEvaluatingMacroInvocation(MacroEvaluator macroEvaluator) {
-        // TODO performance: use a pool of expression lists to avoid repetitive allocations.
-        List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>();
+        expressions.clear();
         // TODO performance: avoid fully materializing all expressions up-front.
         if (reader.isInStruct()) {
             expressions.add(new Expression.FieldName(reader.getFieldNameSymbol()));
         }
-        collectEExpressionArgs(expressions);
+        collectEExpressionArgs();
         macroEvaluator.initExpansion(expressions);
     }
 }
