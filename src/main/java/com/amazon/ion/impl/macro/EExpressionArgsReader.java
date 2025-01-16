@@ -25,8 +25,9 @@ public abstract class EExpressionArgsReader {
 
     private final ReaderAdapter reader;
 
-    // Reusable sink for expressions.
-    protected final List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>(16);
+    // Reusable sink for expressions. The starting size of 64 is chosen so that growth is minimized or avoided for most
+    // e-expression invocations.
+    protected final List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>(64);
 
     /**
      * Constructor.
