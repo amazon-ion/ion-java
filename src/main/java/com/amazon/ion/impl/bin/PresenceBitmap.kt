@@ -46,7 +46,15 @@ import com.amazon.ion.impl.macro.Macro.*
  * TODO: Consider whether we can "compile" a specific function that can read the presence bits when we compile a macro.
  *       That _might_ be more efficient than this approach.
  */
-internal class PresenceBitmap {
+internal class PresenceBitmap(
+    var signature: List<Parameter>,
+    /** The number of parameters for which presence bits must be written. */
+    private var size: Int,
+    /** The total number of parameters in the macro signature */
+    var totalParameterCount: Int
+) {
+
+    constructor() : this(emptyList(), 0, 0)
 
     companion object {
         const val VOID = 0b00L
@@ -61,17 +69,45 @@ internal class PresenceBitmap {
         private const val PB_BITS_PER_SLOT = 2
 
         const val MAX_SUPPORTED_PARAMETERS = PB_SLOTS_PER_LONG * 4
+
+        private val ZERO_PARAMETERS: PresenceBitmap = allRequired(0)
+        private val ONE_REQUIRED_PARAMETER: PresenceBitmap = allRequired(1)
+        private val TWO_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(2)
+        private val THREE_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(3)
+        private val FOUR_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(4)
+
+        /** Creates a PresenceBitmap for the given number of required parameters */
+        private fun allRequired(numberOfParameters: Int): PresenceBitmap {
+            if (numberOfParameters > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
+            val bitmap = PresenceBitmap(emptyList(), 0, numberOfParameters)
+            for (i in 0 until numberOfParameters) {
+                bitmap.setUnchecked(i, EXPRESSION)
+            }
+            return bitmap
+        }
+
+        /** Creates or reuses a [PresenceBitmap] for the given signature. */
+        @JvmStatic
+        fun create(signature: List<Parameter>): PresenceBitmap {
+            if (signature.size > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
+            // Calculate the actual number of presence bits that will be encoded for the given signature.
+            val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
+            val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.taglessEncodingKind != null }
+            val size = if (usePresenceBits) nonRequiredParametersCount else 0
+            return if (size > 0) {
+                PresenceBitmap(signature, nonRequiredParametersCount, signature.size)
+            } else {
+                when (signature.size) {
+                    0 -> ZERO_PARAMETERS
+                    1 -> ONE_REQUIRED_PARAMETER
+                    2 -> TWO_REQUIRED_PARAMETERS
+                    3 -> THREE_REQUIRED_PARAMETERS
+                    4 -> FOUR_REQUIRED_PARAMETERS
+                    else -> allRequired(signature.size)
+                }
+            }
+        }
     }
-
-    var signature: List<Parameter> = emptyList()
-        private set
-
-    /** The number of parameters for which presence bits must be written. */
-    private var size: Int = 0
-
-    /** The total number of parameters in the macro signature */
-    val totalParameterCount: Int
-        get() = signature.size
 
     /** The first 32 presence bits slots */
     private var a: Long = 0
@@ -86,7 +122,7 @@ internal class PresenceBitmap {
     val byteSize: Int
         get() = size divideByRoundingUp PB_SLOTS_PER_BYTE
 
-    /** Resets this [PresenceBitmap] for the given [macro]. */
+    /** Resets this [PresenceBitmap] for the given signature. */
     fun initialize(signature: List<Parameter>) {
         if (signature.size > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
         this.signature = signature
@@ -99,6 +135,7 @@ internal class PresenceBitmap {
         val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
         val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.taglessEncodingKind != null }
         size = if (usePresenceBits) nonRequiredParametersCount else 0
+        totalParameterCount = signature.size
     }
 
     /**

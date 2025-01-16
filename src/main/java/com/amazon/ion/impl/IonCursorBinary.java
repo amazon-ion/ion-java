@@ -1910,18 +1910,16 @@ class IonCursorBinary implements IonCursor {
      * @return the presence bitmap.
      */
     protected PresenceBitmap loadPresenceBitmap(List<Macro.Parameter> signature) {
-        // TODO performance: reuse or pool the presence bitmaps. Ideally, it would not be necessary to allocate them
-        //  at all, but especially not when an invocation does not even have an argument encoding bitmap.
-        PresenceBitmap presenceBitmap = new PresenceBitmap();
-        presenceBitmap.initialize(signature);
+        // TODO performance: reuse or pool the presence bitmaps.
+        // Note: when there is no AEB, the following initializes the presence bitmap to "EXPRESSION" for each parameter.
+        PresenceBitmap presenceBitmap = PresenceBitmap.create(signature);
         if (presenceBitmap.getByteSize() > 0) {
             if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
             }
+            presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
+            presenceBitmap.validate();
         }
-        // Note: when there is no AEB, the following initializes the presence bitmap to "EXPRESSION" for each parameter.
-        presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
-        presenceBitmap.validate();
         return presenceBitmap;
     }
 
