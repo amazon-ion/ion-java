@@ -1255,7 +1255,7 @@ class IonReaderTextSystemX
             if (IonReaderTextSystemX.this.nextRaw() == null) {
                 // Add an empty expression group if nothing present.
                 int index = expressions.size() + 1;
-                expressions.add(new Expression.ExpressionGroup(index, index));
+                expressions.add(expressionPool.createExpressionGroup(index, index));
                 return;
             }
             readValueAsExpression(isTrailing && parameter.getCardinality().canBeMulti);
