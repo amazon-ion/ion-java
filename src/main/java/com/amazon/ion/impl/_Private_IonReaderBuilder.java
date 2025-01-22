@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCatalog;
@@ -8,6 +7,7 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.util.InputStreamInterceptor;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
@@ -16,7 +16,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
-import java.util.zip.GZIPInputStream;
+import java.util.Collections;
+import java.util.List;
 
 import static com.amazon.ion.impl.LocalSymbolTable.DEFAULT_LST_FACTORY;
 import static com.amazon.ion.impl._Private_IonReaderFactory.makeReader;
@@ -99,7 +100,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
      * The TwoElementSequenceInputStream allows the second delegate InputStream to return valid data if it subsequently
      * receives more data, which is common when performing continuable reads.
      */
-    private static final class TwoElementSequenceInputStream extends InputStream {
+    private static final class TwoElementInputStream extends InputStream {
 
         /**
          * The first InputStream in the sequence.
@@ -121,7 +122,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
          * @param first first InputStream in the sequence.
          * @param last last InputStream in the sequence.
          */
-        private TwoElementSequenceInputStream(final InputStream first, final InputStream last) {
+        private TwoElementInputStream(final InputStream first, final InputStream last) {
             this.first = first;
             this.last = last;
             this.in = first;
@@ -192,6 +193,18 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReader makeReader(_Private_IonReaderBuilder builder, byte[] ionData, int offset, int length);
     }
 
+    private static void validateHeaderLength(int maxHeaderLength) {
+        if (maxHeaderLength > _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+            // Note: we could choose an arbitrary limit lower than this. The purpose at this point is to avoid OOM
+            // in the case where Java cannot allocate an array of the requested size.
+            throw new IonException(String.format(
+                "The maximum header length %d exceeds the maximum array size %d.",
+                maxHeaderLength,
+                _Private_IonConstants.ARRAY_MAXIMUM_SIZE
+            ));
+        }
+    }
+
     static IonReader buildReader(
         _Private_IonReaderBuilder builder,
         byte[] ionData,
@@ -200,16 +213,29 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReaderFromBytesFactoryBinary binary,
         IonReaderFromBytesFactoryText text
     ) {
-        if (IonStreamUtils.isGzip(ionData, offset, length)) {
-            try {
-                return buildReader(
-                    builder,
-                    new GZIPInputStream(new ByteArrayInputStream(ionData, offset, length)),
-                    _Private_IonReaderFactory::makeReaderBinary,
-                    _Private_IonReaderFactory::makeReaderText
-                );
-            } catch (IOException e) {
-                throw new IonException(e);
+        List<InputStreamInterceptor> streamInterceptors = builder.getInputStreamInterceptors();
+        for (InputStreamInterceptor streamInterceptor : streamInterceptors) {
+            int headerLength = streamInterceptor.numberOfBytesNeededToDetermineMatch();
+            validateHeaderLength(headerLength);
+            if (length < headerLength) {
+                continue;
+            }
+            if (streamInterceptor.isMatch(ionData, offset, length)) {
+                try {
+                    return buildReader(
+                        builder,
+                        streamInterceptor.newInputStream(new ByteArrayInputStream(ionData, offset, length)),
+                        _Private_IonReaderFactory::makeReaderBinary,
+                        _Private_IonReaderFactory::makeReaderText,
+                        // The builder provides only one level of detection, e.g. GZIP-compressed binary Ion *or*
+                        // zstd-compressed binary Ion; *not* GZIP-compressed zstd-compressed binary Ion. Users that
+                        // need to intercept multiple format layers can provide a custom InputStreamInterceptor to
+                        // achieve this.
+                        /*inputStreamInterceptors=*/ Collections.emptyList()
+                    );
+                } catch (IOException e) {
+                    throw new IonException(e);
+                }
             }
         }
         if (IonStreamUtils.isIonBinary(ionData, offset, length)) {
@@ -247,15 +273,6 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         return true;
     }
 
-    static final byte[] GZIP_HEADER = {0x1F, (byte) 0x8B};
-
-    private static boolean startsWithGzipHeader(byte[] buffer, int length) {
-        if (length >= GZIP_HEADER.length) {
-            return buffer[0] == GZIP_HEADER[0] && buffer[1] == GZIP_HEADER[1];
-        }
-        return false;
-    }
-
     @FunctionalInterface
     interface IonReaderFromInputStreamFactoryText {
         IonReader makeReader(IonCatalog catalog, InputStream source, _Private_LocalSymbolTableFactory lstFactory);
@@ -266,27 +283,62 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         IonReader makeReader(_Private_IonReaderBuilder builder, InputStream source, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen);
     }
 
+    /**
+     * Reads from the given source into the given byte array, stopping once either
+     * <ol>
+     *     <li>`length` bytes have been read, or</li>
+     *     <li>the end of the source stream has been reached, or</li>
+     *     <li>the source stream throws an exception.</li>
+     * </ol>
+     * @param source the source of the bytes to read.
+     * @param destination the destination for the bytes read.
+     * @param length the number of bytes to attempt to read.
+     * @return the number of bytes read into `destination`.
+     */
+    private static int fillToLengthOrStreamEnd(InputStream source, byte[] destination, int length) {
+        int bytesRead = 0;
+        while (bytesRead < length) {
+            int bytesToRead = length - bytesRead;
+            int bytesReadThisIteration;
+            try {
+                bytesReadThisIteration = source.read(destination, bytesRead, bytesToRead);
+            } catch (EOFException e) {
+                // Some InputStream implementations throw EOFException in certain cases to convey
+                // that the end of the stream has been reached.
+                break;
+            } catch (IOException e) {
+                throw new IonException(e);
+            }
+            if (bytesReadThisIteration < 0) { // This indicates the end of the stream.
+                break;
+            }
+            bytesRead += bytesReadThisIteration;
+        }
+        return bytesRead;
+    }
+
     static IonReader buildReader(
         _Private_IonReaderBuilder builder,
         InputStream source,
         IonReaderFromInputStreamFactoryBinary binary,
-        IonReaderFromInputStreamFactoryText text
+        IonReaderFromInputStreamFactoryText text,
+        List<InputStreamInterceptor> inputStreamInterceptors
     ) {
         if (source == null) {
             throw new NullPointerException("Cannot build a reader from a null InputStream.");
         }
+        int maxHeaderLength = Math.max(
+            _Private_IonConstants.BINARY_VERSION_MARKER_SIZE,
+            inputStreamInterceptors.stream().mapToInt(InputStreamInterceptor::numberOfBytesNeededToDetermineMatch).max().orElse(0)
+        );
+        validateHeaderLength(maxHeaderLength);
         // Note: this can create a lot of layers of InputStream wrappers. For example, if this method is called
         // from build(byte[]) and the bytes contain GZIP, the chain will be SequenceInputStream(ByteArrayInputStream,
         // GZIPInputStream -> PushbackInputStream -> ByteArrayInputStream). If this creates a drag on efficiency,
         // alternatives should be evaluated.
-        byte[] possibleIVM = new byte[_Private_IonConstants.BINARY_VERSION_MARKER_SIZE];
+        byte[] possibleIVM = new byte[maxHeaderLength];
         InputStream ionData = source;
-        int bytesRead;
-        try {
-            bytesRead = ionData.read(possibleIVM);
-        } catch (IOException e) {
-            throw new IonException(e);
-        }
+        int bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, maxHeaderLength);
         // If the input stream is growing, it is possible that fewer than BINARY_VERSION_MARKER_SIZE bytes are
         // available yet. Simply check whether the stream *could* contain binary Ion based on the available bytes.
         // If it can't, fall back to text.
@@ -296,19 +348,20 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         // stream will always be empty (in which case it doesn't matter whether a text or binary reader is used)
         // or it's a binary stream (in which case the correct reader was created) or it's a growing text stream
         // (which has always been unsupported).
-        if (startsWithGzipHeader(possibleIVM, bytesRead)) {
-            try {
-                ionData = new GZIPInputStream(
-                    new TwoElementSequenceInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
-                );
+        for (InputStreamInterceptor streamInterceptor : inputStreamInterceptors) {
+            if (bytesRead < streamInterceptor.numberOfBytesNeededToDetermineMatch()) {
+                continue;
+            }
+            if (streamInterceptor.isMatch(possibleIVM, 0, bytesRead)) {
                 try {
-                    bytesRead = ionData.read(possibleIVM);
-                } catch (EOFException e) {
-                    // Only a GZIP header was available, so this may be a binary Ion stream.
-                    bytesRead = 0;
+                    ionData = streamInterceptor.newInputStream(
+                        new TwoElementInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
+                    );
+                } catch (IOException e) {
+                    throw new IonException(e);
                 }
-            } catch (IOException e) {
-                throw new IonException(e);
+                bytesRead = fillToLengthOrStreamEnd(ionData, possibleIVM, _Private_IonConstants.BINARY_VERSION_MARKER_SIZE);
+                break;
             }
         }
         if (startsWithIvm(possibleIVM, bytesRead)) {
@@ -316,7 +369,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
         InputStream wrapper;
         if (bytesRead > 0) {
-            wrapper = new TwoElementSequenceInputStream(
+            wrapper = new TwoElementInputStream(
                 new ByteArrayInputStream(possibleIVM, 0, bytesRead),
                 ionData
             );
@@ -333,7 +386,8 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             this,
             source,
             _Private_IonReaderFactory::makeReaderBinary,
-            _Private_IonReaderFactory::makeReaderText
+            _Private_IonReaderFactory::makeReaderText,
+            getInputStreamInterceptors()
         );
     }
 
