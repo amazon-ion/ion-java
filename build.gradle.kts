@@ -79,6 +79,7 @@ dependencies {
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
+    testImplementation("com.github.luben:zstd-jni:1.5.6-5")
 }
 
 group = "com.amazon.ion"
