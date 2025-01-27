@@ -19,25 +19,25 @@ import java.util.List;
  */
 public class PooledExpressionFactory {
 
-    private static final int POOL_SIZE = 32;
+    private static final int INITIAL_POOL_SIZE = 32;
 
-    private Expression.NullValue[] nullValues = new Expression.NullValue[POOL_SIZE];
-    private Expression.BoolValue[] boolValues = new Expression.BoolValue[POOL_SIZE];
-    private Expression.LongIntValue[] longIntValues = new Expression.LongIntValue[POOL_SIZE];
-    private Expression.BigIntValue[] bigIntValues = new Expression.BigIntValue[POOL_SIZE];
-    private Expression.FloatValue[] floatValues = new Expression.FloatValue[POOL_SIZE];
-    private Expression.DecimalValue[] decimalValues = new Expression.DecimalValue[POOL_SIZE];
-    private Expression.TimestampValue[] timestampValues = new Expression.TimestampValue[POOL_SIZE];
-    private Expression.SymbolValue[] symbolValues = new Expression.SymbolValue[POOL_SIZE];
-    private Expression.StringValue[] stringValues = new Expression.StringValue[POOL_SIZE];
-    private Expression.ClobValue[] clobValues = new Expression.ClobValue[POOL_SIZE];
-    private Expression.BlobValue[] blobValues = new Expression.BlobValue[POOL_SIZE];
-    private Expression.FieldName[] fieldNames = new Expression.FieldName[POOL_SIZE];
-    private Expression.EExpression[] eExpressions = new Expression.EExpression[POOL_SIZE];
-    private Expression.ExpressionGroup[] expressionGroups = new Expression.ExpressionGroup[POOL_SIZE];
-    private Expression.ListValue[] listValues = new Expression.ListValue[POOL_SIZE];
-    private Expression.StructValue[] structValues = new Expression.StructValue[POOL_SIZE];
-    private Expression.SExpValue[] sexpValues = new Expression.SExpValue[POOL_SIZE];
+    private Expression.NullValue[] nullValues = new Expression.NullValue[INITIAL_POOL_SIZE];
+    private Expression.BoolValue[] boolValues = new Expression.BoolValue[INITIAL_POOL_SIZE];
+    private Expression.LongIntValue[] longIntValues = new Expression.LongIntValue[INITIAL_POOL_SIZE];
+    private Expression.BigIntValue[] bigIntValues = new Expression.BigIntValue[INITIAL_POOL_SIZE];
+    private Expression.FloatValue[] floatValues = new Expression.FloatValue[INITIAL_POOL_SIZE];
+    private Expression.DecimalValue[] decimalValues = new Expression.DecimalValue[INITIAL_POOL_SIZE];
+    private Expression.TimestampValue[] timestampValues = new Expression.TimestampValue[INITIAL_POOL_SIZE];
+    private Expression.SymbolValue[] symbolValues = new Expression.SymbolValue[INITIAL_POOL_SIZE];
+    private Expression.StringValue[] stringValues = new Expression.StringValue[INITIAL_POOL_SIZE];
+    private Expression.ClobValue[] clobValues = new Expression.ClobValue[INITIAL_POOL_SIZE];
+    private Expression.BlobValue[] blobValues = new Expression.BlobValue[INITIAL_POOL_SIZE];
+    private Expression.FieldName[] fieldNames = new Expression.FieldName[INITIAL_POOL_SIZE];
+    private Expression.EExpression[] eExpressions = new Expression.EExpression[INITIAL_POOL_SIZE];
+    private Expression.ExpressionGroup[] expressionGroups = new Expression.ExpressionGroup[INITIAL_POOL_SIZE];
+    private Expression.ListValue[] listValues = new Expression.ListValue[INITIAL_POOL_SIZE];
+    private Expression.StructValue[] structValues = new Expression.StructValue[INITIAL_POOL_SIZE];
+    private Expression.SExpValue[] sexpValues = new Expression.SExpValue[INITIAL_POOL_SIZE];
 
     private int nullValuesIndex = 0;
     private int boolValuesIndex = 0;
