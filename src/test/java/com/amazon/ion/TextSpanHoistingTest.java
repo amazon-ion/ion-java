@@ -42,8 +42,6 @@ public class TextSpanHoistingTest
         reader.stepIn();
         Assertions.assertEquals(IonType.SYMBOL, reader.next());
         Assertions.assertEquals("foo1", reader.getFieldName());
-
-        // this assertion fails
         Assertions.assertEquals("bar", reader.stringValue());
         reader.stepOut();
     }
