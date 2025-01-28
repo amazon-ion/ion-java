@@ -46,21 +46,37 @@ class MacroEvaluator {
      * This state pertains to a single "session" of the macro evaluator, and is reset every time [initExpansion] is called.
      * For now, this includes managing the pool of [ExpansionInfo] and tracking the expansion step limit.
      */
-    private class Session(
+    internal class Session(
         /** Number of expansion steps at which the evaluation session should be aborted. */
         private val expansionLimit: Int = 1_000_000
     ) {
         /** Internal state for tracking the number of expansion steps. */
         private var numExpandedExpressions = 0
-        /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
-        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
         /** Pool of [Expression] to minimize allocation and garbage collection. */
         val expressionPool: PooledExpressionFactory = PooledExpressionFactory()
+        /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
+        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
+        private var expanderPoolIndex = 0
+
+        /**
+         * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
+         * valid until [reset] is called.
+         */
+        private fun getExpansion(): ExpansionInfo {
+            val expansion: ExpansionInfo
+            if (expanderPoolIndex >= expanderPool.size) {
+                expansion = ExpansionInfo(this)
+                expanderPool.add(expansion)
+            } else {
+                expansion = expanderPool[expanderPoolIndex]
+            }
+            expanderPoolIndex++
+            return expansion
+        }
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
         fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
-            val expansion = expanderPool.removeLastOrNull() ?: ExpansionInfo(this)
-            expansion.isInPool = false
+            val expansion = getExpansion()
             expansion.expansionKind = expansionKind
             expansion.expressions = expressions
             expansion.i = startInclusive
@@ -69,15 +85,6 @@ class MacroEvaluator {
             expansion.additionalState = null
             expansion.childExpansion = null
             return expansion
-        }
-
-        /** Reclaims an [ExpansionInfo] to the available pool. */
-        fun reclaimExpander(ex: ExpansionInfo) {
-            // Ensure that we are not doubly-adding an ExpansionInfo instance to the pool.
-            if (!ex.isInPool) {
-                ex.isInPool = true
-                expanderPool.add(ex)
-            }
         }
 
         fun incrementStepCounter() {
@@ -92,6 +99,34 @@ class MacroEvaluator {
         fun reset() {
             numExpandedExpressions = 0
             expressionPool.clear()
+            expanderPoolIndex = 0
+            intArrayPoolIndices.fill(0)
+        }
+
+        /** The pool of [IntArray]s for use during this session. */
+        private val intArrayPools = Array<MutableList<IntArray>>(32) { mutableListOf() }
+        private val intArrayPoolIndices = IntArray(32) { 0 }
+
+        /**
+         * Gets an [IntArray] from the pool, or allocates a new one if necessary. Returned arrays will not
+         * necessarily be zeroed and are valid until [reset] is called.
+         * */
+        fun intArrayForSize(size: Int): IntArray {
+            if (size >= intArrayPools.size) {
+                // Don't attempt to pool arbitrarily large arrays.
+                return IntArray(size)
+            }
+            val pool = intArrayPools[size]
+            val index = intArrayPoolIndices[size]
+            val array: IntArray
+            if (index >= pool.size) {
+                array = IntArray(size)
+                pool.add(array)
+            } else {
+                array = pool[index]
+            }
+            intArrayPoolIndices[size] = index + 1
+            return array
         }
     }
 
@@ -121,7 +156,7 @@ class MacroEvaluator {
      */
     // TODO(PERF): It might be possible to optimize this by changing it to an enum without any methods (or even a set of
     //             integer constants) and converting all their implementations to static methods.
-    private enum class ExpansionKind {
+    internal enum class ExpansionKind {
         Uninitialized {
             override fun produceNext(thisExpansion: ExpansionInfo): Nothing = throw IllegalStateException("ExpansionInfo not initialized.")
         },
@@ -157,7 +192,7 @@ class MacroEvaluator {
                     is DataModelExpression -> next
                     is InvokableExpression -> {
                         val macro = next.macro
-                        val argIndices = calculateArgumentIndices(macro, thisExpansion.expressions, next.startInclusive, next.endExclusive)
+                        val argIndices = calculateArgumentIndices(macro, thisExpansion, next.startInclusive, next.endExclusive)
                         val newEnvironment = thisExpansion.environment.createChild(thisExpansion.expressions, argIndices)
                         val expansionKind = ExpansionKind.forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
@@ -699,7 +734,7 @@ class MacroEvaluator {
      *       Alternately, consider ExpansionOperator to reflect the fact that these are
      *       like operators in an expression tree.
      */
-    private class ExpansionInfo(@JvmField val session: Session) {
+    internal class ExpansionInfo(@JvmField val session: Session) {
 
         /** The [ExpansionKind]. */
         @JvmField var expansionKind: ExpansionKind = ExpansionKind.Uninitialized
@@ -723,9 +758,6 @@ class MacroEvaluator {
          */
         @JvmField
         var additionalState: Any? = null
-
-        @JvmField
-        var isInPool = false
 
         /**
          * Additional state in the form of a child [ExpansionInfo].
@@ -764,7 +796,6 @@ class MacroEvaluator {
             additionalState = null
             childExpansion?.close()
             childExpansion = null
-            session.reclaimExpander(this)
         }
 
         /**
@@ -901,7 +932,7 @@ class MacroEvaluator {
 
 /**
  * Given a [Macro] (or more specifically, its signature), calculates the position of each of its arguments
- * in [encodingExpressions]. The result is a list that can be used to map from a parameter's
+ * in [expansion].expressions. The result is a list that can be used to map from a parameter's
  * signature index to the encoding expression index. Any trailing, optional arguments that are
  * elided have a value of -1.
  *
@@ -910,14 +941,15 @@ class MacroEvaluator {
  */
 private fun calculateArgumentIndices(
     macro: Macro,
-    encodingExpressions: List<Expression>,
+    expansion: MacroEvaluator.ExpansionInfo,
     argsStartInclusive: Int,
     argsEndExclusive: Int
 ): IntArray {
     // TODO: For TDL macro invocations, see if we can calculate this during the "compile" step.
     var numArgs = 0
-    val argsIndices = IntArray(macro.signature.size) // TODO performance: pool these
+    val argsIndices = expansion.session.intArrayForSize(macro.signature.size)
     var currentArgIndex = argsStartInclusive
+    val encodingExpressions: List<Expression> = expansion.expressions
 
     for (p in macro.signature) {
         if (currentArgIndex >= argsEndExclusive) {
