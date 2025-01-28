@@ -1647,7 +1647,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (exitArgumentGroup() == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            expressions.set(startIndex, new Expression.ExpressionGroup(startIndex, expressions.size()));
+            expressions.set(startIndex, expressionPool.createExpressionGroup(startIndex, expressions.size()));
         }
 
         /**
@@ -1655,7 +1655,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          */
         private void addVoidExpression() {
             int startIndex = expressions.size();
-            expressions.add(new Expression.ExpressionGroup(startIndex, startIndex + 1));
+            expressions.add(expressionPool.createExpressionGroup(startIndex, startIndex + 1));
         }
 
         @Override
