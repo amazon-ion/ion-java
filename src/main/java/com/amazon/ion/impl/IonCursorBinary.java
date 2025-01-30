@@ -393,6 +393,13 @@ class IonCursorBinary implements IonCursor {
     TaglessEncoding taglessType = null;
 
     /**
+     * A pool for PresenceBitmap instances that can be scoped to the current value. This is used when skipping macro
+     * invocations. PresenceBitmap instances that need to stay in scope after the cursor moves to the next value
+     * cannot come from this pool; an externally managed pool must be used in that case.
+     */
+    private final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
+
+    /**
      * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
      */
     private static BufferConfiguration.DataHandler getDataHandler(IonBufferConfiguration configuration) {
@@ -1907,12 +1914,12 @@ class IonCursorBinary implements IonCursor {
      * Loads the presence bitmap for the given signature. Upon calling this method, `peekIndex` must point to the
      * first byte in the argument encoding bitmap (if applicable for the signature).
      * @param signature the signature of the macro invocation for which to read a presence bitmap.
+     * @param pool the PresenceBitmap pool to use.
      * @return the presence bitmap.
      */
-    protected PresenceBitmap loadPresenceBitmap(List<Macro.Parameter> signature) {
-        // TODO performance: reuse or pool the presence bitmaps.
+    protected PresenceBitmap loadPresenceBitmap(List<Macro.Parameter> signature, PresenceBitmap.Companion.PooledFactory pool) {
         // Note: when there is no AEB, the following initializes the presence bitmap to "EXPRESSION" for each parameter.
-        PresenceBitmap presenceBitmap = PresenceBitmap.create(signature);
+        PresenceBitmap presenceBitmap = PresenceBitmap.create(signature, pool);
         if (presenceBitmap.getByteSize() > 0) {
             if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
@@ -2041,7 +2048,7 @@ class IonCursorBinary implements IonCursor {
         }
         stepIntoEExpression();
         List<Macro.Parameter > signature = macro.getSignature();
-        PresenceBitmap presenceBitmap = loadPresenceBitmap(signature);
+        PresenceBitmap presenceBitmap = loadPresenceBitmap(signature, presenceBitmapPool);
         for (int i = 0; i < signature.size(); i++) {
             Macro.Parameter parameter = signature.get(i);
             long parameterPresence = presenceBitmap.get(i);
@@ -2335,6 +2342,7 @@ class IonCursorBinary implements IonCursor {
         macroInvocationId = -1;
         isSystemInvocation = false;
         taglessType = null;
+        presenceBitmapPool.clear();
     }
 
     /**

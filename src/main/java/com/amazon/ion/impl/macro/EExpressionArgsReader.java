@@ -29,6 +29,8 @@ public abstract class EExpressionArgsReader {
 
     protected final PooledExpressionFactory expressionPool = new PooledExpressionFactory();
 
+    protected final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
+
     /**
      * Constructor.
      * @param reader the {@link ReaderAdapter} from which to read {@link Expression}s.
@@ -270,6 +272,7 @@ public abstract class EExpressionArgsReader {
     public void beginEvaluatingMacroInvocation(MacroEvaluator macroEvaluator) {
         expressions.clear();
         expressionPool.clear();
+        presenceBitmapPool.clear();
         // TODO performance: avoid fully materializing all expressions up-front.
         if (reader.isInStruct()) {
             expressions.add(expressionPool.createFieldName(reader.getFieldNameSymbol()));
