@@ -3,8 +3,13 @@
 package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
+import com.amazon.ion.impl.bin.PresenceBitmap.Companion.EXPRESSION
+import com.amazon.ion.impl.bin.PresenceBitmap.Companion.GROUP
+import com.amazon.ion.impl.bin.PresenceBitmap.Companion.VOID
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.Macro.*
+import com.amazon.ion.impl.macro.MacroEvaluator.*
+import java.util.*
 
 /**
  * Utility class for setting, storing, reading, and writing presence bits.
@@ -70,16 +75,40 @@ internal class PresenceBitmap(
 
         const val MAX_SUPPORTED_PARAMETERS = PB_SLOTS_PER_LONG * 4
 
-        private val ZERO_PARAMETERS: PresenceBitmap = allRequired(0)
-        private val ONE_REQUIRED_PARAMETER: PresenceBitmap = allRequired(1)
-        private val TWO_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(2)
-        private val THREE_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(3)
-        private val FOUR_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(4)
+        private val ZERO_PARAMETERS: PresenceBitmap = allRequired(0) { PresenceBitmap() }
+        private val ONE_REQUIRED_PARAMETER: PresenceBitmap = allRequired(1) { PresenceBitmap() }
+        private val TWO_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(2) { PresenceBitmap() }
+        private val THREE_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(3) { PresenceBitmap() }
+        private val FOUR_REQUIRED_PARAMETERS: PresenceBitmap = allRequired(4) { PresenceBitmap() }
+
+        /** Pool for PresenceBitmap instances. */
+        class PooledFactory {
+
+            private var index = 0
+
+            private var pool: Array<PresenceBitmap?> = Array(32) { null }
+
+            /** Gets an instance from the pool, allocating a new one only if necessary. The returned instance must be reset. */
+            fun get(): PresenceBitmap {
+                if (index >= pool.size) {
+                    pool = pool.copyOf(pool.size * 2)
+                }
+                if (pool[index] == null) {
+                    pool[index] = PresenceBitmap()
+                }
+                return pool[index++]!!
+            }
+
+            /** Clears the pool. Calling this method invalidates all instances previously returned by [get]. */
+            fun clear() {
+                index = 0
+            }
+        }
 
         /** Creates a PresenceBitmap for the given number of required parameters */
-        private fun allRequired(numberOfParameters: Int): PresenceBitmap {
+        private inline fun allRequired(numberOfParameters: Int, supplier: () -> PresenceBitmap): PresenceBitmap {
             if (numberOfParameters > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
-            val bitmap = PresenceBitmap(emptyList(), 0, numberOfParameters)
+            val bitmap = supplier().reset(emptyList(), 0, numberOfParameters)
             for (i in 0 until numberOfParameters) {
                 bitmap.setUnchecked(i, EXPRESSION)
             }
@@ -88,14 +117,22 @@ internal class PresenceBitmap(
 
         /** Creates or reuses a [PresenceBitmap] for the given signature. */
         @JvmStatic
-        fun create(signature: List<Parameter>): PresenceBitmap {
+        fun create(signature: List<Parameter>, pool: PooledFactory): PresenceBitmap {
             if (signature.size > MAX_SUPPORTED_PARAMETERS) throw IonException("Macros with more than 128 parameters are not supported by this implementation.")
             // Calculate the actual number of presence bits that will be encoded for the given signature.
-            val nonRequiredParametersCount = signature.count { it.cardinality != ParameterCardinality.ExactlyOne }
-            val usePresenceBits = nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD || signature.any { it.type.taglessEncodingKind != null }
+            var nonRequiredParametersCount = 0
+            var usePresenceBits = false
+            for (i in signature.indices) {
+                val parameter = signature[i]
+                if (parameter.cardinality != ParameterCardinality.ExactlyOne) {
+                    nonRequiredParametersCount++
+                }
+                usePresenceBits = usePresenceBits or (parameter.type.taglessEncodingKind != null)
+            }
+            usePresenceBits = usePresenceBits or (nonRequiredParametersCount > PRESENCE_BITS_SIZE_THRESHOLD)
             val size = if (usePresenceBits) nonRequiredParametersCount else 0
             return if (size > 0) {
-                PresenceBitmap(signature, nonRequiredParametersCount, signature.size)
+                pool.get().reset(signature, nonRequiredParametersCount, signature.size)
             } else {
                 when (signature.size) {
                     0 -> ZERO_PARAMETERS
@@ -103,7 +140,7 @@ internal class PresenceBitmap(
                     2 -> TWO_REQUIRED_PARAMETERS
                     3 -> THREE_REQUIRED_PARAMETERS
                     4 -> FOUR_REQUIRED_PARAMETERS
-                    else -> allRequired(signature.size)
+                    else -> allRequired(signature.size, pool::get)
                 }
             }
         }
@@ -121,6 +158,21 @@ internal class PresenceBitmap(
     /** The number of bytes required to encode this [PresenceBitmap] */
     val byteSize: Int
         get() = size divideByRoundingUp PB_SLOTS_PER_BYTE
+
+    /**
+     * Resets this [PresenceBitmap] for the given signature, size, and parameter count. After this method is called,
+     * callers must set the bitmap as necessary, such as by calling [readFrom].
+     */
+    fun reset(signature: List<Parameter>, size: Int, totalParameterCount: Int): PresenceBitmap {
+        this.signature = signature
+        this.size = size
+        this.totalParameterCount = totalParameterCount
+        a = 0
+        b = 0
+        c = 0
+        d = 0
+        return this
+    }
 
     /** Resets this [PresenceBitmap] for the given signature. */
     fun initialize(signature: List<Parameter>) {

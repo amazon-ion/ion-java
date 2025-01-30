@@ -1727,7 +1727,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         @Override
         protected PresenceBitmap loadPresenceBitmapIfNecessary(List<Macro.Parameter> signature) {
-            return IonReaderContinuableCoreBinary.this.loadPresenceBitmap(signature);
+            return IonReaderContinuableCoreBinary.this.loadPresenceBitmap(signature, presenceBitmapPool);
         }
 
         @Override
