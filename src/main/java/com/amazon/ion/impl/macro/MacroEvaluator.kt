@@ -864,10 +864,9 @@ class MacroEvaluator {
      */
     fun initExpansion(encodingExpressions: List<EExpressionBodyExpression>) {
         session.reset()
-        containerStack.push { ci ->
-            ci.type = ContainerInfo.Type.TopLevel
-            ci.expansion = session.getExpander(ExpansionKind.Stream, encodingExpressions, 0, encodingExpressions.size, Environment.EMPTY)
-        }
+        val ci = containerStack.push { _ -> }
+        ci.type = ContainerInfo.Type.TopLevel
+        ci.expansion = session.getExpander(ExpansionKind.Stream, encodingExpressions, 0, encodingExpressions.size, Environment.EMPTY)
     }
 
     /**
@@ -908,21 +907,20 @@ class MacroEvaluator {
         if (expression is DataModelContainer) {
             val currentContainer = containerStack.peek()
             val topExpansion = currentContainer.expansion.top()
-            containerStack.push { ci ->
-                ci.type = when (expression.type) {
-                    IonType.LIST -> ContainerInfo.Type.List
-                    IonType.SEXP -> ContainerInfo.Type.Sexp
-                    IonType.STRUCT -> ContainerInfo.Type.Struct
-                    else -> unreachable()
-                }
-                ci.expansion = session.getExpander(
-                    expansionKind = ExpansionKind.Stream,
-                    expressions = topExpansion.expressions,
-                    startInclusive = expression.startInclusive,
-                    endExclusive = expression.endExclusive,
-                    environment = topExpansion.environment,
-                )
+            val ci = containerStack.push { _ -> }
+            ci.type = when (expression.type) {
+                IonType.LIST -> ContainerInfo.Type.List
+                IonType.SEXP -> ContainerInfo.Type.Sexp
+                IonType.STRUCT -> ContainerInfo.Type.Struct
+                else -> unreachable()
             }
+            ci.expansion = session.getExpander(
+                expansionKind = ExpansionKind.Stream,
+                expressions = topExpansion.expressions,
+                startInclusive = expression.startInclusive,
+                endExclusive = expression.endExclusive,
+                environment = topExpansion.environment,
+            )
             currentExpr = null
         } else {
             throw IonException("Not positioned on a container.")
