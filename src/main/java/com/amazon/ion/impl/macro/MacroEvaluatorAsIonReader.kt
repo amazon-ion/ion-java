@@ -117,10 +117,9 @@ class MacroEvaluatorAsIonReader(
 
         val containerToStepInto = currentValueExpression
         evaluator.stepIn()
-        containerStack.push {
-            it.container = containerToStepInto as Expression.DataModelContainer
-            it.currentFieldName = null
-        }
+        val it = containerStack.push { _ -> }
+        it.container = containerToStepInto as Expression.DataModelContainer
+        it.currentFieldName = null
         currentFieldName = null
         currentValueExpression = null
         queuedFieldName = null
