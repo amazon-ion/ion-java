@@ -25,7 +25,7 @@ public abstract class EExpressionArgsReader {
     private final ReaderAdapter reader;
 
     // Reusable sink for expressions.
-    protected final List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>(16);
+    protected final List<Expression.EExpressionBodyExpression> expressions = new ArrayList<>(128);
 
     protected final PooledExpressionFactory expressionPool = new PooledExpressionFactory();
 

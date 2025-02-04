@@ -55,7 +55,7 @@ class MacroEvaluator {
         /** Pool of [Expression] to minimize allocation and garbage collection. */
         val expressionPool: PooledExpressionFactory = PooledExpressionFactory()
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
-        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
+        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
         private var expanderPoolIndex = 0
 
         /**

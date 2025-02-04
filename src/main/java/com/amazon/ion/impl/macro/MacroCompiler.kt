@@ -21,8 +21,8 @@ internal class MacroCompiler(
     var macroName: String? = null
         private set // Only mutable internally
 
-    private val signature: MutableList<Macro.Parameter> = mutableListOf()
-    private val expressions: MutableList<TemplateBodyExpression> = mutableListOf()
+    private val signature: MutableList<Macro.Parameter> = ArrayList(16)
+    private val expressions: MutableList<TemplateBodyExpression> = ArrayList(64)
 
     /**
      * Compiles a template macro definition from the reader. Caller is responsible for positioning the reader at—but not
