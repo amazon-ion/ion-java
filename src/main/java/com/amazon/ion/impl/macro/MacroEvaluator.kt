@@ -949,9 +949,9 @@ private fun calculateArgumentIndices(
     var currentArgIndex = argsStartInclusive
     val encodingExpressions: List<Expression> = expansion.expressions
 
-    for (p in macro.signature) {
+    for (i in 0 until macro.signature.size) {
         if (currentArgIndex >= argsEndExclusive) {
-            if (!p.cardinality.canBeVoid) throw IonException("No value provided for parameter ${p.variableName}")
+            if (!macro.signature[i].cardinality.canBeVoid) throw IonException("No value provided for parameter ${macro.signature[i].variableName}")
             // Elided rest parameter.
             argsIndices[numArgs] = -1
         } else {

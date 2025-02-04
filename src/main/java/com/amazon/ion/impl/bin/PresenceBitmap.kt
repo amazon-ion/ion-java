@@ -195,11 +195,9 @@ internal class PresenceBitmap(
      * Throws [IonException] if any are not.
      */
     fun validate() {
-        val parameters = signature.iterator()
-        var i = 0
-        while (parameters.hasNext()) {
-            val p = parameters.next()
-            val v = getUnchecked(i++)
+        for (i in signature.indices) {
+            val p = signature[i]
+            val v = getUnchecked(i)
             val isValid = when (p.cardinality) {
                 ParameterCardinality.ZeroOrOne -> v == VOID || v == EXPRESSION
                 ParameterCardinality.ExactlyOne -> v == EXPRESSION
@@ -222,18 +220,16 @@ internal class PresenceBitmap(
         var currentByte: Long = -1
         var currentPosition: Int = startInclusive
         var bitmapIndex = 0
-        var i = 0
 
-        val parameters = signature.iterator()
-        while (parameters.hasNext()) {
-            val p = parameters.next()
+        for (i in signature.indices) {
+            val p = signature[i]
             if (p.cardinality == ParameterCardinality.ExactlyOne) {
-                setUnchecked(i++, EXPRESSION)
+                setUnchecked(i, EXPRESSION)
             } else {
                 if (bitmapIndex % PB_SLOTS_PER_BYTE == 0) {
                     currentByte = bytes[currentPosition++].toLong()
                 }
-                setUnchecked(i++, currentByte and TWO_BIT_MASK)
+                setUnchecked(i, currentByte and TWO_BIT_MASK)
                 currentByte = currentByte shr PB_BITS_PER_SLOT
                 bitmapIndex++
             }
