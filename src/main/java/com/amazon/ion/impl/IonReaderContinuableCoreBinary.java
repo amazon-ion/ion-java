@@ -1221,7 +1221,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         boolean isSymbolTableAppend = false;
         boolean isMacroTableAppend = false;
-        List<String> newSymbols = new ArrayList<>(8);
+        List<String> newSymbols = new ArrayList<>(128);
         Map<MacroRef, Macro> newMacros = new LinkedHashMap<>();
         MacroCompiler macroCompiler = new MacroCompiler(this::resolveMacro, readerAdapter);
 
