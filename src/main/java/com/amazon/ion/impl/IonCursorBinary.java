@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.function.IntConsumer;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
@@ -174,6 +175,12 @@ class IonCursorBinary implements IonCursor {
          * container is assumed to be buffered in its entirety and no probing occurs.
          */
         private boolean skipAnnotations = false;
+
+        /**
+         * If non-null, will be notified of the number of bytes left-shifted in the buffer, whenever such a shift
+         * occurs. See {@link #setLeftShiftHandler(IntConsumer)}.
+         */
+        IntConsumer onLeftShift = null;
 
         RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
             this.inputStream = inputStream;
@@ -591,6 +598,16 @@ class IonCursorBinary implements IonCursor {
         registerOversizedValueHandler(configuration.getOversizedValueHandler());
     }
 
+    /**
+     * Sets the handler to be invoked when space is reclaimed in the buffer and existing bytes are shifted left.
+     * @param onLeftShift the handler.
+     */
+    void setLeftShiftHandler(IntConsumer onLeftShift) {
+        if (refillableState != null) {
+            refillableState.onLeftShift = onLeftShift;
+        }
+    }
+
     /*
      * This class contains methods with the prefix 'slow', which usually have
      * counterparts with the prefix 'unchecked'. The 'unchecked' variants are
@@ -822,6 +839,9 @@ class IonCursorBinary implements IonCursor {
         shiftContainerEnds(shiftAmount);
         refillableState.pendingShift = shiftAmount;
         refillableState.totalDiscardedBytes += shiftAmount;
+        if (refillableState.onLeftShift != null) {
+            refillableState.onLeftShift.accept(shiftAmount);
+        }
     }
 
     /**
@@ -1414,6 +1434,11 @@ class IonCursorBinary implements IonCursor {
 
         }
         valueMarker.typeId = valueTid;
+        // These starts and ends are used by code paths shared with Ion 1.0 to validate annotation wrapper lengths.
+        // Since Ion 1.1 annotation lengths do not include the wrapped value, bypass length verification by clearing
+        // the indices.
+        valueMarker.startIndex = -1;
+        valueMarker.endIndex = -1;
         return false;
     }
 
@@ -2107,6 +2132,33 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Pin the bytes present in the buffer that have not yet been consumed, preventing them from being evicted. When
+     * these bytes are no longer needed, the caller must call {@link #unpinBytes()} to unpin them so they can be
+     * reclaimed.
+     */
+    protected void pinBytesInCurrentValue() {
+        if (refillableState == null) {
+            // When the cursor is backed by a buffer, the bytes are already logically pinned because no growth or
+            // shifting can occur.
+            return;
+        }
+        if (refillableState.pinOffset < 0) {
+            refillableState.pinOffset = offset;
+        }
+    }
+
+    /**
+     * Unpins the bytes that were previously pinned by {@link #pinBytesInCurrentValue()}, allowing those bytes to be
+     * reclaimed.
+     */
+    protected void unpinBytes() {
+        if (refillableState == null) {
+            return;
+        }
+        refillableState.pinOffset = -1;
+    }
+
+    /**
      * Locates the end of the delimited container on which the reader is currently positioned.
      * @return true if the end of the container was found; otherwise, false.
      */
@@ -2343,6 +2395,13 @@ class IonCursorBinary implements IonCursor {
         isSystemInvocation = false;
         taglessType = null;
         presenceBitmapPool.clear();
+    }
+
+    /**
+     * Returns the cursor's `peekIndex` to the last `checkpoint`.
+     */
+    protected void returnToCheckpoint() {
+        peekIndex = checkpoint;
     }
 
     /**
@@ -3094,7 +3153,7 @@ class IonCursorBinary implements IonCursor {
             if (slowSeek(parent.endIndex - offset)) {
                 return event;
             }
-            peekIndex = offset;
+            peekIndex = parent.endIndex;
         }
         slowPopContainer();
         return event;
@@ -3967,6 +4026,23 @@ class IonCursorBinary implements IonCursor {
             // TODO changes are needed here to support Ion 1.1.
             throw new IonException(String.format("Attempted to seek using an unsupported Ion version %s.", ionVersionId));
         }
+    }
+
+    /**
+     * Positions the cursor on the first byte of a value body (i.e., after the value's header byte(s)). It is up to the
+     * caller to ensure that a value represented by the given IonTypeID is present in the buffer between the given
+     * start (inclusive) and end (exclusive) indices.
+     * @param start the start index of the value body (inclusive).
+     * @param end the end index of the value body (exclusive).
+     * @param typeId the type ID of the value.
+     */
+    protected void sliceAfterHeader(int start, int end, IonTypeID typeId) {
+        peekIndex = start;
+        valueMarker.startIndex = start;
+        valueMarker.endIndex = end;
+        valueMarker.typeId = typeId;
+        event = Event.VALUE_READY; // TODO check
+        valueTid = typeId;
     }
 
     /**

@@ -21,8 +21,6 @@ import com.amazon.ion.impl.bin.PresenceBitmap;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
-import com.amazon.ion.impl.macro.Expression;
-import com.amazon.ion.impl.macro.EExpressionArgsReader;
 import com.amazon.ion.impl.macro.IonReaderFromReaderAdapter;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
@@ -140,7 +138,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private final EncodingDirectiveReader encodingDirectiveReader = new EncodingDirectiveReader();
 
     // Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
-    private final EExpressionArgsReader expressionArgsReader = new BinaryEExpressionArgsReader();
+    private final LazyEExpressionArgsReader expressionArgsReader = new LazyBinaryEExpressionArgsReader();
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
@@ -1593,10 +1591,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     /**
      * Reads macro invocation arguments as expressions and feeds them to the MacroEvaluator.
      */
-    private class BinaryEExpressionArgsReader extends EExpressionArgsReader {
+    private class LazyBinaryEExpressionArgsReader extends LazyEExpressionArgsReader {
 
-        BinaryEExpressionArgsReader() {
-            super (readerAdapter);
+        LazyBinaryEExpressionArgsReader() {
+            super (IonReaderContinuableCoreBinary.this);
         }
 
         /**
@@ -1630,8 +1628,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (event == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            int startIndex = expressions.size();
-            expressions.add(Expression.Placeholder.INSTANCE);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
             boolean isSingleton = true;
             while (nextGroupedValue() != Event.NEEDS_INSTRUCTION || isMacroInvocation()) {
                 readValueAsExpression(false);
@@ -1647,15 +1644,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (exitArgumentGroup() == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            expressions.set(startIndex, expressionPool.createExpressionGroup(startIndex, expressions.size()));
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
         }
 
         /**
          * Adds an expression that conveys that the parameter was not present (void).
          */
         private void addVoidExpression() {
-            int startIndex = expressions.size();
-            expressions.add(expressionPool.createExpressionGroup(startIndex, startIndex + 1));
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
         }
 
         @Override
