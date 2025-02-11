@@ -1811,6 +1811,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (type == null) {
             if (macroEvaluatorIonReader.getDepth() == 0) {
                 // Evaluation of this macro is complete. Resume reading from the stream.
+                expressionArgsReader.finishEvaluatingMacroInvocation();
                 isEvaluatingEExpression = false;
                 event = Event.NEEDS_INSTRUCTION;
                 return true;
@@ -2049,6 +2050,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 // The evaluator is not producing a container value. Therefore, the user intends for this stepOut() call
                 // to step out of the parent container of the e-expression being evaluated. This terminates e-expression
                 // evaluation.
+                expressionArgsReader.finishEvaluatingMacroInvocation();
                 isEvaluatingEExpression = false;
             }
         }

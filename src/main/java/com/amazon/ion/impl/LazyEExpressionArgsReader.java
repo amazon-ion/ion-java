@@ -259,6 +259,7 @@ abstract class LazyEExpressionArgsReader {
      */
     LazyEExpressionArgsReader(IonReaderContinuableCoreBinary reader) {
         this.reader = reader;
+        this.reader.setLeftShiftHandler(expressionTape::shiftIndicesLeft);
     }
 
     /**
@@ -433,9 +434,6 @@ abstract class LazyEExpressionArgsReader {
         while ((expression = expressionTape.dequeue(reader, expressions)) != null) {
             expressions.add(expression);
         }
-        // TODO seek reader to valueMarker.endIndex and reset?
-        expressionTape.clear();
-        reader.returnToCheckpoint();
     }
 
     /**
@@ -443,11 +441,7 @@ abstract class LazyEExpressionArgsReader {
      * them to the macro evaluator.
      */
     public void beginEvaluatingMacroInvocation(MacroEvaluator macroEvaluator) {
-        expressions.clear(); // TODO remove
-        presenceBitmapPool.clear();
-        expressionTape.clear();
         reader.pinBytesInCurrentValue();
-        reader.setLeftShiftHandler(expressionTape::shiftIndicesLeft);
         if (reader.isInStruct()) {
             // TODO avoid having to create SymbolToken every time
             expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME, -1, -1);
@@ -456,7 +450,18 @@ abstract class LazyEExpressionArgsReader {
 
         // TODO temporary: the MacroEvaluator should be modified to operate on the tape directly
         materialize(reader);
-        reader.unpinBytes(); // TODO this would need to be moved after expansion if the tape were provided to the evaluator
         macroEvaluator.initExpansion(expressions);
+    }
+
+    /**
+     * Finishes evaluating the current macro invocation, resetting any associated state.
+     */
+    public void finishEvaluatingMacroInvocation() {
+        expressions.clear();
+        presenceBitmapPool.clear();
+        expressionTape.clear();
+        reader.unpinBytes();
+        reader.returnToCheckpoint();
+        expressionTape.clear();
     }
 }
