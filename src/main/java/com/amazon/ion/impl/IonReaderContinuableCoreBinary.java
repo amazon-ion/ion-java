@@ -22,6 +22,8 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.IonReaderFromReaderAdapter;
+import com.amazon.ion.impl.macro.LazyMacroEvaluator;
+import com.amazon.ion.impl.macro.LazyMacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
 import com.amazon.ion.impl.macro.MacroTable;
@@ -120,10 +122,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private final IntList annotationSids;
 
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    private final MacroEvaluator macroEvaluator = new MacroEvaluator();
+    private final LazyMacroEvaluator macroEvaluator = new LazyMacroEvaluator();
 
     // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    protected MacroEvaluatorAsIonReader macroEvaluatorIonReader = new MacroEvaluatorAsIonReader(macroEvaluator);
+    protected LazyMacroEvaluatorAsIonReader macroEvaluatorIonReader = new LazyMacroEvaluatorAsIonReader(macroEvaluator);
 
     // The encoding context (macro table) that is currently active.
     private EncodingContext encodingContext = EncodingContext.getDefault();
