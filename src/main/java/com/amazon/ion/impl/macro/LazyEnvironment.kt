@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
-import com.amazon.ion.impl.*
+import com.amazon.ion.impl.ExpressionTape
 
 /**
  * An `Environment` contains variable bindings for a given macro evaluation.
@@ -15,29 +15,26 @@ import com.amazon.ion.impl.*
  * The [parentEnvironment] is an environment to use if any of the expressions in this environment
  * contains a variable that references something from an outer macro invocation.
  */
-data class Environment constructor(
+data class LazyEnvironment constructor(
     // Any variables found here have to be looked up in [parentEnvironment]
-    val arguments: List<Expression>,
-    val argumentIndices: IntArray,
+    val arguments: ExpressionTape?,
+    val firstArgumentStartIndex: Int,
     val parentEnvironment: EnvironmentBase?,
 ) : EnvironmentBase {
-    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int): EnvironmentBase = LazyEnvironment(arguments, firstArgumentStartIndex, this)
+    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, this)
+    override fun createChild(arguments: List<Expression>, argumentIndices: IntArray): EnvironmentBase = Environment(arguments, argumentIndices, this)
 
-    override fun createChild(arguments: List<Expression>, argumentIndices: IntArray) = Environment(arguments, argumentIndices, this)
-
+    // TODO
     override fun toString() = """
         |Environment(
-        |    argumentIndices: $argumentIndices,
-        |    argumentExpressions: [${arguments.mapIndexed { index, expression -> "\n|        $index. $expression" }.joinToString() }
-        |    ],
         |    parent: ${parentEnvironment.toString().lines().joinToString("\n|        ")},
         |)
     """.trimMargin()
 
     companion object {
         @JvmStatic
-        val EMPTY = Environment(emptyList(), IntArray(0), null)
+        val EMPTY = LazyEnvironment(null, -1, null)
         @JvmStatic
-        fun create(arguments: List<Expression>, argumentIndices: IntArray) = Environment(arguments, argumentIndices, null)
+        fun create(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, null)
     }
 }

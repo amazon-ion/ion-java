@@ -630,7 +630,7 @@ class MacroEvaluator {
                 expressions = environment.arguments,
                 startInclusive = if (firstArgExpression is ExpressionGroup) firstArgExpression.startInclusive else argIndex,
                 endExclusive = if (firstArgExpression is HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
-                environment = environment.parentEnvironment!!
+                environment = environment.parentEnvironment!! as Environment
             )
         }
 

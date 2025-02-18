@@ -73,17 +73,35 @@ class LazyMacroEvaluator {
         }
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
-        fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
+        fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, tapeIndex: Int, environment: EnvironmentBase): ExpansionInfo {
             val expansion = getExpansion()
             expansion.expansionKind = expansionKind
             expansion.expressions = expressions
             expansion.i = startInclusive
+            expansion.tapeIndex = tapeIndex
             expansion.endExclusive = endExclusive
             expansion.environment = environment
             expansion.additionalState = null
             expansion.childExpansion = null
             return expansion
         }
+
+        /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
+        /*
+        fun getExpander(expansionKind: ExpansionKind, macroBodyExpressions: List<TemplateBodyExpression>, expressionTape: ExpressionTape, tapeStartInclusive: Int, environment: LazyEnvironment): ExpansionInfo {
+            val expansion = getExpansion()
+            expansion.expansionKind = expansionKind
+            expansion.expressionTape = expressionTape
+            expansion.i = tapeStartInclusive
+            //expansion.i = startInclusive
+            //expansion.endExclusive = endExclusive
+            expansion.environment = environment
+            expansion.additionalState = null
+            expansion.childExpansion = null
+            return expansion
+        }
+
+         */
 
         fun incrementStepCounter() {
             numExpandedExpressions++
@@ -98,7 +116,7 @@ class LazyMacroEvaluator {
             numExpandedExpressions = 0
             expressionPool.clear()
             expanderPoolIndex = 0
-            intArrayPoolIndices.fill(0)
+            //intArrayPoolIndices.fill(0)
             expressions.clear()
         }
 
@@ -164,21 +182,8 @@ class LazyMacroEvaluator {
                 Expression.EndOfExpansion
         },
         Stream {
-            override fun produceNext(thisExpansion: ExpansionInfo): Expression.ExpansionOutputExpressionOrContinue {
-                // If there's a delegate, we'll try that first.
-                val delegate = thisExpansion.childExpansion
-                check(thisExpansion != delegate)
-                if (delegate != null) {
-                    return when (val result = delegate.produceNext()) {
-                        is Expression.DataModelExpression -> result
-                        Expression.EndOfExpansion -> {
-                            delegate.close()
-                            thisExpansion.childExpansion = null
-                            Expression.ContinueExpansion
-                        }
-                    }
-                }
 
+            fun produceNextFromMaterializedExpression(thisExpansion: ExpansionInfo): Expression.ExpansionOutputExpressionOrContinue {
                 if (thisExpansion.i >= thisExpansion.endExclusive) {
                     thisExpansion.expansionKind = Empty
                     return Expression.ContinueExpansion
@@ -201,6 +206,7 @@ class LazyMacroEvaluator {
                             expressions = macro.body ?: emptyList(),
                             startInclusive = 0,
                             endExclusive = macro.body?.size ?: 0,
+                            tapeIndex = thisExpansion.tapeIndex,
                             environment = newEnvironment,
                         )
                         Expression.ContinueExpansion
@@ -211,6 +217,7 @@ class LazyMacroEvaluator {
                             expressions = thisExpansion.expressions,
                             startInclusive = next.startInclusive,
                             endExclusive = next.endExclusive,
+                            tapeIndex = thisExpansion.tapeIndex,
                             environment = thisExpansion.environment,
                         )
 
@@ -224,11 +231,135 @@ class LazyMacroEvaluator {
                     Expression.Placeholder -> unreachable()
                 }
             }
+
+            fun produceNextFromLazyExpression(thisExpansion: ExpansionInfo): Expression.ExpansionOutputExpressionOrContinue {
+                val expressionTape = (thisExpansion.environment as LazyEnvironment).arguments!!
+                if (thisExpansion.tapeIndex >= expressionTape.size() || thisExpansion.tapeIndex < 0) {
+                    // TODO ugly way of handling end. Should be detected elsewhere? Or protected in expressionTape.typeAt?
+                    thisExpansion.expansionKind = Empty
+                    return Expression.ContinueExpansion
+                }
+                val nextType = expressionTape.typeAt(thisExpansion.tapeIndex)
+                if (nextType.isEnd) {
+                    //thisExpansion.tapeIndex++ // TODO check
+                    if (nextType == ExpressionType.EXPRESSION_GROUP_END || nextType == ExpressionType.E_EXPRESSION_END) {
+                        // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
+                        // here.
+                        thisExpansion.tapeIndex++
+                    }
+                    thisExpansion.expansionKind = Empty
+                    return Expression.ContinueExpansion
+                }
+
+                //val next = thisExpansion.expressions[thisExpansion.i]
+                //thisExpansion.i++
+                //if (next is Expression.HasStartAndEnd) thisExpansion.i = next.endExclusive
+
+
+                //if (nextType.isContainerStart) thisExpansion.tapeIndex++
+
+                // TODO when the parent expansion is a VARIABLE, and the last expression for the current value has been
+                //  provided, need to abandon the current VARIABLE expansion and move on to the next from the macro body
+
+                // TODO avoid materializing Expressions here
+                return when (nextType) {
+                    ExpressionType.FIELD_NAME -> expressionTape.expressionAt(thisExpansion.tapeIndex++) as DataModelExpression
+                    ExpressionType.ANNOTATION -> {
+                        val expression = expressionTape.expressionAt(thisExpansion.tapeIndex) as DataModelExpression
+                        thisExpansion.tapeIndex += 2
+                        return expression
+                    }
+                    ExpressionType.E_EXPRESSION -> {
+                        val macro = expressionTape.contextAt(thisExpansion.tapeIndex /*- 1*/) as Macro
+                        //val argIndices =
+                        //    calculateArgumentIndices(macro, thisExpansion, 0, macro.body?.size ?: 0)
+                        val newEnvironment = thisExpansion.environment.createLazyChild(expressionTape, ++thisExpansion.tapeIndex)
+                        //val newEnvironment = thisExpansion.environment.createChild(macro.body ?: emptyList(), argIndices)
+                        val expansionKind = ExpansionKind.forMacro(macro)
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = expansionKind,
+                            expressions = macro.body ?: emptyList(),
+                            startInclusive = 0,
+                            endExclusive = macro.body?.size ?: 0,
+                            tapeIndex = thisExpansion.tapeIndex,
+                            environment = newEnvironment,
+                        )
+                        Expression.ContinueExpansion
+                    }
+                    ExpressionType.E_EXPRESSION_END -> unreachable()
+                    ExpressionType.EXPRESSION_GROUP -> {
+                        thisExpansion.childExpansion = thisExpansion.session.getExpander(
+                            expansionKind = ExprGroup,
+                            expressions = thisExpansion.expressions,
+                            startInclusive = thisExpansion.i,
+                            endExclusive = thisExpansion.endExclusive,
+                            tapeIndex = ++thisExpansion.tapeIndex,
+                            environment = thisExpansion.environment,
+                        )
+                        Expression.ContinueExpansion
+                    }
+                    ExpressionType.EXPRESSION_GROUP_END -> unreachable()
+                    ExpressionType.DATA_MODEL_SCALAR -> {
+                        /*
+                        if (thisExpansion.expansionKind != ExprGroup) {
+                            // One argument at a time is pulled from the tape. // TODO check if still needed
+                            thisExpansion.expansionKind = Empty
+                        }
+
+                         */
+
+                        // One argument at a time is pulled from the tape. // TODO check if still needed
+                        //thisExpansion.expansionKind = Empty // TODO when this scalar exists in an expression group, this ends the group evaluation after the first value, which is too early
+                        expressionTape.expressionAt(thisExpansion.tapeIndex++) as DataModelExpression
+                    }
+                    ExpressionType.DATA_MODEL_CONTAINER -> expressionTape.expressionAt(thisExpansion.tapeIndex++) as DataModelExpression
+                    ExpressionType.DATA_MODEL_CONTAINER_END -> unreachable()
+                }
+            }
+
+            override fun produceNext(thisExpansion: ExpansionInfo): Expression.ExpansionOutputExpressionOrContinue {
+                // If there's a delegate, we'll try that first.
+                val delegate = thisExpansion.childExpansion
+                check(thisExpansion != delegate)
+                if (delegate != null) {
+                    val expression = when (val result = delegate.produceNext()) {
+                        is Expression.DataModelExpression -> result
+                        Expression.EndOfExpansion -> {
+                            delegate.close()
+                            thisExpansion.childExpansion = null
+                            Expression.ContinueExpansion
+                        }
+                    }
+                    thisExpansion.tapeIndex = delegate.tapeIndex // TODO check
+                    return expression
+                }
+                /*
+                when (thisExpansion.environment) {
+                    is Environment -> return produceNextFromMaterializedExpression(thisExpansion)
+                    is LazyEnvironment -> return produceNextFromLazyExpression(thisExpansion)
+                    else -> unreachable()
+                }
+
+                 */
+                if (thisExpansion.i < thisExpansion.endExclusive) {
+                    return produceNextFromMaterializedExpression(thisExpansion)
+                } else if (thisExpansion.environment is LazyEnvironment) { // TODO this should not happen unless the it's a variable expansion? (or bubbles up to a variable expansion)
+                    return produceNextFromLazyExpression(thisExpansion)
+                } else {
+                    thisExpansion.expansionKind = Empty
+                    return Expression.ContinueExpansion
+                }
+            }
         },
         /** Alias of [Stream] to aid in debugging */
         Variable {
             override fun produceNext(thisExpansion: ExpansionInfo): Expression.ExpansionOutputExpressionOrContinue {
-                return Stream.produceNext(thisExpansion)
+                val expression = Stream.produceNext(thisExpansion)
+                if (thisExpansion.i >= thisExpansion.endExclusive && thisExpansion.childExpansion == null) { // TODO can/should this be moved somewhere? Or eliminated somehow?
+                    thisExpansion.expansionKind = Empty
+                    thisExpansion.childExpansion = null
+                }
+                return expression
             }
         },
         /** Alias of [Stream] to aid in debugging */
@@ -479,6 +610,7 @@ class LazyMacroEvaluator {
                                 expressions = argumentExpansion.top().expressions,
                                 startInclusive = nextSequence.startInclusive,
                                 endExclusive = nextSequence.endExclusive,
+                                tapeIndex = thisExpansion.tapeIndex,
                                 environment = argumentExpansion.top().environment,
                             )
                             Expression.ContinueExpansion
@@ -519,6 +651,7 @@ class LazyMacroEvaluator {
                                 expressions = argumentExpansion.top().expressions,
                                 startInclusive = nextSequence.startInclusive,
                                 endExclusive = nextSequence.endExclusive,
+                                tapeIndex = thisExpansion.tapeIndex,
                                 environment = argumentExpansion.top().environment,
                             )
 
@@ -626,19 +759,117 @@ class LazyMacroEvaluator {
          * Returns an expansion for the given variable.
          */
         fun ExpansionInfo.readArgument(variableRef: Expression.VariableRef): ExpansionInfo {
-            val argIndex = environment.argumentIndices[variableRef.signatureIndex]
-            if (argIndex < 0) {
-                // Argument was elided.
-                return session.getExpander(Empty, emptyList(), 0, 0, Environment.EMPTY)
+            when (environment) {
+                is Environment -> {
+                    val materializedEnvironment = environment as Environment
+                    val argIndex = materializedEnvironment.argumentIndices[variableRef.signatureIndex]
+                    if (argIndex < 0) {
+                        // Argument was elided.
+                        return session.getExpander(Empty, emptyList(), 0, 0, tapeIndex, Environment.EMPTY)
+                    }
+                    val firstArgExpression = materializedEnvironment.arguments[argIndex]
+                    return session.getExpander(
+                        expansionKind = Variable,
+                        expressions = materializedEnvironment.arguments,
+                        startInclusive = if (firstArgExpression is Expression.ExpressionGroup) firstArgExpression.startInclusive else argIndex,
+                        endExclusive = if (firstArgExpression is Expression.HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
+                        tapeIndex = tapeIndex,
+                        environment = materializedEnvironment.parentEnvironment!!
+                    )
+                }
+                is LazyEnvironment -> {
+                    val lazyEnvironment = environment as LazyEnvironment
+                    val tapeStartIndex = lazyEnvironment.firstArgumentStartIndex
+                    val variableIndex = variableRef.signatureIndex
+                    // TODO iterate through the tape to find the index of the requested variable
+                    // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
+                    var argIndex = 0
+                    var relativeDepth = 0
+                    var i = tapeStartIndex
+                    while (i < lazyEnvironment.arguments!!.size()) {
+                        when (lazyEnvironment.arguments!!.typeAt(i)) {
+                            ExpressionType.FIELD_NAME -> continue
+                            ExpressionType.ANNOTATION -> {
+                                if (relativeDepth == 0) {
+                                    if (argIndex == variableIndex) {
+                                        break;
+                                    }
+                                    argIndex++
+                                }
+                            }
+                            ExpressionType.E_EXPRESSION -> {
+                                if (relativeDepth == 0) {
+                                    if (argIndex == variableIndex) {
+                                        break;
+                                    }
+                                    argIndex++
+                                }
+                                relativeDepth++
+                            }
+                            ExpressionType.EXPRESSION_GROUP -> {
+                                if (relativeDepth == 0) {
+                                    if (argIndex == variableIndex) {
+                                        break;
+                                    }
+                                    argIndex++
+                                }
+                                relativeDepth++
+                            }
+                            ExpressionType.EXPRESSION_GROUP_END -> {
+                                if (--relativeDepth < 0) {
+                                    i++
+                                    break;
+                                }
+                            }
+                            ExpressionType.DATA_MODEL_SCALAR -> {
+                                if (relativeDepth == 0) {
+                                    if (argIndex == variableIndex) {
+                                        break;
+                                    }
+                                    argIndex++
+                                }
+                            }
+                            ExpressionType.DATA_MODEL_CONTAINER -> {
+                                if (relativeDepth == 0) {
+                                    if (argIndex == variableIndex) {
+                                        break;
+                                    }
+                                    argIndex++
+                                }
+                                relativeDepth++
+                            }
+                            ExpressionType.DATA_MODEL_CONTAINER_END -> {
+                                if (--relativeDepth < 0) {
+                                    i++
+                                    break;
+                                }
+                            }
+                            ExpressionType.E_EXPRESSION_END -> {
+                                if (--relativeDepth < 0) {
+                                    i++
+                                    break;
+                                }
+                            }
+                        }
+                        i++
+                    }
+                    //val argIndex = environment.argumentIndices[variableRef.signatureIndex]
+                    if (argIndex < variableIndex) {
+                        // Argument was elided.
+                        return session.getExpander(Empty, emptyList(), 0, 0, i, Environment.EMPTY)
+                    }
+                    //val firstArgExpression = environment.arguments[argIndex]
+                    return session.getExpander(
+                        expansionKind = Variable,
+                        expressions = Collections.emptyList(), // The expressions will come from the tape, not the macro body
+                        startInclusive = 0,
+                        endExclusive = 0, //if (firstArgExpression is Expression.HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
+                        tapeIndex = i,
+                        environment = lazyEnvironment.createLazyChild(lazyEnvironment.arguments, i) //environment.parentEnvironment!!
+                    )
+                }
+                else -> throw IllegalStateException()
             }
-            val firstArgExpression = environment.arguments[argIndex]
-            return session.getExpander(
-                expansionKind = Variable,
-                expressions = environment.arguments,
-                startInclusive = if (firstArgExpression is Expression.ExpressionGroup) firstArgExpression.startInclusive else argIndex,
-                endExclusive = if (firstArgExpression is Expression.HasStartAndEnd) firstArgExpression.endExclusive else argIndex + 1,
-                environment = environment.parentEnvironment!!
-            )
         }
 
         /**
@@ -748,17 +979,20 @@ class LazyMacroEvaluator {
         /**
          * The evaluation [Environment]—i.e. variable bindings.
          */
-        @JvmField var environment: Environment = Environment.EMPTY
+        @JvmField var environment: EnvironmentBase = Environment.EMPTY
         /**
          * The [Expression]s being expanded. This MUST be the original list, not a sublist because
          * (a) we don't want to be allocating new sublists all the time, and (b) the
          * start and end indices of the expressions may be incorrect if a sublist is taken.
          */
         @JvmField var expressions: List<Expression> = emptyList()
+        //@JvmField var expressionTape: ExpressionTape? = null
         /** End of [expressions] that are applicable for this [ExpansionInfo] */
         @JvmField var endExclusive: Int = 0
         /** Current position within [expressions] of this expansion */
         @JvmField var i: Int = 0
+        /** Current position within [expressions] of this expansion */
+        @JvmField var tapeIndex: Int = 0
 
         /**
          * Field for storing any additional state required by an ExpansionKind.
@@ -797,8 +1031,8 @@ class LazyMacroEvaluator {
          */
         fun close() {
             expansionKind = ExpansionKind.Uninitialized
-            environment = Environment.EMPTY
-            expressions = emptyList()
+            environment = LazyEnvironment.EMPTY
+            //expressionTape = null
             additionalState?.let { if (it is ExpansionInfo) it.close() }
             additionalState = null
             childExpansion?.close()
@@ -811,9 +1045,10 @@ class LazyMacroEvaluator {
          */
         fun tailCall(other: ExpansionInfo) {
             this.expansionKind = other.expansionKind
-            this.expressions = other.expressions
+            //this.expressionTape = other.expressionTape
             this.i = other.i
-            this.endExclusive = other.endExclusive
+            this.tapeIndex = other.tapeIndex
+            //this.endExclusive = other.endExclusive
             this.childExpansion = other.childExpansion
             this.additionalState = other.additionalState
             this.environment = other.environment
@@ -840,14 +1075,11 @@ class LazyMacroEvaluator {
             }
         }
 
+        // TODO
         override fun toString() = """
         |ExpansionInfo(
         |    expansionKind: $expansionKind,
         |    environment: ${environment.toString().lines().joinToString("\n|        ")},
-        |    expressions: [
-        |        ${expressions.mapIndexed { i, expr -> "$i. $expr" }.joinToString(",\n|        ") }
-        |    ],
-        |    endExclusive: $endExclusive,
         |    i: $i,
         |    child: ${childExpansion?.expansionKind}
         |    additionalState: $additionalState,
@@ -863,7 +1095,9 @@ class LazyMacroEvaluator {
      * Returns the e-expression argument expressions that this MacroEvaluator would evaluate.
      */
     fun getArguments(): List<Expression> {
-        return containerStack.iterator().next().expansion.expressions
+        // TODO avoid eager materialization; change call site to iterate
+        materializeExpressions((containerStack.iterator().next().expansion.environment as LazyEnvironment).arguments!!)
+        return session.expressions.toList()
     }
 
 
@@ -883,11 +1117,12 @@ class LazyMacroEvaluator {
     fun initExpansion(encodingExpressions: ExpressionTape) {
         session.reset()
         val ci = containerStack.push { _ -> }
-        materializeExpressions(encodingExpressions) // TODO temporary. FIRST, make the expanders able to retrieve the next Expression incrementally
+        //materializeExpressions(encodingExpressions) // TODO temporary. FIRST, make the expanders able to retrieve the next Expression incrementally
         ci.type = ContainerInfo.Type.TopLevel
-        ci.expansion = session.getExpander(ExpansionKind.Stream, session.expressions, 0, session.expressions.size,
-            Environment.EMPTY
-        )
+        //ci.expansion = session.getExpander(ExpansionKind.Stream, session.expressions, 0, session.expressions.size,
+        //    Environment.EMPTY
+        //)
+        ci.expansion = session.getExpander(ExpansionKind.Stream, Collections.emptyList(), 0, 0, 0, LazyEnvironment.create(encodingExpressions, 0))
     }
 
     /**
@@ -909,6 +1144,19 @@ class LazyMacroEvaluator {
         return currentExpr
     }
 
+    private fun seekTapePastEndOfCurrentContainer(currentContainer: ContainerInfo) {
+        if (currentContainer.expansion.environment is LazyEnvironment && currentContainer.expansion.tapeIndex >= 0) { // TODO why will tapeIndex sometimes be < 0? TRY REMOVING. The fix in findIndex... should prevent this
+            val lazyEnvironment = currentContainer.expansion.environment as LazyEnvironment
+            val parentContainer = containerStack.peek()
+            parentContainer.expansion.tapeIndex = lazyEnvironment.arguments!!.findIndexAfterEndContainerFrom(currentContainer.expansion.tapeIndex)
+            var childExpansion = parentContainer.expansion.childExpansion
+            while (childExpansion != null) {
+                childExpansion.tapeIndex = parentContainer.expansion.tapeIndex
+                childExpansion = childExpansion.childExpansion
+            }
+        }
+    }
+
     /**
      * Steps out of the current [DataModelContainer].
      */
@@ -916,6 +1164,7 @@ class LazyMacroEvaluator {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
+        seekTapePastEndOfCurrentContainer(popped)
         popped.close()
     }
 
@@ -940,6 +1189,7 @@ class LazyMacroEvaluator {
                 expressions = topExpansion.expressions,
                 startInclusive = expression.startInclusive,
                 endExclusive = expression.endExclusive,
+                tapeIndex = currentContainer.expansion.tapeIndex,
                 environment = topExpansion.environment,
             )
             currentExpr = null
