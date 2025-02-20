@@ -20,9 +20,21 @@ data class LazyEnvironment constructor(
     val arguments: ExpressionTape?,
     val firstArgumentStartIndex: Int,
     val parentEnvironment: EnvironmentBase?,
+    var useTape: Boolean
 ) : EnvironmentBase {
-    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, this)
+
+    fun startVariableEvaluation() {
+        useTape = true
+    }
+
+    fun finishVariableEvaluation() {
+        useTape = false
+    }
+
+    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int, useTape: Boolean) = LazyEnvironment(arguments, firstArgumentStartIndex, this, useTape)
     override fun createChild(arguments: List<Expression>, argumentIndices: IntArray): EnvironmentBase = Environment(arguments, argumentIndices, this)
+
+
 
     // TODO
     override fun toString() = """
@@ -33,8 +45,8 @@ data class LazyEnvironment constructor(
 
     companion object {
         @JvmStatic
-        val EMPTY = LazyEnvironment(null, -1, null)
+        val EMPTY = LazyEnvironment(null, -1, null, false)
         @JvmStatic
-        fun create(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, null)
+        fun create(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, null, true)
     }
 }

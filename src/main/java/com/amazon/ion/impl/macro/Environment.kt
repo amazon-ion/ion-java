@@ -21,7 +21,7 @@ data class Environment constructor(
     val argumentIndices: IntArray,
     val parentEnvironment: EnvironmentBase?,
 ) : EnvironmentBase {
-    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int): EnvironmentBase = LazyEnvironment(arguments, firstArgumentStartIndex, this)
+    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int, useTape: Boolean): EnvironmentBase = LazyEnvironment(arguments, firstArgumentStartIndex, this, useTape)
 
     override fun createChild(arguments: List<Expression>, argumentIndices: IntArray) = Environment(arguments, argumentIndices, this)
 

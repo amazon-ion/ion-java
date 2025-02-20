@@ -101,7 +101,18 @@ public class ExpressionTape { // TODO make internal
         throw new IllegalStateException("Unreachable: no start expression found for type " + type);
     }
 
+    public int findIndexAfterEndEExpressionFrom(int index) {
+        // TODO won't this be fooled by encountering a nested expression before the end?
+        for (int i = index; i < size; i++) {
+            if (types[i] == ExpressionType.E_EXPRESSION_END) {
+                return i + 1;
+            }
+        }
+        return index;
+    }
+
     public int findIndexAfterEndContainerFrom(int index) {
+        // TODO won't this be fooled by encountering a nested container before the end?
         for (int i = index; i < size; i++) {
             if (types[i].isEnd()) {
                 return i + 1;
