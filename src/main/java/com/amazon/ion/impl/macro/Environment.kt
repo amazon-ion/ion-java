@@ -19,11 +19,9 @@ data class Environment constructor(
     // Any variables found here have to be looked up in [parentEnvironment]
     val arguments: List<Expression>,
     val argumentIndices: IntArray,
-    val parentEnvironment: EnvironmentBase?,
-) : EnvironmentBase {
-    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int, useTape: Boolean): EnvironmentBase = LazyEnvironment(arguments, firstArgumentStartIndex, this, useTape)
-
-    override fun createChild(arguments: List<Expression>, argumentIndices: IntArray) = Environment(arguments, argumentIndices, this)
+    val parentEnvironment: Environment?,
+) {
+    fun createChild(arguments: List<Expression>, argumentIndices: IntArray) = Environment(arguments, argumentIndices, this)
 
     override fun toString() = """
         |Environment(

@@ -19,9 +19,11 @@ data class LazyEnvironment constructor(
     // Any variables found here have to be looked up in [parentEnvironment]
     val arguments: ExpressionTape?,
     val firstArgumentStartIndex: Int,
-    val parentEnvironment: EnvironmentBase?,
-    var useTape: Boolean
-) : EnvironmentBase {
+    val parentEnvironment: LazyEnvironment?,
+    var useTape: Boolean,
+    val expressions: List<Expression>,
+    val argumentIndices: IntArray
+) {
 
     fun startVariableEvaluation() {
         useTape = true
@@ -31,8 +33,8 @@ data class LazyEnvironment constructor(
         useTape = false
     }
 
-    override fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int, useTape: Boolean) = LazyEnvironment(arguments, firstArgumentStartIndex, this, useTape)
-    override fun createChild(arguments: List<Expression>, argumentIndices: IntArray): EnvironmentBase = Environment(arguments, argumentIndices, this)
+    fun createLazyChild(arguments: ExpressionTape, firstArgumentStartIndex: Int, useTape: Boolean) = LazyEnvironment(arguments, firstArgumentStartIndex, this, useTape, emptyList(), EMPTY_ARRAY)
+    fun createChild(arguments: List<Expression>, argumentIndices: IntArray): LazyEnvironment = LazyEnvironment(this.arguments, this.firstArgumentStartIndex, this, false, arguments, argumentIndices)
 
 
 
@@ -44,9 +46,10 @@ data class LazyEnvironment constructor(
     """.trimMargin()
 
     companion object {
+        val EMPTY_ARRAY = IntArray(0)
         @JvmStatic
-        val EMPTY = LazyEnvironment(null, -1, null, false)
+        val EMPTY = LazyEnvironment(null, -1, null, false, emptyList(), EMPTY_ARRAY)
         @JvmStatic
-        fun create(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, null, true)
+        fun create(arguments: ExpressionTape, firstArgumentStartIndex: Int) = LazyEnvironment(arguments, firstArgumentStartIndex, null, true, emptyList(), EMPTY_ARRAY)
     }
 }
