@@ -21,46 +21,52 @@ class LazyMacroEvaluatorAsIonReader(
 ) : IonReader {
 
     private class ContainerInfo {
-        @JvmField var currentFieldName: Expression.FieldName? = null
-        @JvmField var container: Expression.DataModelContainer? = null
+        @JvmField var currentFieldName: SymbolToken? = null
+        @JvmField var container: IonType? = null
     }
     private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
 
-    private var currentFieldName: Expression.FieldName? = null
-    private var currentValueExpression: Expression.DataModelValue? = null
+    private var currentFieldName: SymbolToken? = null
+    private var currentAnnotations: List<SymbolToken>? = null
+    private var currentValueType: IonType? = null
 
-    private var queuedFieldName: Expression.FieldName? = null
-    private var queuedValueExpression: Expression.DataModelValue? = null
+    private var queuedFieldName: SymbolToken? = null
+    private var queuedAnnotations: List<SymbolToken>? = null
+    private var queuedValueType: IonType? = null
 
     private fun queueNext() {
-        queuedValueExpression = null
-        while (queuedValueExpression == null) {
-            when (val nextCandidate = evaluator.expandNext()) {
-                null -> {
+        queuedValueType = null
+        while (queuedValueType == null) {
+            val nextCandidate = evaluator.expandNext()
+            when {
+                nextCandidate == null -> {
                     queuedFieldName = null
+                    queuedAnnotations = null
                     return
                 }
-                is Expression.FieldName -> queuedFieldName = nextCandidate
-                is Expression.DataModelValue -> queuedValueExpression = nextCandidate
+                nextCandidate == ExpressionType.FIELD_NAME -> queuedFieldName = evaluator.currentFieldName()
+                nextCandidate == ExpressionType.ANNOTATION -> queuedAnnotations = evaluator.currentAnnotations()
+                nextCandidate.isDataModelValue -> queuedValueType = evaluator.currentValueType()
             }
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun hasNext(): Boolean {
-        if (queuedValueExpression == null) queueNext()
-        return queuedValueExpression != null
+        if (queuedValueType == null) queueNext()
+        return queuedValueType != null
     }
 
     override fun next(): IonType? {
         if (!hasNext()) {
-            currentValueExpression = null
+            currentValueType = null
             return null
         }
-        currentValueExpression = queuedValueExpression
+        currentValueType = queuedValueType
         currentFieldName = queuedFieldName
-        queuedValueExpression = null
-        return getType()
+        currentAnnotations = queuedAnnotations
+        queuedValueType = null
+        return currentValueType
     }
 
     /**
@@ -88,7 +94,7 @@ class LazyMacroEvaluatorAsIonReader(
                     numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
                 }
                 is Expression.DataModelValue -> {
-                    currentValueExpression = argument
+                    currentValueType = argument.type
                     writer.writeValue(this)
                 }
                 is Expression.FieldName -> {
@@ -115,15 +121,17 @@ class LazyMacroEvaluatorAsIonReader(
         // This is essentially a no-op for Lists and SExps
         containerStack.peek()?.currentFieldName = this.currentFieldName
 
-        val containerToStepInto = currentValueExpression
+        val containerToStepInto = currentValueType
         evaluator.stepIn()
         val it = containerStack.push { _ -> }
-        it.container = containerToStepInto as Expression.DataModelContainer
+        it.container = containerToStepInto
         it.currentFieldName = null
         currentFieldName = null
-        currentValueExpression = null
+        currentValueType = null
+        currentAnnotations = null
         queuedFieldName = null
-        queuedValueExpression = null
+        queuedValueType = null
+        queuedAnnotations = null
     }
 
     override fun stepOut() {
@@ -131,9 +139,11 @@ class LazyMacroEvaluatorAsIonReader(
         containerStack.pop()
         // This is essentially a no-op for Lists and SExps
         currentFieldName = containerStack.peek()?.currentFieldName
-        currentValueExpression = null // Must call `next()` to get the next value
+        currentValueType = null // Must call `next()` to get the next value
+        currentAnnotations = null
         queuedFieldName = null
-        queuedValueExpression = null
+        queuedValueType = null
+        queuedAnnotations = null
     }
 
     override fun close() { /* Nothing to do (yet) */ }
@@ -141,12 +151,12 @@ class LazyMacroEvaluatorAsIonReader(
     override fun getDepth(): Int = containerStack.size()
     override fun getSymbolTable(): SymbolTable? = null
 
-    override fun getType(): IonType? = currentValueExpression?.type
+    override fun getType(): IonType? = currentValueType
 
-    fun hasAnnotations(): Boolean = currentValueExpression != null && currentValueExpression!!.annotations.isNotEmpty()
+    fun hasAnnotations(): Boolean = currentAnnotations != null && currentAnnotations!!.isNotEmpty()
 
-    override fun getTypeAnnotations(): Array<String>? = currentValueExpression?.annotations?.let { Array(it.size) { i -> it[i].assumeText() } }
-    override fun getTypeAnnotationSymbols(): Array<SymbolToken>? = currentValueExpression?.annotations?.toTypedArray()
+    override fun getTypeAnnotations(): Array<String>? = currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } }
+    override fun getTypeAnnotationSymbols(): Array<SymbolToken> = currentAnnotations?.toTypedArray() ?: emptyArray()
 
     private class SymbolTokenAsStringIterator(val tokens: List<SymbolToken>) : MutableIterator<String> {
 
@@ -169,56 +179,40 @@ class LazyMacroEvaluatorAsIonReader(
     }
 
     override fun iterateTypeAnnotations(): MutableIterator<String> {
-        return if (currentValueExpression?.annotations?.isNotEmpty() == true) {
-            SymbolTokenAsStringIterator(currentValueExpression!!.annotations)
+        return if (currentAnnotations?.isNotEmpty() == true) {
+            SymbolTokenAsStringIterator(currentAnnotations!!)
         } else {
             Collections.emptyIterator()
         }
     }
 
-    override fun isInStruct(): Boolean = containerStack.peek()?.container?.type == IonType.STRUCT
+    override fun isInStruct(): Boolean = containerStack.peek()?.container == IonType.STRUCT
 
-    override fun getFieldId(): Int = currentFieldName?.value?.sid ?: 0
-    override fun getFieldName(): String? = currentFieldName?.value?.text
-    override fun getFieldNameSymbol(): SymbolToken? = currentFieldName?.value
+    override fun getFieldId(): Int = currentFieldName?.sid ?: 0
+    override fun getFieldName(): String? = currentFieldName?.text
+    override fun getFieldNameSymbol(): SymbolToken? = currentFieldName
 
-    override fun isNullValue(): Boolean = currentValueExpression is Expression.NullValue
-    override fun booleanValue(): Boolean = (currentValueExpression as Expression.BoolValue).value
+    override fun isNullValue(): Boolean = evaluator.isNullValue()
+    override fun booleanValue(): Boolean = evaluator.booleanValue()
 
-    override fun getIntegerSize(): IntegerSize {
-        // TODO: Make this more efficient, more precise
-        return when (val intExpression = currentValueExpression as Expression.IntValue) {
-            is Expression.LongIntValue -> if (intExpression.value.toInt().toLong() == intExpression.value) {
-                IntegerSize.INT
-            } else {
-                IntegerSize.LONG
-            }
-            is Expression.BigIntValue -> IntegerSize.BIG_INTEGER
-        }
-    }
+    override fun getIntegerSize(): IntegerSize = evaluator.getIntegerSize()
 
     /** TODO: Throw on data loss */
     override fun intValue(): Int = longValue().toInt()
 
-    override fun longValue(): Long = when (val intExpression = currentValueExpression as Expression.IntValue) {
-        is Expression.LongIntValue -> intExpression.value
-        is Expression.BigIntValue -> intExpression.value.longValueExact()
-    }
+    override fun longValue(): Long = evaluator.longValue()
 
-    override fun bigIntegerValue(): BigInteger = when (val intExpression = currentValueExpression as Expression.IntValue) {
-        is Expression.LongIntValue -> intExpression.value.toBigInteger()
-        is Expression.BigIntValue -> intExpression.value
-    }
+    override fun bigIntegerValue(): BigInteger = evaluator.bigIntegerValue()
 
-    override fun doubleValue(): Double = (currentValueExpression as Expression.FloatValue).value
-    override fun bigDecimalValue(): BigDecimal = (currentValueExpression as Expression.DecimalValue).value
+    override fun doubleValue(): Double = evaluator.doubleValue()
+    override fun bigDecimalValue(): BigDecimal = evaluator.bigDecimalValue()
     override fun decimalValue(): Decimal = Decimal.valueOf(bigDecimalValue())
-    override fun timestampValue(): Timestamp = (currentValueExpression as Expression.TimestampValue).value
+    override fun timestampValue(): Timestamp = evaluator.timestampValue()
     override fun dateValue(): Date = timestampValue().dateValue()
-    override fun stringValue(): String = (currentValueExpression as Expression.TextValue).stringValue
-    override fun symbolValue(): SymbolToken = (currentValueExpression as Expression.SymbolValue).value
-    override fun byteSize(): Int = (currentValueExpression as Expression.LobValue).value.size
-    override fun newBytes(): ByteArray = (currentValueExpression as Expression.LobValue).value.copyOf()
+    override fun stringValue(): String = evaluator.stringValue()
+    override fun symbolValue(): SymbolToken = evaluator.symbolValue()
+    override fun byteSize(): Int = evaluator.lobSize()
+    override fun newBytes(): ByteArray = evaluator.lobValue().copyOf()
 
     override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
         TODO("Not yet implemented")
