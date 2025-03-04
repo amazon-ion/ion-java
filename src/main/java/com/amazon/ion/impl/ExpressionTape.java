@@ -129,6 +129,7 @@ public class ExpressionTape { // TODO make internal
         expressionPool.clear();
     }
 
+    /*
     private void updateEndIndexFor(ExpressionType type, List<Expression.EExpressionBodyExpression> expressions) {
         // TODO note: this is not efficient, but it is temporary anyway. The evaluator will handle this using its
         //  evaluation stack.
@@ -167,6 +168,8 @@ public class ExpressionTape { // TODO make internal
         }
         throw new IllegalStateException("Unreachable: no start expression found for type " + type);
     }
+
+     */
 
     public int findIndexAfterEndEExpression() {
         // TODO won't this be fooled by encountering a nested expression before the end?
@@ -212,7 +215,7 @@ public class ExpressionTape { // TODO make internal
     //  on the reader directly to avoid materializing expressions.
     // TODO test early step-out or step-over before the tape is fully drained. The reader needs to be advanced to
     //  the end of the tape and prepared to continue reading.
-
+/*
     public Expression.EExpressionBodyExpression dequeue(List<Expression.EExpressionBodyExpression> expressions) {
         List<SymbolToken> annotations = Collections.emptyList();
         while (true) {
@@ -322,6 +325,8 @@ public class ExpressionTape { // TODO make internal
             }
         }
     }
+
+ */
 
     private void prepareToRead(IonType expectedType) {
         /*
@@ -559,6 +564,7 @@ public class ExpressionTape { // TODO make internal
         return value;
     }
 
+    /*
     public Expression.EExpressionBodyExpression expression() {
         List<SymbolToken> annotations = Collections.emptyList();
         while (true) {
@@ -669,6 +675,8 @@ public class ExpressionTape { // TODO make internal
             return expression;
         }
     }
+
+     */
 
     // TODO might be able to get around needing these by adding an ExpressionType value for NULL_SCALAR
     private static final IonTypeID[] NON_NULL_SCALAR_TYPE_IDS;

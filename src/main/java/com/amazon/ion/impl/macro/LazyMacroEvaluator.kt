@@ -1138,11 +1138,14 @@ class LazyMacroEvaluator {
     /**
      * Returns the e-expression argument expressions that this MacroEvaluator would evaluate.
      */
+    /*
     fun getArguments(): List<Expression> {
         // TODO avoid eager materialization; change call site to iterate
         materializeExpressions(containerStack.iterator().next().expansion.session.environment!!.arguments!!)
         return session.expressions.toList()
     }
+
+     */
 
     fun getArgumentTape(): ExpressionTape {
         return session.environment!!.arguments!!
@@ -1151,6 +1154,7 @@ class LazyMacroEvaluator {
 
     // TODO modify the evaluator to operate on the "tape" instead of the materialized expressions. Remove
     //  the materialization
+    /*
     private fun materializeExpressions(expressionTape: ExpressionTape) {
         expressionTape.rewindTo(0)
         var expression: EExpressionBodyExpression?
@@ -1158,6 +1162,8 @@ class LazyMacroEvaluator {
             session.expressions.add(expression!!)
         }
     }
+
+     */
 
     /**
      * Initialize the macro evaluator with an E-Expression.
@@ -1201,12 +1207,15 @@ class LazyMacroEvaluator {
         return expansion
     }
 
+    /*
     fun forceEvaluation(value: DataModelValue) {
         val expressionTape = currentExpansion().environmentContext.tape!!
         expressionTape.clear()
         expressionTape.addDataModelValue(value)
         expressionTape.rewindTo(0)
     }
+
+     */
 
     /*
     fun finishForcedEvaluation() {

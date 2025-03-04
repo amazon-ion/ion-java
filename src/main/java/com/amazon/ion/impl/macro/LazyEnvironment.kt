@@ -69,6 +69,7 @@ class LazyEnvironment /*(
             return tape!!.context()
         }
 
+        /*
         fun expression(/*, expressionIndex: Int*/): Expression? {
             /*
             if (isReadingFromTape()) {
@@ -79,6 +80,8 @@ class LazyEnvironment /*(
              */
             return tape!!.expression()
         }
+
+         */
 
         fun type(/*, expressionIndex: Int*/): IonType {
             /*
