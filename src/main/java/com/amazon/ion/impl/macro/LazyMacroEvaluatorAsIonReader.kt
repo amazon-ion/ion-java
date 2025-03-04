@@ -76,45 +76,79 @@ class LazyMacroEvaluatorAsIonReader(
      */
     fun transcodeArgumentsTo(writer: MacroAwareIonWriter) {
         var index = 0
-        val arguments: List<Expression> = evaluator.getArguments()
-        val numberOfContainerEndsAtExpressionIndex = IntArray(arguments.size + 1)
+        val arguments: ExpressionTape = evaluator.getArgumentTape()
+        arguments.rewindTo(0)
 
+        // TODO all the null-setting within the when branches might not be necessary
+
+        currentAnnotations = null // Annotations are written only via Annotation expressions
         currentFieldName = null // Field names are written only via FieldName expressions
-
-        while (index < arguments.size) {
-            for (i in 0 until numberOfContainerEndsAtExpressionIndex[index]) {
+        while (index < arguments.size()) {
+            currentValueType = null
+            arguments.next()
+            arguments.prepareNext()
+            val argument = arguments.type()
+            if (argument.isEnd) {
+                currentAnnotations = null
+                currentFieldName = null
                 writer.stepOut()
+                index++;
+                continue
             }
-            when (val argument = arguments[index]) {
-                is Expression.DataModelContainer -> {
-                    if (hasAnnotations()) {
-                        writer.setTypeAnnotationSymbols(*typeAnnotationSymbols!!)
+            when (argument) {
+                ExpressionType.ANNOTATION -> {
+                    currentAnnotations = arguments.context() as List<SymbolToken>
+                    writer.setTypeAnnotationSymbols(*currentAnnotations!!.toTypedArray())
+                }
+                ExpressionType.DATA_MODEL_CONTAINER -> {
+                    currentValueType = arguments.ionType()
+                    writer.stepIn(currentValueType)
+                    currentFieldName = null
+                    currentAnnotations = null
+                }
+                ExpressionType.DATA_MODEL_SCALAR -> {
+                    currentValueType = arguments.ionType()
+                    when (currentValueType) {
+                        IonType.NULL -> writer.writeNull()
+                        IonType.BOOL -> writer.writeBool(this.booleanValue())
+                        IonType.INT -> {
+                            when (this.integerSize) {
+                                IntegerSize.INT -> writer.writeInt(this.longValue())
+                                IntegerSize.LONG -> writer.writeInt(this.longValue())
+                                IntegerSize.BIG_INTEGER ->writer.writeInt(this.bigIntegerValue())
+                            }
+                        }
+                        IonType.FLOAT -> writer.writeFloat(this.doubleValue())
+                        IonType.DECIMAL -> writer.writeDecimal(this.decimalValue())
+                        IonType.TIMESTAMP -> writer.writeTimestamp(this.timestampValue())
+                        IonType.SYMBOL -> writer.writeSymbolToken(this.symbolValue())
+                        IonType.STRING -> writer.writeString(this.stringValue())
+                        IonType.BLOB -> writer.writeBlob(this.newBytes())
+                        IonType.CLOB -> writer.writeClob(this.newBytes())
+                        else -> throw IllegalStateException("Unexpected branch")
                     }
-                    writer.stepIn(argument.type)
-                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
+                    currentFieldName = null
+                    currentAnnotations = null
                 }
-                is Expression.DataModelValue -> {
-                    currentValueType = argument.type
-                    writer.writeValue(this)
+                ExpressionType.FIELD_NAME -> {
+                    currentFieldName = arguments.context() as SymbolToken
+                    writer.setFieldNameSymbol(currentFieldName)
                 }
-                is Expression.FieldName -> {
-                    writer.setFieldNameSymbol(argument.value)
+                ExpressionType.E_EXPRESSION -> {
+                    writer.startMacro(arguments.context() as Macro)
+                    currentAnnotations = null
+                    currentFieldName = null
                 }
-                is Expression.EExpression -> {
-                    writer.startMacro(argument.macro)
-                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
-                }
-                is Expression.ExpressionGroup -> {
+                ExpressionType.EXPRESSION_GROUP -> {
                     writer.startExpressionGroup()
-                    numberOfContainerEndsAtExpressionIndex[argument.endExclusive]++
+                    currentAnnotations = null
+                    currentFieldName = null
                 }
                 else -> throw IllegalStateException("Unexpected branch")
             }
             index++
         }
-        for (i in 0 until numberOfContainerEndsAtExpressionIndex[index]) {
-            writer.stepOut()
-        }
+        arguments.rewindTo(0)
     }
 
     override fun stepIn() {

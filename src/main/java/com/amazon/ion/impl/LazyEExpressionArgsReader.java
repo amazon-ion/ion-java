@@ -49,7 +49,7 @@ abstract class LazyEExpressionArgsReader {
      */
     LazyEExpressionArgsReader(IonReaderContinuableCoreBinary reader) {
         this.reader = reader;
-        expressionTape = new ExpressionTape(reader);
+        expressionTape = new ExpressionTape(reader, 64);
         this.reader.setLeftShiftHandler(expressionTape::shiftIndicesLeft);
     }
 
@@ -136,7 +136,7 @@ abstract class LazyEExpressionArgsReader {
         if (isExpressionGroup) {
             expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
         } else {
-            expressionTape.add(reader.valueTid.type, ExpressionType.DATA_MODEL_CONTAINER, -1, -1);
+            expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_CONTAINER, -1, -1);
         }
         // TODO if the container is prefixed, don't recursively step through it
         stepInRaw();

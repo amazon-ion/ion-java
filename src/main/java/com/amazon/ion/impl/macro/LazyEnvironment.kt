@@ -4,6 +4,8 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.util.*
+import com.amazon.ion.util.unreachable
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -52,59 +54,59 @@ class LazyEnvironment /*(
 
          */
 
-        fun annotationsAt(tapeIndex: Int): List<SymbolToken> {
-            return tape!!.annotationsAt(tapeIndex)
+        fun annotations(): List<SymbolToken> {
+            return tape!!.annotations()
         }
 
-        fun contextAt(tapeIndex: Int/*, expressionIndex: Int*/): Any? {
+        fun context(/*, expressionIndex: Int*/): Any? {
             /*
             if (isReadingFromTape()) {
-                return arguments!!.expressionAt(tapeIndex)
+                return arguments!!.expression()
             }
             return currentContext.expressions[expressionIndex]
 
              */
-            return tape!!.contextAt(tapeIndex)
+            return tape!!.context()
         }
 
-        fun expressionAt(tapeIndex: Int/*, expressionIndex: Int*/): Expression? {
+        fun expression(/*, expressionIndex: Int*/): Expression? {
             /*
             if (isReadingFromTape()) {
-                return arguments!!.expressionAt(tapeIndex)
+                return arguments!!.expression()
             }
             return currentContext.expressions[expressionIndex]
 
              */
-            return tape!!.expressionAt(tapeIndex)
+            return tape!!.expression()
         }
 
-        fun typeAt(tapeIndex: Int/*, expressionIndex: Int*/): IonType {
+        fun type(/*, expressionIndex: Int*/): IonType {
             /*
             if (isReadingFromTape()) {
-                return arguments!!.ionTypeAt(tapeIndex)
+                return arguments!!.ionType()
             }
             return (currentContext.expressions[expressionIndex] as Expression.DataModelValue).type
 
              */
-            return tape!!.ionTypeAt(tapeIndex)
+            return tape!!.ionType()
         }
 
         // TODO add functions like intValue() stringValue()..., which demux from the correct source (expressions or tape)
 
-        fun longValueAt(tapeIndex: Int/*, expressionIndex: Int*/): Long {
+        fun longValue(/*, expressionIndex: Int*/): Long {
             /*
             if (isReadingFromTape()) {
-                return arguments!!.readLongAt(tapeIndex)
+                return arguments!!.readLong()
             }
             return (currentContext.expressions[expressionIndex] as Expression.LongIntValue).longValue
 
              */
-            return tape!!.readLongAt(tapeIndex)
+            return tape!!.readLong()
         }
 
-        fun bigIntegerValueAt(tapeIndex: Int/*, expressionIndex: Int*/): BigInteger {
+        fun bigIntegerValue(/*, expressionIndex: Int*/): BigInteger {
             //if (isReadingFromTape()) {
-            return tape!!.readBigIntegerAt(tapeIndex)
+            return tape!!.readBigInteger()
             /*}
             val expression = currentContext.expressions[expressionIndex]
             when (expression) {
@@ -116,13 +118,13 @@ class LazyEnvironment /*(
              */
         }
 
-        fun integerSizeAt(tapeIndex: Int): IntegerSize {
-            return tape!!.readIntegerSizeAt(tapeIndex)
+        fun integerSize(): IntegerSize {
+            return tape!!.readIntegerSize()
         }
 
-        fun bigDecimalValueAt(tapeIndex: Int/*, expressionIndex: Int*/): BigDecimal {
+        fun bigDecimalValue(/*, expressionIndex: Int*/): BigDecimal {
             //if (isReadingFromTape()) {
-            return tape!!.readBigDecimalAt(tapeIndex)
+            return tape!!.readBigDecimal()
             /*}
             val expression = currentContext.expressions[expressionIndex]
             when (expression) {
@@ -134,9 +136,9 @@ class LazyEnvironment /*(
              */
         }
 
-        fun textValueAt(tapeIndex: Int/*, expressionIndex: Int*/): String {
+        fun textValue(/*, expressionIndex: Int*/): String {
             //if (isReadingFromTape()) {
-            return tape!!.readTextAt(tapeIndex)
+            return tape!!.readText()
             /*}
             val expression = currentContext.expressions[expressionIndex]
             when (expression) {
@@ -148,22 +150,22 @@ class LazyEnvironment /*(
              */
         }
 
-        fun lobValueAt(tapeIndex: Int/*, expressionIndex: Int*/): ByteArray {
+        fun lobValue(/*, expressionIndex: Int*/): ByteArray {
             //if (isReadingFromTape()) {
-            return tape!!.readLobAt(tapeIndex)
+            return tape!!.readLob()
             /*}
             return (currentContext.expressions[expressionIndex] as Expression.LobValue).value
 
              */
         }
 
-        fun lobSizeAt(tapeIndex: Int/*, expressionIndex: Int*/): Int {
-            return tape!!.lobSize(tapeIndex)
+        fun lobSize(/*, expressionIndex: Int*/): Int {
+            return tape!!.lobSize()
         }
 
-        fun symbolValueAt(tapeIndex: Int/*, expressionIndex: Int*/): SymbolToken {
+        fun symbolValue(/*, expressionIndex: Int*/): SymbolToken {
             //if (isReadingFromTape()) {
-            return tape!!.readSymbolAt(tapeIndex)
+            return tape!!.readSymbol()
             /*}
             val expression = currentContext.expressions[expressionIndex]
             when (expression) {
@@ -175,20 +177,24 @@ class LazyEnvironment /*(
              */
         }
 
-        fun timestampValueAt(tapeIndex: Int): Timestamp {
-            return tape!!.readTimestampAt(tapeIndex)
+        fun timestampValue(): Timestamp {
+            return tape!!.readTimestamp()
         }
 
-        fun doubleValueAt(tapeIndex: Int): Double {
-            return tape!!.readFloatAt(tapeIndex)
+        fun doubleValue(): Double {
+            return tape!!.readFloat()
         }
 
-        fun isNullValueAt(tapeIndex: Int): Boolean {
-            return tape!!.isNullValueAt(tapeIndex)
+        fun isNullValue(): Boolean {
+            return tape!!.isNullValue()
         }
 
-        fun booleanValueAt(tapeIndex: Int): Boolean {
-            return tape!!.readBooleanAt(tapeIndex)
+        fun booleanValue(): Boolean {
+            return tape!!.readBoolean()
+        }
+
+        fun seekToArgument(argumentTape: ExpressionTape, indexRelativeToStart: Int): Boolean {
+            return argumentTape.seekToArgument(firstArgumentStartIndex, indexRelativeToStart)
         }
     }
 
@@ -201,9 +207,12 @@ class LazyEnvironment /*(
         nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
     }
 
+    /*
     fun parent(): NestedContext {
         return nestedContexts[nestedContextIndex - 1]!!
     }
+
+     */
 
     /*
     fun startVariableEvaluation() {

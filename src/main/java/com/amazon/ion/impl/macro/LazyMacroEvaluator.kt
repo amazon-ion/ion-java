@@ -9,7 +9,6 @@ import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
-import kotlin.math.exp
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -80,8 +79,8 @@ class LazyMacroEvaluator {
             expansion.expansionKind = expansionKind
             //expansion.expressions = expressions
             //expansion.i = startInclusive
-            expansion.currentExpressionIndex = tapeIndex
-            expansion.nextExpressionIndex = tapeIndex
+            //expansion.currentExpressionIndex = tapeIndex
+            //expansion.nextExpressionIndex = tapeIndex
             //expansion.endExclusive = endExclusive
             expansion.environmentContext = environmentContext
             expansion.additionalState = null
@@ -232,17 +231,17 @@ class LazyMacroEvaluator {
 
             fun produceNextFromLazyExpression(thisExpansion: ExpansionInfo): ExpressionType {
                 val expressionTape = thisExpansion.environmentContext.tape!!
-                if (thisExpansion.currentExpressionIndex >= expressionTape.size() || thisExpansion.currentExpressionIndex < 0) {
+                if (expressionTape.isExhausted) { // TODO necessary?
                     // TODO ugly way of handling end. Should be detected elsewhere? Or protected in expressionTape.typeAt?
                     thisExpansion.expansionKind = Empty
                     return ExpressionType.CONTINUE_EXPANSION
                 }
-                val nextType = expressionTape.typeAt(thisExpansion.currentExpressionIndex)
+                val nextType = expressionTape.type()
                 if (nextType.isEnd) {
                     if (nextType == ExpressionType.EXPRESSION_GROUP_END || nextType == ExpressionType.E_EXPRESSION_END) {
                         // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
                         // here.
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
+                        expressionTape.prepareNext()
                     }
                     if (nextType != ExpressionType.E_EXPRESSION_END) { // TODO why the special case?
                         thisExpansion.expansionKind = Empty
@@ -253,21 +252,23 @@ class LazyMacroEvaluator {
                 return when (nextType) {
                     ExpressionType.FIELD_NAME -> {
                         // TODO record field name position so they can be read later
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
+                        expressionTape.prepareNext()
                         ExpressionType.FIELD_NAME
                     }
                     ExpressionType.ANNOTATION -> {
                         // TODO record annotation position so they can be read later
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
+                        expressionTape.prepareNext()
                         ExpressionType.ANNOTATION
                     }
                     ExpressionType.E_EXPRESSION -> {
-                        val macro = expressionTape.contextAt(thisExpansion.currentExpressionIndex) as Macro
+                        val macro = expressionTape.context() as Macro
                         //val argIndices =
                         //    calculateArgumentIndices(macro, thisExpansion, 0, macro.body?.size ?: 0)
                         //val newEnvironment = thisExpansion.environment.createLazyChild(expressionTape, ++thisExpansion.tapeIndex, false)
                         val macroBodyTape = ExpressionTape.from(macro.body ?: emptyList()) // TODO put this in the compiler before measuring performance
-                        val newEnvironment = thisExpansion.session.environment!!.startChildEnvironment(macroBodyTape, ++thisExpansion.currentExpressionIndex)
+                        expressionTape.prepareNext()
+                        expressionTape.next() // TODO adding this did nothing; try removing
+                        val newEnvironment = thisExpansion.session.environment!!.startChildEnvironment(macroBodyTape, expressionTape.currentIndex())
                         //val newEnvironment = thisExpansion.environment.createChild(macro.body ?: emptyList(), argIndices)
                         val expansionKind = forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
@@ -285,28 +286,29 @@ class LazyMacroEvaluator {
                     }
                     ExpressionType.E_EXPRESSION_END -> unreachable()
                     ExpressionType.EXPRESSION_GROUP -> {
+                        expressionTape.prepareNext()
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = ExprGroup,
                             //expressions = thisExpansion.expressions,
                             //startInclusive = thisExpansion.i,
                             //endExclusive = thisExpansion.endExclusive,
-                            tapeIndex = ++thisExpansion.currentExpressionIndex,
+                            tapeIndex = 0, //++thisExpansion.currentExpressionIndex, // TODO tapeIndex might not even be needed
                             environmentContext = thisExpansion.environmentContext,
                         )
                         ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.EXPRESSION_GROUP_END -> unreachable()
                     ExpressionType.DATA_MODEL_SCALAR -> {
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
+                        expressionTape.prepareNext()
                         ExpressionType.DATA_MODEL_SCALAR
                     }
                     ExpressionType.DATA_MODEL_CONTAINER -> {
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
+                        expressionTape.prepareNext()
                         ExpressionType.DATA_MODEL_CONTAINER
                     }
                     ExpressionType.VARIABLE -> {
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex + 1
-                        thisExpansion.childExpansion = thisExpansion.readArgument(expressionTape.contextAt(thisExpansion.currentExpressionIndex) as Int)
+                        expressionTape.prepareNext()
+                        thisExpansion.childExpansion = thisExpansion.readArgument(expressionTape.context() as Int)
                         ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.DATA_MODEL_CONTAINER_END -> unreachable()
@@ -330,10 +332,13 @@ class LazyMacroEvaluator {
                         }
                         else -> unreachable()
                     }
+                    /*
                     if (delegate.environmentContext == thisExpansion.environmentContext) {
                         thisExpansion.currentExpressionIndex = delegate.currentExpressionIndex
                         thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex
                     }
+
+                     */
                     return expression
                 }
                 return produceNextFromLazyExpression(thisExpansion)
@@ -349,16 +354,18 @@ class LazyMacroEvaluator {
                     return ExpressionType.CONTINUE_EXPANSION
                 }
                 val expression = Stream.produceNext(thisExpansion)
-                if (expression == ExpressionType.DATA_MODEL_SCALAR) {
-                    thisExpansion.reachedEndOfExpression = true
-                } else if (thisExpansion.childExpansion == null && expression == ExpressionType.CONTINUE_EXPANSION) { // TODO end condition
-                    //thisExpansion.environment.parent().finishVariableEvaluation()
-                    thisExpansion.session.environment!!.finishChildEnvironment() // TODO the same needs to happen in all cases where a child environment was created (macro invocations/template body)
-                    thisExpansion.expansionKind = Empty
-                    thisExpansion.childExpansion = null
+                if (thisExpansion.childExpansion == null) {
+                    if (expression == ExpressionType.DATA_MODEL_SCALAR) {
+                        thisExpansion.reachedEndOfExpression = true
+                    } else if (expression == ExpressionType.CONTINUE_EXPANSION) { // TODO end condition
+                        //thisExpansion.environment.parent().finishVariableEvaluation()
+                        thisExpansion.session.environment!!.finishChildEnvironment() // TODO the same needs to happen in all cases where a child environment was created (macro invocations/template body)
+                        thisExpansion.expansionKind = Empty
+                        thisExpansion.childExpansion = null
+                    }
                 }
-                if (thisExpansion.additionalState != null) {
-                    thisExpansion.currentExpressionIndex = thisExpansion.additionalState as Int
+                if (thisExpansion.additionalState != null) { // TODO still needed?
+                    thisExpansion.environmentContext.tape!!.rewindTo(thisExpansion.additionalState as Int)
                     thisExpansion.additionalState = null
                 }
                 return expression
@@ -467,7 +474,8 @@ class LazyMacroEvaluator {
                 }
                 // TODO determine where else this might need to be applied. MakeSymbol?
                 // TODO should it be checked whether useTape is true?
-                thisExpansion.currentExpressionIndex = thisExpansion.session.environment!!.arguments!!.findIndexAfterEndEExpressionFrom(thisExpansion.currentExpressionIndex)
+                //thisExpansion.currentExpressionIndex = thisExpansion.session.environment!!.arguments!!.findIndexAfterEndEExpressionFrom(thisExpansion.currentExpressionIndex)
+                thisExpansion.environmentContext.tape!!.advanceToAfterEndEExpression()
                 thisExpansion.expansionKind = Empty
                 //return thisExpansion.session.expressionPool.createStringValue(Collections.emptyList(), sb.toString())
                 // TODO stash the sb somewhere
@@ -596,7 +604,7 @@ class LazyMacroEvaluator {
                     fieldName.asSymbol(thisExpansion)
                 )
 
-                val savedTapeIndex = thisExpansion.currentExpressionIndex
+                val savedTapeIndex = thisExpansion.environmentContext.tape!!.currentIndex() // TODO determine if there needs to be some replacement to this now that the index is tracked in the tape
 
                 thisExpansion.readExactlyOneArgument(FIELD_VALUE)
 
@@ -604,7 +612,8 @@ class LazyMacroEvaluator {
 
                 // Rewind the tape; this argument will be read again to satisfy the one-expression-at-a-time
                 // design of the evaluator.
-                valueExpansion.currentExpressionIndex = savedTapeIndex
+                //valueExpansion.currentExpressionIndex = savedTapeIndex
+                thisExpansion.environmentContext.tape!!.rewindTo(savedTapeIndex)
 
                 /*
                 return fieldNameExpression.also {
@@ -648,7 +657,7 @@ class LazyMacroEvaluator {
                                 endExclusive = expression?.endExclusive ?: 0,
 
                                  */
-                                tapeIndex = thisExpansion.currentExpressionIndex,
+                                tapeIndex = 0, //thisExpansion.currentExpressionIndex,
                                 environmentContext = argumentExpansion.top().environmentContext,
                             )
                             ExpressionType.CONTINUE_EXPANSION
@@ -700,7 +709,7 @@ class LazyMacroEvaluator {
                                 endExclusive = expression?.endExclusive ?: 0,
 
                                  */
-                                tapeIndex = thisExpansion.currentExpressionIndex,
+                                tapeIndex = 0, //thisExpansion.currentExpressionIndex,
                                 environmentContext = argumentExpansion.top().environmentContext,
                             )
 
@@ -757,8 +766,8 @@ class LazyMacroEvaluator {
                         return nextExpandedArg //thisExpansion.session.expressionPool.createBigIntValue(Collections.emptyList(), nextOutput)
                     }
                     nextExpandedArg == ExpressionType.END_OF_EXPANSION -> {
-                        thisExpansion.currentExpressionIndex = delegate.currentExpressionIndex
-                        thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex
+                        //thisExpansion.currentExpressionIndex = delegate.currentExpressionIndex
+                        //thisExpansion.nextExpressionIndex = thisExpansion.currentExpressionIndex
                         return ExpressionType.END_OF_EXPANSION
                     }
                     else -> throw IonException("delta arguments must be integers")
@@ -818,7 +827,7 @@ class LazyMacroEvaluator {
             tailCall(readArgument(branch))
             if (branch == 2) {
                 // The false branch comes second; skip the tape past its expression(s) if the branch is not taken.
-                additionalState = testArg.session.environment!!.arguments!!.findIndexAfterEndEExpressionFrom(currentExpressionIndex)
+                additionalState = testArg.session.environment!!.arguments!!.findIndexAfterEndEExpression()
             }
             return ExpressionType.CONTINUE_EXPANSION
         }
@@ -827,86 +836,8 @@ class LazyMacroEvaluator {
          * Returns an expansion for the given variable.
          */
         fun ExpansionInfo.readArgument(variableRef: Int): ExpansionInfo {
-                val tapeStartIndex = environmentContext.firstArgumentStartIndex
-                val variableIndex = variableRef
-                // TODO iterate through the tape to find the index of the requested variable
-                // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
-                var argIndex = 0
-                var relativeDepth = 0
-                var i = tapeStartIndex
-                while (i < session.environment!!.arguments!!.size()) { // TODO clean up
-                    when (session.environment!!.arguments!!.typeAt(i)) {
-                        ExpressionType.FIELD_NAME -> {
-                            // Skip the field name; advance to the following expression.
-                        }
-                        ExpressionType.ANNOTATION -> {
-                            if (relativeDepth == 0) {
-                                if (argIndex == variableIndex) {
-                                    break;
-                                }
-                                argIndex++
-                            }
-                        }
-                        ExpressionType.E_EXPRESSION -> {
-                            if (relativeDepth == 0) {
-                                if (argIndex == variableIndex) {
-                                    break;
-                                }
-                                argIndex++
-                            }
-                            relativeDepth++
-                        }
-                        ExpressionType.EXPRESSION_GROUP -> {
-                            if (relativeDepth == 0) {
-                                if (argIndex == variableIndex) {
-                                    break;
-                                }
-                                argIndex++
-                            }
-                            relativeDepth++
-                        }
-                        ExpressionType.EXPRESSION_GROUP_END -> {
-                            if (--relativeDepth < 0) {
-                                i++
-                                break;
-                            }
-                        }
-                        ExpressionType.DATA_MODEL_SCALAR -> {
-                            if (relativeDepth == 0) {
-                                if (argIndex == variableIndex) {
-                                    break;
-                                }
-                                argIndex++
-                            }
-                        }
-                        ExpressionType.DATA_MODEL_CONTAINER -> {
-                            if (relativeDepth == 0) {
-                                if (argIndex == variableIndex) {
-                                    break;
-                                }
-                                argIndex++
-                            }
-                            relativeDepth++
-                        }
-                        ExpressionType.DATA_MODEL_CONTAINER_END -> {
-                            if (--relativeDepth < 0) {
-                                i++
-                                break;
-                            }
-                        }
-                        ExpressionType.E_EXPRESSION_END -> {
-                            if (--relativeDepth < 0) {
-                                i++
-                                break;
-                            }
-                        }
-                        ExpressionType.VARIABLE -> unreachable()
-                        ExpressionType.END_OF_EXPANSION -> unreachable()
-                        ExpressionType.CONTINUE_EXPANSION -> unreachable()
-                    }
-                    i++
-                }
-                if (argIndex < variableIndex) {
+            val argumentTape = session.environment!!.arguments!!
+                if (!environmentContext.seekToArgument(argumentTape, variableRef)) {
                     // Argument was elided.
                     return session.getExpander(Empty, 0, LazyEnvironment.EMPTY.currentContext)
                 }
@@ -919,9 +850,9 @@ class LazyMacroEvaluator {
                     endExclusive = 0,
 
                      */
-                    tapeIndex = i,
+                    tapeIndex = 0, //i,
                     //environment = environment.createLazyChild(environment.arguments!!, i, true)
-                    environmentContext = session.environment!!.startChildEnvironment(session.environment!!.arguments!!, i) // TODO ensure this is the right source
+                    environmentContext = session.environment!!.startChildEnvironment(argumentTape, argumentTape.currentIndex()) // TODO ensure this is the right source
                 )
         }
 
@@ -957,42 +888,42 @@ class LazyMacroEvaluator {
 
         fun ExpressionType.asLong(expansion: ExpansionInfo): Long {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.longValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.longValue()
             }
             throw IonException("invalid argument; expected integer")
         }
 
         fun ExpressionType.asBigInteger(expansion: ExpansionInfo): BigInteger {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.bigIntegerValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.bigIntegerValue()
             }
             throw IonException("invalid argument; expected integer")
         }
 
         fun ExpressionType.asText(expansion: ExpansionInfo): String {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.textValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.textValue()
             }
             throw IonException("invalid argument; expected string or symbol")
         }
 
         fun ExpressionType.asSymbol(expansion: ExpansionInfo): SymbolToken {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.symbolValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.symbolValue()
             }
             throw IonException("invalid argument; expected string or symbol")
         }
 
         fun ExpressionType.asBigDecimal(expansion: ExpansionInfo): BigDecimal {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.bigDecimalValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.bigDecimalValue()
             }
             throw IonException("invalid argument; expected decimal or int")
         }
 
         fun ExpressionType.asLob(expansion: ExpansionInfo): ByteArray {
             if (this == ExpressionType.DATA_MODEL_SCALAR) {
-                return expansion.environmentContext.lobValueAt(expansion.currentExpressionIndex)
+                return expansion.environmentContext.lobValue()
             }
             throw IonException("invalid argument; expected string or symbol")
         }
@@ -1019,7 +950,7 @@ class LazyMacroEvaluator {
                     it == ExpressionType.FIELD_NAME -> unreachable("Unreachable without stepping into a container")
                 }
             }
-            currentExpressionIndex = argExpansion.currentExpressionIndex
+            //currentExpressionIndex = argExpansion.currentExpressionIndex
             argExpansion.close()
             return argValue
         }
@@ -1091,8 +1022,8 @@ class LazyMacroEvaluator {
         /** Current position within [expressions] of this expansion */
         //@JvmField var i: Int = 0
         /** Current position within the environment's expression tape */
-        @JvmField var currentExpressionIndex: Int = 0
-        @JvmField var nextExpressionIndex: Int = 0
+        //@JvmField var currentExpressionIndex: Int = 0
+        //@JvmField var nextExpressionIndex: Int = 0
         @JvmField var reachedEndOfExpression: Boolean = false
 
         /**
@@ -1117,8 +1048,8 @@ class LazyMacroEvaluator {
          */
         fun closeDelegateAndContinue(): ExpressionType {
             if (childExpansion != null) {
-                currentExpressionIndex = childExpansion!!.currentExpressionIndex
-                nextExpressionIndex = currentExpressionIndex
+                //currentExpressionIndex = childExpansion!!.currentExpressionIndex
+                //nextExpressionIndex = currentExpressionIndex
                 childExpansion!!.close()
                 childExpansion = null
             }
@@ -1140,7 +1071,7 @@ class LazyMacroEvaluator {
             additionalState = null
             childExpansion?.close()
             childExpansion = null
-            nextExpressionIndex = currentExpressionIndex
+            //nextExpressionIndex = currentExpressionIndex
             reachedEndOfExpression = false
         }
 
@@ -1151,8 +1082,8 @@ class LazyMacroEvaluator {
         fun tailCall(other: ExpansionInfo) {
             this.expansionKind = other.expansionKind
             //this.i = other.i
-            this.currentExpressionIndex = other.currentExpressionIndex
-            this.nextExpressionIndex = other.nextExpressionIndex
+            //this.currentExpressionIndex = other.currentExpressionIndex
+            //this.nextExpressionIndex = other.nextExpressionIndex
             //this.endExclusive = other.endExclusive
             this.childExpansion = other.childExpansion
             this.additionalState = other.additionalState
@@ -1175,7 +1106,8 @@ class LazyMacroEvaluator {
         fun produceNext(): ExpressionType {
             while (true) {
                 // TODO seek the tapeIndex forward (using a stored amount based on the previous expression), and check for end of expansion
-                currentExpressionIndex = nextExpressionIndex
+                //currentExpressionIndex = nextExpressionIndex
+                environmentContext.tape!!.next();
                 val next = expansionKind.produceNext(this)
                 if (next == ExpressionType.CONTINUE_EXPANSION) continue
                 // This the only place where we count the expansion steps.
@@ -1212,11 +1144,15 @@ class LazyMacroEvaluator {
         return session.expressions.toList()
     }
 
+    fun getArgumentTape(): ExpressionTape {
+        return session.environment!!.arguments!!
+    }
+
 
     // TODO modify the evaluator to operate on the "tape" instead of the materialized expressions. Remove
     //  the materialization
     private fun materializeExpressions(expressionTape: ExpressionTape) {
-        expressionTape.rewind()
+        expressionTape.rewindTo(0)
         var expression: EExpressionBodyExpression?
         while ((expressionTape.dequeue(session.expressions).also { expression = it }) != null) {
             session.expressions.add(expression!!)
@@ -1265,11 +1201,25 @@ class LazyMacroEvaluator {
         return expansion
     }
 
+    fun forceEvaluation(value: DataModelValue) {
+        val expressionTape = currentExpansion().environmentContext.tape!!
+        expressionTape.clear()
+        expressionTape.addDataModelValue(value)
+        expressionTape.rewindTo(0)
+    }
+
+    /*
+    fun finishForcedEvaluation() {
+        currentExpansion().environmentContext.tape!!.clear()
+    }
+
+     */
+
     fun currentFieldName(): SymbolToken {
         return when {
             currentExpr!! == ExpressionType.FIELD_NAME -> {
                 val expansion = currentExpansion()
-                expansion.environmentContext.contextAt(expansion.currentExpressionIndex) as SymbolToken
+                expansion.environmentContext.context() as SymbolToken
             }
 
             else -> throw IonException("Not positioned on a field name")
@@ -1280,7 +1230,7 @@ class LazyMacroEvaluator {
         return when {
             currentExpr!! == ExpressionType.ANNOTATION -> {
                 val expansion = currentExpansion()
-                expansion.environmentContext.annotationsAt(expansion.currentExpressionIndex)
+                expansion.environmentContext.annotations()
             }
             else -> throw IonException("Not positioned on annotations")
         }
@@ -1290,7 +1240,7 @@ class LazyMacroEvaluator {
         return when {
             currentExpr!!.isDataModelValue -> {
                 val expansion = currentExpansion()
-                expansion.environmentContext.typeAt(expansion.currentExpressionIndex)
+                expansion.environmentContext.type()
             }
             else -> throw IonException("Not positioned on a value")
         }
@@ -1298,16 +1248,20 @@ class LazyMacroEvaluator {
 
     private fun seekTapePastEndOfCurrentContainer(currentContainer: ContainerInfo) {
         //if (currentContainer.expansion.currentExpressionIndex >= 0) { // TODO why will tapeIndex sometimes be < 0? TRY REMOVING. The fix in findIndex... should prevent this
-            currentContainer.expansion.currentExpressionIndex = currentContainer.expansion.nextExpressionIndex
+            //currentContainer.expansion.currentExpressionIndex = currentContainer.expansion.nextExpressionIndex
             val parentContainer = containerStack.peek()
-            parentContainer.expansion.currentExpressionIndex = currentContainer.expansion.session.environment!!.arguments!!.findIndexAfterEndContainerFrom(currentContainer.expansion.currentExpressionIndex)
-            parentContainer.expansion.nextExpressionIndex = parentContainer.expansion.currentExpressionIndex
+            //parentContainer.expansion.currentExpressionIndex = currentContainer.expansion.session.environment!!.arguments!!.findIndexAfterEndContainerFrom(currentContainer.expansion.currentExpressionIndex)
+            parentContainer.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
+            //parentContainer.expansion.nextExpressionIndex = parentContainer.expansion.currentExpressionIndex
+        /* // TODO note: this should happen automatically because related children will use the same tape
             var childExpansion = parentContainer.expansion.childExpansion
             while (childExpansion != null) {
                 childExpansion.currentExpressionIndex = parentContainer.expansion.currentExpressionIndex
                 childExpansion.nextExpressionIndex = childExpansion.currentExpressionIndex
                 childExpansion = childExpansion.childExpansion
             }
+
+         */
         //}
     }
 
@@ -1341,7 +1295,7 @@ class LazyMacroEvaluator {
             }
 
              */
-            ci.type = when (topExpansion.environmentContext.typeAt(currentContainer.expansion.currentExpressionIndex)) {
+            ci.type = when (topExpansion.environmentContext.type()) {
                 IonType.LIST -> ContainerInfo.Type.List
                 IonType.SEXP -> ContainerInfo.Type.Sexp
                 IonType.STRUCT -> ContainerInfo.Type.Struct
@@ -1355,7 +1309,7 @@ class LazyMacroEvaluator {
                 endExclusive = expression?.endExclusive ?: 0,
 
                  */
-                tapeIndex = currentContainer.expansion.currentExpressionIndex + 1,
+                tapeIndex = 0, //currentContainer.expansion.currentExpressionIndex + 1,
                 environmentContext = topExpansion.environmentContext,
             )
             currentExpr = null
@@ -1366,62 +1320,62 @@ class LazyMacroEvaluator {
 
     fun longValue(): Long {
         val expansion = currentExpansion()
-        return expansion.environmentContext.longValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.longValue()
     }
 
     fun bigIntegerValue(): BigInteger {
         val expansion = currentExpansion()
-        return expansion.environmentContext.bigIntegerValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.bigIntegerValue()
     }
 
     fun getIntegerSize(): IntegerSize {
         val expansion = currentExpansion()
-        return expansion.environmentContext.integerSizeAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.integerSize()
     }
 
     fun stringValue(): String {
         val expansion = currentExpansion()
-        return expansion.environmentContext.textValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.textValue()
     }
 
     fun symbolValue(): SymbolToken {
         val expansion = currentExpansion()
-        return expansion.environmentContext.symbolValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.symbolValue()
     }
 
     fun bigDecimalValue(): BigDecimal {
         val expansion = currentExpansion()
-        return expansion.environmentContext.bigDecimalValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.bigDecimalValue()
     }
 
     fun lobSize(): Int {
         val expansion = currentExpansion()
-        return expansion.environmentContext.lobSizeAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.lobSize()
     }
 
     fun lobValue(): ByteArray {
         val expansion = currentExpansion()
-        return expansion.environmentContext.lobValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.lobValue()
     }
 
     fun doubleValue(): Double {
         val expansion = currentExpansion()
-        return expansion.environmentContext.doubleValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.doubleValue()
     }
 
     fun timestampValue(): Timestamp {
         val expansion = currentExpansion()
-        return expansion.environmentContext.timestampValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.timestampValue()
     }
 
     fun isNullValue(): Boolean {
         val expansion = currentExpansion()
-        return expansion.environmentContext.isNullValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.isNullValue()
     }
 
     fun booleanValue(): Boolean {
         val expansion = currentExpansion()
-        return expansion.environmentContext.booleanValueAt(expansion.currentExpressionIndex)
+        return expansion.environmentContext.booleanValue()
     }
 }
 
