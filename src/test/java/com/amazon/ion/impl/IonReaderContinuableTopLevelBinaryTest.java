@@ -6542,6 +6542,96 @@ public class IonReaderContinuableTopLevelBinaryTest {
         closeAndCount();
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void basicSum(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x07, // System macro 7 (sum)
+            0x60, // Int 0
+            0x61, 0x01  // Int 1
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void emptyMakeString(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x09, // System macro 9 (make_string)
+            0x00, // AEB 0 (nothing)
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals("", reader.stringValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void emptyDefaultUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x02, // System macro 2 (default)
+            0x00, // AEB: neither of the two optionals are present
+            0x60  // Int 0
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(0, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void defaultUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x02, // System macro 2 (default)
+            0x05, // AEB: both optionals are present
+            0x60,  // Int 0
+            0x61, 0x01  // Int 1
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(0, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void makeFieldUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x10, // System macro 16 (make_field)
+            0xA3, 0x66, 0x6F, 0x6F, // inline symbol "foo"
+            0x60 // Int 0
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("foo", reader.getFieldName());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(0, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+    }
+
     // TODO test continuable reading and skipping of non-prefixed macro invocations.
     // TODO test skipping macro invocations (especially length-prefixed ones) that expand to system values.
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)

@@ -189,7 +189,7 @@ class LazyMacroEvaluatorAsIonReader(
 
     fun hasAnnotations(): Boolean = currentAnnotations != null && currentAnnotations!!.isNotEmpty()
 
-    override fun getTypeAnnotations(): Array<String>? = currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } }
+    override fun getTypeAnnotations(): Array<String> = currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } } ?: emptyArray()
     override fun getTypeAnnotationSymbols(): Array<SymbolToken> = currentAnnotations?.toTypedArray() ?: emptyArray()
 
     private class SymbolTokenAsStringIterator(val tokens: List<SymbolToken>) : MutableIterator<String> {

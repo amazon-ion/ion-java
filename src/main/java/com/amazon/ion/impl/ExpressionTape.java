@@ -385,6 +385,9 @@ public class ExpressionTape { // TODO make internal
     public long readLong() {
         if (!backedByReader) {
             // TODO what about null ints? Handled externally?
+            if (values[i] instanceof BigInteger) {
+                return ((BigInteger) values[i]).longValue();
+            }
             return (long) values[i]; // TODO add a nicer error if something is wrong
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
