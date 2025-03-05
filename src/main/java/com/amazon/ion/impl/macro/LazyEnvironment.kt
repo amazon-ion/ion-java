@@ -32,6 +32,8 @@ class LazyEnvironment /*(
 ) */{
 
     val arguments: ExpressionTape?
+    val sideEffects: ExpressionTape = ExpressionTape(null, 4)
+    val sideEffectContext: NestedContext = NestedContext(sideEffects, 0)
     var currentContext: NestedContext = NestedContext(null, -1)
 
     constructor(arguments: ExpressionTape?) {

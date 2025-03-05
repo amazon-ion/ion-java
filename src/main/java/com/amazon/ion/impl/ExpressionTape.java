@@ -33,7 +33,7 @@ public class ExpressionTape { // TODO make internal
     private int iNext = 0;
     private int size = 0;
 
-    ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
+    public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
         backedByReader = reader != null;
         contexts = new Object[initialSize];
@@ -64,7 +64,7 @@ public class ExpressionTape { // TODO make internal
         size++;
     }
 
-    void add(Object context, ExpressionType type, Object value) {
+    private void add(Object context, ExpressionType type, Object value) {
         if (i >= contexts.length) {
             grow();
         }
@@ -75,6 +75,10 @@ public class ExpressionTape { // TODO make internal
         ends[i] = -1;
         i++;
         size++;
+    }
+
+    public void addScalar(IonType type, Object value) {
+        add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR, value);
     }
 
     public void next() {
