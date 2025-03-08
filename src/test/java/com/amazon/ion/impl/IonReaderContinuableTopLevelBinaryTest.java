@@ -5977,11 +5977,19 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(bytes)));
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(readerBuilder, constructFromBytes, input);
+        /*
         assertSequence(
             next(IonType.INT), intValue(0),
             next(IonType.INT), intValue(1),
             next(null)
         );
+
+         */
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(0, reader.intValue());
+        assertEquals(IonType.INT, reader.next());
+        assertEquals(1, reader.intValue());
+        assertNull(reader.next());
         closeAndCount();
     }
 

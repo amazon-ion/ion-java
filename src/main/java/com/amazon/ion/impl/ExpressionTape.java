@@ -77,6 +77,10 @@ public class ExpressionTape { // TODO make internal
         size++;
     }
 
+    public void addFieldName(Object fieldNameStringOrToken) {
+        add(fieldNameStringOrToken, ExpressionType.FIELD_NAME, null);
+    }
+
     public void addScalar(IonType type, Object value) {
         add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR, value);
     }
@@ -185,6 +189,12 @@ public class ExpressionTape { // TODO make internal
         return i;
     }
 
+    public void setNextAfterEndOfEExpression() {
+        int iCurrent = i;
+        iNext = findIndexAfterEndEExpression();
+        i = iCurrent;
+    }
+
     public void advanceToAfterEndEExpression() {
         // TODO won't this be fooled by encountering a nested expression before the end?
         while (i < size) {
@@ -203,6 +213,16 @@ public class ExpressionTape { // TODO make internal
             }
         }
         iNext = i;
+    }
+
+    public int highestVariableIndex() {
+        int highestVariableIndex = 0;
+        for (int tapeIndex = 0; tapeIndex < size; tapeIndex++) {
+            if (types[tapeIndex] == ExpressionType.VARIABLE) {
+                highestVariableIndex = Math.max(highestVariableIndex, (int) contexts[tapeIndex]);
+            }
+        }
+        return highestVariableIndex;
     }
 
     void shiftIndicesLeft(int shiftAmount) {
@@ -901,11 +921,12 @@ public class ExpressionTape { // TODO make internal
         return tape;
     }
 
-    public boolean seekToArgument(int startIndex, int indexRelativeToStart) {
+    public ExpressionType seekToArgument(int startIndex, int indexRelativeToStart) {
         // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
         // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
         int argIndex = 0;
         int relativeDepth = 0;
+        //int iStart = i;
         i = startIndex;
         loop: while (i < size) { // TODO clean up
             switch (types[i]) {
@@ -914,6 +935,7 @@ public class ExpressionTape { // TODO make internal
                     break;
                 case ANNOTATION:
                 case DATA_MODEL_SCALAR:
+                case VARIABLE:
                     if (relativeDepth == 0) {
                         if (argIndex == indexRelativeToStart) {
                             break loop;
@@ -945,7 +967,82 @@ public class ExpressionTape { // TODO make internal
             }
             i++;
         }
+        if (argIndex < indexRelativeToStart || i >= size) {
+            //i = iStart;
+            iNext = i;
+            return ExpressionType.END_OF_EXPANSION;
+        }
+        ExpressionType targetType = types[i];
+        if (targetType == ExpressionType.VARIABLE) {
+            // The desired argument is a variable, so the parent tape must be consulted.
+            //i = iStart;
+            return ExpressionType.VARIABLE;
+        }
         iNext = i;
-        return argIndex >= indexRelativeToStart;
+        return targetType;
+    }
+
+    public void seekPastExpression() {
+        // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
+        // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
+        //int argIndex = 0;
+        int relativeDepth = 0;
+        //int iStart = i;
+        //i = startIndex;
+        int startIndex = i;
+        loop: while (i < size) { // TODO clean up
+            switch (types[i]) {
+                case FIELD_NAME:
+                case ANNOTATION:
+                    // Skip the field name or annotation; advance to the following expression.
+                    break;
+                case DATA_MODEL_SCALAR:
+                case VARIABLE:
+                    if (relativeDepth == 0) {
+                        if (i > startIndex) {
+                            break loop;
+                        }
+                    }
+                    break;
+                case E_EXPRESSION:
+                case EXPRESSION_GROUP:
+                case DATA_MODEL_CONTAINER:
+                    if (relativeDepth == 0) {
+                        if (i > startIndex) {
+                            break loop;
+                        }
+                    }
+                    relativeDepth++;
+                    break;
+                case EXPRESSION_GROUP_END:
+                case DATA_MODEL_CONTAINER_END:
+                case E_EXPRESSION_END:
+                    if (--relativeDepth < 0) {
+                        i++; // TODO check
+                        break loop;
+                    }
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+            i++;
+        }
+        /*
+        if (i == startIndex || i >= size) {
+            //i = iStart;
+            iNext = i;
+            return ExpressionType.END_OF_EXPANSION;
+        }
+        ExpressionType targetType = types[i];
+        if (targetType == ExpressionType.VARIABLE) {
+            // The desired argument is a variable, so the parent tape must be consulted.
+            //i = iStart;
+            return ExpressionType.VARIABLE;
+        }
+
+         */
+        i++; // This positions the tape *after* the end of the expression that was located above.
+        iNext = i;
+        //return targetType;
     }
 }

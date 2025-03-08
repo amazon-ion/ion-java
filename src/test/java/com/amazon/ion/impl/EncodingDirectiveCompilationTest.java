@@ -2198,6 +2198,7 @@ public class EncodingDirectiveCompilationTest {
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.STRING, reader.next());
             assertEquals("hello world", reader.stringValue());
+            assertNull(reader.next());
         }
     }
 

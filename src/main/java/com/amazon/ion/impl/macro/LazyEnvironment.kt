@@ -5,7 +5,6 @@ package com.amazon.ion.impl.macro
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.util.*
-import com.amazon.ion.util.unreachable
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -33,18 +32,19 @@ class LazyEnvironment /*(
 
     val arguments: ExpressionTape?
     val sideEffects: ExpressionTape = ExpressionTape(null, 4)
-    val sideEffectContext: NestedContext = NestedContext(sideEffects, 0)
-    var currentContext: NestedContext = NestedContext(null, -1)
+    val sideEffectContext: NestedContext = NestedContext(sideEffects, null, -1)
+    var currentContext: NestedContext = NestedContext(null, null, -1)
 
     constructor(arguments: ExpressionTape?) {
         this.arguments = arguments
         currentContext = nestedContexts[++nestedContextIndex]!!
         currentContext.tape = arguments
+        currentContext.arguments = arguments // TODO ?
         currentContext.firstArgumentStartIndex = 0
     }
 
     //data class NestedContext(var useTape: Boolean, var firstArgumentStartIndex: Int, var expressions: List<Expression>, var argumentIndices: IntArray) {
-    data class NestedContext(var tape: ExpressionTape?, var firstArgumentStartIndex: Int) { // TODO track whether a single expression has been read; nested contexts read only one
+    data class NestedContext(var tape: ExpressionTape?, var arguments: ExpressionTape?, var firstArgumentStartIndex: Int) { // TODO track whether a single expression has been read; nested contexts read only one
         /*
         fun startVariableEvaluation() {
             useTape = true
@@ -198,18 +198,93 @@ class LazyEnvironment /*(
             return tape!!.readBoolean()
         }
 
-        fun seekToArgument(argumentTape: ExpressionTape, indexRelativeToStart: Int): Boolean {
-            return argumentTape.seekToArgument(firstArgumentStartIndex, indexRelativeToStart)
+        fun highestVariableIndex(): Int {
+            // TODO performance: store this to avoid recomputing
+            return tape!!.highestVariableIndex()
         }
     }
 
     private var nestedContexts: Array<NestedContext?> = Array(16) {
-         NestedContext(null, -1)
+         NestedContext(null, null, -1)
     }
     private var nestedContextIndex = -1
 
     private fun growContextStack() {
         nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
+    }
+
+    fun finishChildEnvironments(context: NestedContext) {
+        // TODO consider storing the index in the context so that this can be done without looping“
+        while (currentContext !== context) { // TODO verify this uses reference equality
+            finishChildEnvironment()
+        }
+        finishChildEnvironment()
+    }
+
+    fun seekToArgument(indexRelativeToStart: Int): ExpressionTape? {
+        var context = currentContext
+        var contextIndex = nestedContextIndex
+        var startIndex = context.firstArgumentStartIndex
+        var searchIndex = indexRelativeToStart
+        var sourceTape = context.arguments!!
+        while (true) {
+            when (sourceTape.seekToArgument(startIndex, searchIndex)) {
+                ExpressionType.END_OF_EXPANSION -> return null
+                ExpressionType.VARIABLE -> {
+                    // The new search index is the index of the variable in the parent tape
+                    searchIndex = sourceTape.context() as Int
+                    // This pass-through variable has now been consumed.
+                    sourceTape.prepareNext()
+                    context = nestedContexts[--contextIndex]!!
+                    startIndex = context.firstArgumentStartIndex
+                    sourceTape = context.arguments!!
+
+                }
+                else -> {
+                    return sourceTape
+                }
+            }
+        }
+    }
+
+    fun seekPastFinalArgument() {
+        // TODO perf: depending on the final design of the invocation stack, it might not be necessary for this to go
+        //  upward recursively, e.g. if the invocation stack is still modeled recursively, this might be called at
+        //  each depth anyway, so there would be duplicate work under the current implementation.
+        var context = currentContext
+        var contextIndex = nestedContextIndex
+        var startIndex = context.firstArgumentStartIndex
+        var searchIndex = context.highestVariableIndex()
+        var sourceTape = context.arguments!!
+        while (true) {
+            when (sourceTape.seekToArgument(startIndex, searchIndex)) {
+                ExpressionType.END_OF_EXPANSION -> break
+                ExpressionType.VARIABLE -> {
+                    // The new search index is the index of the variable in the parent tape
+                    searchIndex = sourceTape.context() as Int
+                    sourceTape.prepareNext() // Advance past this variable, which has been consumed.
+                    context = nestedContexts[--contextIndex]!!
+                    startIndex = context.firstArgumentStartIndex
+                    sourceTape = context.arguments!!
+                }
+                else -> {
+                    // Seek to the next argument, since the current one has been consumed.
+                    //sourceTape.seekToArgument(sourceTape.currentIndex(), 1) //prepareNext() // Advance past this expression, which has been used.
+                    sourceTape.seekPastExpression()
+                    break
+                }
+            }
+        }
+    }
+
+    fun tailCall(): NestedContext {
+        // TODO do this earlier, so that 'currentContext' never needs to go on the stack
+        val context = currentContext
+        finishChildEnvironment()
+        currentContext.tape = context.tape
+        currentContext.arguments = context.arguments
+        currentContext.firstArgumentStartIndex = context.firstArgumentStartIndex
+        return currentContext
     }
 
     /*
@@ -237,7 +312,7 @@ class LazyEnvironment /*(
 
      */
 
-    fun startChildEnvironment(tape: ExpressionTape, firstArgumentStartIndex: Int, /*useTape: Boolean, expressions: List<Expression>, argumentIndices: IntArray*/): NestedContext {
+    fun startChildEnvironment(tape: ExpressionTape, arguments: ExpressionTape, firstArgumentStartIndex: Int, /*useTape: Boolean, expressions: List<Expression>, argumentIndices: IntArray*/): NestedContext {
         //return LazyEnvironment(this.arguments, firstArgumentStartIndex, this, useTape, expressions, argumentIndices)
         if (++nestedContextIndex > nestedContexts.size) {
             growContextStack()
@@ -246,6 +321,7 @@ class LazyEnvironment /*(
         //currentContext.useTape = useTape
         //currentContext.expressions = expressions
         currentContext.tape = tape
+        currentContext.arguments = arguments
         currentContext.firstArgumentStartIndex = firstArgumentStartIndex
         //currentContext.argumentIndices = argumentIndices
         return currentContext
