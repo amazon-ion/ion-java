@@ -6,23 +6,18 @@ import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl.bin.Ion_1_1_Constants;
 import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.macro.Expression;
-import com.amazon.ion.impl.macro.Macro;
-import com.amazon.ion.impl.macro.PooledExpressionFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class ExpressionTape { // TODO make internal
 
     private final IonReaderContinuableCoreBinary reader; // If null, then the values are materialized
-    private final PooledExpressionFactory expressionPool = new PooledExpressionFactory(); // TODO remove
     private boolean backedByReader;
     private Object[] contexts;
     private Object[] values; // Elements are null for values that haven't yet been materialized
@@ -102,14 +97,6 @@ public class ExpressionTape { // TODO make internal
     }
 
     public IonType ionType() {
-        /*
-        switch (types[i]) {
-            case DATA_MODEL_CONTAINER: return (IonType) contexts[i];
-            case DATA_MODEL_SCALAR: return ((IonTypeID) contexts[i]).type; //!backedByReader ? (IonType) contexts[i] : ((IonTypeID) contexts[i]).type;
-            default: throw new IllegalStateException();
-        }
-
-         */
         return ((IonTypeID) contexts[i]).type;
     }
 
@@ -134,50 +121,7 @@ public class ExpressionTape { // TODO make internal
         i = 0;
         iNext = 0;
         size = 0;
-        expressionPool.clear();
     }
-
-    /*
-    private void updateEndIndexFor(ExpressionType type, List<Expression.EExpressionBodyExpression> expressions) {
-        // TODO note: this is not efficient, but it is temporary anyway. The evaluator will handle this using its
-        //  evaluation stack.
-        int end = expressions.size();
-        for (int i = end - 1; i >= 0; i--) {
-            Expression.EExpressionBodyExpression expression = expressions.get(i);
-            switch (type) {
-                case E_EXPRESSION:
-                    if (expression instanceof Expression.EExpression) {
-                        Expression.EExpression eexpression = ((Expression.EExpression) expression);
-                        if (eexpression.getEndExclusive() < 0) {
-                            eexpression.setEndExclusive(end);
-                            return;
-                        }
-                    }
-                    break;
-                case EXPRESSION_GROUP:
-                    if (expression instanceof Expression.ExpressionGroup) {
-                        Expression.ExpressionGroup expressionGroup = ((Expression.ExpressionGroup) expression);
-                        if (expressionGroup.getEndExclusive() < 0) {
-                            expressionGroup.setEndExclusive(end);
-                            return;
-                        }
-                    }
-                    break;
-                case DATA_MODEL_CONTAINER:
-                    if (expression instanceof Expression.DataModelContainer) {
-                        Expression.DataModelContainer container = ((Expression.DataModelContainer) expression);
-                        if (container.getEndExclusive() < 0) {
-                            container.setEndExclusive(end);
-                            return;
-                        }
-                    }
-                    break;
-            }
-        }
-        throw new IllegalStateException("Unreachable: no start expression found for type " + type);
-    }
-
-     */
 
     public int findIndexAfterEndEExpression() {
         // TODO won't this be fooled by encountering a nested expression before the end?
@@ -235,136 +179,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    // TODO eventually, just prime the reader instead of returning an expression. The evaluator should operate
-    //  on the reader directly to avoid materializing expressions.
-    // TODO test early step-out or step-over before the tape is fully drained. The reader needs to be advanced to
-    //  the end of the tape and prepared to continue reading.
-/*
-    public Expression.EExpressionBodyExpression dequeue(List<Expression.EExpressionBodyExpression> expressions) {
-        List<SymbolToken> annotations = Collections.emptyList();
-        while (true) {
-            if (i >= size) {
-                return null;
-            }
-            int startIndex = starts[i];
-            Object context = contexts[i];
-            ExpressionType type = types[i];
-            int endIndex = ends[i];
-            Expression.EExpressionBodyExpression expression = null;
-            switch (type) {
-                case FIELD_NAME:
-                    expression = expressionPool.createFieldName((SymbolToken) context);
-                    break;
-                case ANNOTATION:
-                    annotations = (List<SymbolToken>) context;
-                    break;
-                case E_EXPRESSION:
-                    expression = expressionPool.createEExpression((Macro) context, expressions.size(), -1);
-                    break;
-                case E_EXPRESSION_END:
-                    updateEndIndexFor(ExpressionType.E_EXPRESSION, expressions);
-                    break;
-                case EXPRESSION_GROUP:
-                    expression = expressionPool.createExpressionGroup(expressions.size(), -1);
-                    break;
-                case EXPRESSION_GROUP_END:
-                    updateEndIndexFor(ExpressionType.EXPRESSION_GROUP, expressions);
-                    break;
-                case DATA_MODEL_SCALAR:
-                    boolean isEvaluating = reader.isEvaluatingEExpression;
-                    reader.isEvaluatingEExpression = false; // TODO hack
-                    reader.sliceAfterHeader(startIndex, endIndex, (IonTypeID) context); // TODO do this for containers too when prefixed instead of eagerly traversing them
-                    if (reader.isNullValue()) {
-                        expression = expressionPool.createNullValue(annotations, reader.getEncodingType());
-                    } else {
-                        switch (reader.getEncodingType()) {
-                            case BOOL:
-                                expression = expressionPool.createBoolValue(annotations, reader.booleanValue());
-                                break;
-                            case INT:
-                                switch (reader.getIntegerSize()) {
-                                    case INT:
-                                    case LONG:
-                                        expression = expressionPool.createLongIntValue(annotations, reader.longValue());
-                                        break;
-                                    case BIG_INTEGER:
-                                        expression = expressionPool.createBigIntValue(annotations, reader.bigIntegerValue());
-                                        break;
-                                    default:
-                                        throw new IllegalStateException();
-                                }
-                                break;
-                            case FLOAT:
-                                expression = expressionPool.createFloatValue(annotations, reader.doubleValue());
-                                break;
-                            case DECIMAL:
-                                expression = expressionPool.createDecimalValue(annotations, reader.decimalValue());
-                                break;
-                            case TIMESTAMP:
-                                expression = expressionPool.createTimestampValue(annotations, reader.timestampValue());
-                                break;
-                            case SYMBOL:
-                                expression = expressionPool.createSymbolValue(annotations, reader.symbolValue());
-                                break;
-                            case STRING:
-                                expression = expressionPool.createStringValue(annotations, reader.stringValue());
-                                break;
-                            case CLOB:
-                                expression = expressionPool.createClobValue(annotations, reader.newBytes());
-                                break;
-                            case BLOB:
-                                expression = expressionPool.createBlobValue(annotations, reader.newBytes());
-                                break;
-                            default:
-                                throw new IllegalStateException();
-                        }
-                    }
-                    reader.isEvaluatingEExpression = isEvaluating;
-                    break;
-                case DATA_MODEL_CONTAINER:
-                    switch (((IonTypeID) context).type) {
-                        case LIST:
-                            expression = expressionPool.createListValue(annotations, expressions.size(), -1);
-                            break;
-                        case SEXP:
-                            expression = expressionPool.createSExpValue(annotations, expressions.size(), -1);
-                            break;
-                        case STRUCT:
-                            expression = expressionPool.createStructValue(annotations, expressions.size(), -1);
-                            break;
-                        default:
-                            throw new IllegalStateException();
-                    }
-                    break;
-                case DATA_MODEL_CONTAINER_END:
-                    updateEndIndexFor(ExpressionType.DATA_MODEL_CONTAINER, expressions);
-                    break;
-            }
-            i++;
-            if (expression != null) {
-                if (expression instanceof Expression.DataModelValue) {
-                    ((Expression.DataModelValue) expression).setAnnotations(annotations);
-                }
-                return expression;
-            }
-        }
-    }
-
- */
-
     private void prepareToRead(IonType expectedType) {
-        /*
-        if (i >= size) {
-            throw new IllegalStateException("Tape index " + i + " is out of bounds for tape of size " + size);
-        }
-
-         */
-        /*
-        if (types[i] != ExpressionType.DATA_MODEL_SCALAR) {
-            throw new IllegalStateException("Tape index " + i + " does not contain a data model scalar");
-        }
-
-         */
         IonTypeID typeId = (IonTypeID) contexts[i];
         if (expectedType != typeId.type) {
             throw new IonException(String.format("Expected type %s, but found %s.", expectedType, typeId.type));
@@ -377,12 +192,6 @@ public class ExpressionTape { // TODO make internal
     }
 
     public boolean isNullValue() {
-        /*
-        if (!backedByReader) {
-            return values[i] == null;
-        }
-
-         */
         IonTypeID typeId = (IonTypeID) contexts[i];
         return typeId.isNull;
     }
@@ -395,7 +204,7 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.BOOL);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         boolean value = reader.booleanValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -404,7 +213,6 @@ public class ExpressionTape { // TODO make internal
 
     public long readLong() {
         if (!backedByReader) {
-            // TODO what about null ints? Handled externally?
             if (values[i] instanceof BigInteger) {
                 return ((BigInteger) values[i]).longValue();
             }
@@ -414,7 +222,7 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         long value = reader.longValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -432,7 +240,7 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         BigInteger value = reader.bigIntegerValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -448,7 +256,7 @@ public class ExpressionTape { // TODO make internal
             if (longValue <= Integer.MAX_VALUE && longValue >= Integer.MIN_VALUE) {
                 return IntegerSize.INT;
             }
-            return IntegerSize.LONG; // TODO differentiate between int and long if necessary
+            return IntegerSize.LONG;
         }
         // TODO it's common to call getIntegerSize(), then the corresponding Value() method. The current implementation
         //  here involves a lot of duplicate work.
@@ -456,7 +264,7 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         IntegerSize value = reader.getIntegerSize();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -475,7 +283,7 @@ public class ExpressionTape { // TODO make internal
         }
         reader.sliceAfterHeader(starts[i], ends[i], typeId);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         Decimal value = reader.decimalValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -497,7 +305,7 @@ public class ExpressionTape { // TODO make internal
         }
         reader.sliceAfterHeader(starts[i], ends[i], typeId);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         String value = reader.stringValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -519,7 +327,7 @@ public class ExpressionTape { // TODO make internal
         }
         reader.sliceAfterHeader(starts[i], ends[i], typeId);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         SymbolToken value;
         if (typeId.type == IonType.SYMBOL) {
@@ -554,7 +362,7 @@ public class ExpressionTape { // TODO make internal
         }
         reader.sliceAfterHeader(starts[i], ends[i], typeId);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         byte[] value = reader.newBytes();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -569,7 +377,7 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.FLOAT);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         double value = reader.doubleValue();
         reader.isEvaluatingEExpression = isEvaluating;
@@ -584,126 +392,12 @@ public class ExpressionTape { // TODO make internal
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.TIMESTAMP);
         if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value."); // TODO could have a nullable variant
+            throw new IonException("Expected a non-null value.");
         }
         Timestamp value = reader.timestampValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
     }
-
-    /*
-    public Expression.EExpressionBodyExpression expression() {
-        List<SymbolToken> annotations = Collections.emptyList();
-        while (true) {
-            if (i >= size) {
-                return null;
-            }
-            int startIndex = starts[i];
-            Object context = contexts[i];
-            ExpressionType type = types[i];
-            int endIndex = ends[i];
-            Expression.EExpressionBodyExpression expression = null;
-            switch (type) {
-                case FIELD_NAME:
-                    expression = expressionPool.createFieldName((SymbolToken) context);
-                    break;
-                case ANNOTATION:
-                    annotations = (List<SymbolToken>) context;
-                    i++;
-                    continue;
-                case E_EXPRESSION:
-                    expression = expressionPool.createEExpression((Macro) context, -1, -1);
-                    break;
-                case E_EXPRESSION_END:
-                    //updateEndIndexFor(ExpressionType.E_EXPRESSION, expressions);
-                    break;
-                case EXPRESSION_GROUP:
-                    //expression = expressionPool.createExpressionGroup(expressions.size(), -1);
-                    break;
-                case EXPRESSION_GROUP_END:
-                    //updateEndIndexFor(ExpressionType.EXPRESSION_GROUP, expressions);
-                    break;
-                case DATA_MODEL_SCALAR:
-                    boolean isEvaluating = reader.isEvaluatingEExpression;
-                    reader.isEvaluatingEExpression = false; // TODO hack
-                    reader.sliceAfterHeader(startIndex, endIndex, (IonTypeID) context); // TODO do this for containers too when prefixed instead of eagerly traversing them
-                    if (reader.isNullValue()) {
-                        expression = expressionPool.createNullValue(annotations, reader.getEncodingType());
-                    } else {
-                        switch (reader.getEncodingType()) {
-                            case BOOL:
-                                expression = expressionPool.createBoolValue(annotations, reader.booleanValue());
-                                break;
-                            case INT:
-                                switch (reader.getIntegerSize()) {
-                                    case INT:
-                                    case LONG:
-                                        expression = expressionPool.createLongIntValue(annotations, reader.longValue());
-                                        break;
-                                    case BIG_INTEGER:
-                                        expression = expressionPool.createBigIntValue(annotations, reader.bigIntegerValue());
-                                        break;
-                                    default:
-                                        throw new IllegalStateException();
-                                }
-                                break;
-                            case FLOAT:
-                                expression = expressionPool.createFloatValue(annotations, reader.doubleValue());
-                                break;
-                            case DECIMAL:
-                                expression = expressionPool.createDecimalValue(annotations, reader.decimalValue());
-                                break;
-                            case TIMESTAMP:
-                                expression = expressionPool.createTimestampValue(annotations, reader.timestampValue());
-                                break;
-                            case SYMBOL:
-                                expression = expressionPool.createSymbolValue(annotations, reader.symbolValue());
-                                break;
-                            case STRING:
-                                expression = expressionPool.createStringValue(annotations, reader.stringValue());
-                                break;
-                            case CLOB:
-                                expression = expressionPool.createClobValue(annotations, reader.newBytes());
-                                break;
-                            case BLOB:
-                                expression = expressionPool.createBlobValue(annotations, reader.newBytes());
-                                break;
-                            default:
-                                throw new IllegalStateException();
-                        }
-                    }
-                    reader.isEvaluatingEExpression = isEvaluating;
-                    break;
-                case DATA_MODEL_CONTAINER:
-                    switch (((IonTypeID) context).type) {
-                        case LIST:
-                            expression = expressionPool.createListValue(annotations, -1, -1);
-                            break;
-                        case SEXP:
-                            expression = expressionPool.createSExpValue(annotations, -1, -1);
-                            break;
-                        case STRUCT:
-                            expression = expressionPool.createStructValue(annotations, -1, -1);
-                            break;
-                        default:
-                            throw new IllegalStateException();
-                    }
-                    break;
-                case DATA_MODEL_CONTAINER_END:
-                    //updateEndIndexFor(ExpressionType.DATA_MODEL_CONTAINER, expressions);
-                    break;
-            }
-            //i++;
-            if (expression != null) {
-                if (expression instanceof Expression.DataModelValue) {
-                    ((Expression.DataModelValue) expression).setAnnotations(annotations);
-                }
-            }
-            return expression;
-        }
-    }
-
-     */
 
     // TODO might be able to get around needing these by adding an ExpressionType value for NULL_SCALAR
     private static final IonTypeID[] NON_NULL_SCALAR_TYPE_IDS;
@@ -832,20 +526,9 @@ public class ExpressionTape { // TODO make internal
         }
 
         ExpressionTape tape = new ExpressionTape(null, tapeSize);
-        //ExpressionType[] ends = new ExpressionType[expressions.size() + 1];
         List<ExpressionType>[] ends = new List[expressions.size() + 1];
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
-            /*
-            while (tape.types[tape.i] != null) {
-                if (!tape.types[tape.i].isEnd()) {
-                    throw new IllegalStateException();
-                }
-                // An end marker has already been positioned at this location. Move to the next.
-                tape.i++;
-            }
-
-             */
             List<ExpressionType> endsAtExpressionIndex = ends[i];
             if (endsAtExpressionIndex != null) {
                 for (int j = endsAtExpressionIndex.size() - 1; j >= 0; j--) {
@@ -857,8 +540,6 @@ public class ExpressionTape { // TODO make internal
             } else if (expression instanceof Expression.EExpression) {
                 Expression.EExpression eExpression = (Expression.EExpression) expression;
                 tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION, null);
-                //tape.add(eExpression.getEndExclusive(), null, ExpressionType.E_EXPRESSION_END, null);
-                //ends[eExpression.getEndExclusive()] = ExpressionType.E_EXPRESSION_END;
                 List<ExpressionType> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -868,8 +549,6 @@ public class ExpressionTape { // TODO make internal
             } else if (expression instanceof Expression.MacroInvocation) {
                 Expression.MacroInvocation eExpression = (Expression.MacroInvocation) expression;
                 tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION, null);
-                //tape.add(eExpression.getEndExclusive(), null, ExpressionType.E_EXPRESSION_END, null);
-                //ends[eExpression.getEndExclusive()] = ExpressionType.E_EXPRESSION_END;
                 List<ExpressionType> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -879,8 +558,6 @@ public class ExpressionTape { // TODO make internal
             } else if (expression instanceof Expression.ExpressionGroup) {
                 Expression.ExpressionGroup group = (Expression.ExpressionGroup) expression;
                 tape.add(null, ExpressionType.EXPRESSION_GROUP, null); // TODO could pass along the endIndex as context?
-                //tape.add(group.getEndExclusive(), null, ExpressionType.EXPRESSION_GROUP_END, null);
-                //ends[group.getEndExclusive()] = ExpressionType.EXPRESSION_GROUP_END;
                 List<ExpressionType> endsAtEndIndex = ends[group.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -894,8 +571,6 @@ public class ExpressionTape { // TODO make internal
                     tape.add(annotations, ExpressionType.ANNOTATION, null);
                 }
                 tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER, null); // TODO could pass along the endIndex as context?
-                //tape.add(container.getEndExclusive(), null, ExpressionType.DATA_MODEL_CONTAINER_END, null);
-                //ends[container.getEndExclusive()] = ExpressionType.DATA_MODEL_CONTAINER_END;
                 List<ExpressionType> endsAtEndIndex = ends[container.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -926,9 +601,8 @@ public class ExpressionTape { // TODO make internal
         // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
         int argIndex = 0;
         int relativeDepth = 0;
-        //int iStart = i;
         i = startIndex;
-        loop: while (i < size) { // TODO clean up
+        loop: while (i < size) {
             switch (types[i]) {
                 case FIELD_NAME:
                     // Skip the field name; advance to the following expression.
@@ -968,14 +642,12 @@ public class ExpressionTape { // TODO make internal
             i++;
         }
         if (argIndex < indexRelativeToStart || i >= size) {
-            //i = iStart;
             iNext = i;
             return ExpressionType.END_OF_EXPANSION;
         }
         ExpressionType targetType = types[i];
         if (targetType == ExpressionType.VARIABLE) {
             // The desired argument is a variable, so the parent tape must be consulted.
-            //i = iStart;
             return ExpressionType.VARIABLE;
         }
         iNext = i;
@@ -985,12 +657,9 @@ public class ExpressionTape { // TODO make internal
     public void seekPastExpression() {
         // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
         // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
-        //int argIndex = 0;
         int relativeDepth = 0;
-        //int iStart = i;
-        //i = startIndex;
         int startIndex = i;
-        loop: while (i < size) { // TODO clean up
+        loop: while (i < size) {
             switch (types[i]) {
                 case FIELD_NAME:
                 case ANNOTATION:
@@ -1018,7 +687,7 @@ public class ExpressionTape { // TODO make internal
                 case DATA_MODEL_CONTAINER_END:
                 case E_EXPRESSION_END:
                     if (--relativeDepth < 0) {
-                        i++; // TODO check
+                        i++;
                         break loop;
                     }
                     break;
@@ -1027,22 +696,7 @@ public class ExpressionTape { // TODO make internal
             }
             i++;
         }
-        /*
-        if (i == startIndex || i >= size) {
-            //i = iStart;
-            iNext = i;
-            return ExpressionType.END_OF_EXPANSION;
-        }
-        ExpressionType targetType = types[i];
-        if (targetType == ExpressionType.VARIABLE) {
-            // The desired argument is a variable, so the parent tape must be consulted.
-            //i = iStart;
-            return ExpressionType.VARIABLE;
-        }
-
-         */
         i++; // This positions the tape *after* the end of the expression that was located above.
         iNext = i;
-        //return targetType;
     }
 }
