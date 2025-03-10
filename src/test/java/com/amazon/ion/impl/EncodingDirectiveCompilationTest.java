@@ -30,7 +30,6 @@ import com.amazon.ion.system.IonSystemBuilder;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -583,6 +582,80 @@ public class EncodingDirectiveCompilationTest {
             assertEquals(IonType.INT, reader.next());
             assertEquals(42, reader.intValue());
 
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void structMacroWithOneOptionalInvokedWithEmptyContainers(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "People");
+        writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
+        // The macro body
+        writer.stepInStruct(false);
+        writeVariableField(writer, symbols, "ID", "$ID");
+        writeVariableField(writer, symbols, "Name", "$Name");
+        writeVariableField(writer, symbols, "Bald", "$Bald");
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("People", new TemplateMacro(
+            Arrays.asList(
+                new Macro.Parameter("$ID", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Name", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Bald", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrOne)
+            ),
+            Arrays.asList(
+                new Expression.StructValue(Collections.emptyList(), 0, 7, new HashMap<String, List<Integer>>() {{
+                    put("ID", Collections.singletonList(2));
+                    put("Name", Collections.singletonList(4));
+                    put("Bald", Collections.singletonList(6));
+                }}),
+                new Expression.FieldName(new FakeSymbolToken("ID", symbols.get("ID"))),
+                new Expression.VariableRef(0),
+                new Expression.FieldName(new FakeSymbolToken("Name", symbols.get("Name"))),
+                new Expression.VariableRef(1),
+                new Expression.FieldName(new FakeSymbolToken("Bald", symbols.get("Bald"))),
+                new Expression.VariableRef(2)
+            )
+        ));
+        streamType.startMacroInvocationByName(writer, "People", expectedMacroTable);
+        writer.stepInStruct(false);
+        writer.stepOut();
+        writer.stepInList(true);
+        writer.stepOut();
+        writer.stepOut();
+        writer.writeInt(42); // Not a macro invocation
+        byte[] data = getBytes(writer, out);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.STRUCT, reader.next());
+            assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
+            reader.stepIn();
+            assertEquals(1, reader.getDepth());
+            assertEquals(IonType.STRUCT, reader.next());
+            assertEquals("ID", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(42, reader.intValue());
             assertNull(reader.next());
         }
     }
@@ -2017,7 +2090,7 @@ public class EncodingDirectiveCompilationTest {
         );
     }
 
-    private static byte[] macroInvocationsProduceMultipleMacrosInOneInvocation(StreamType streamType) {
+    private static byte[] modifyMultipleMacrosInTableInOneInvocation(StreamType streamType) {
         BigDecimal pi = new BigDecimal("3.14159");
         SortedMap<String, Macro> macroTable = new TreeMap<>();
         macroTable.put("Pi", new TemplateMacro(
@@ -2055,15 +2128,14 @@ public class EncodingDirectiveCompilationTest {
 
         writer.stepInEExp(1, false, macroTable.get("foo"));
         writer.stepOut();
-        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1); // foo
+        writer.writeSymbol(SystemSymbols_1_1.size() + FIRST_LOCAL_SYMBOL_ID + 1); // foo
         return getBytes(writer, out);
     }
 
-    @Disabled
     @ParameterizedTest(name = "{0},{1}")
     @MethodSource("allCombinations")
-    public void macroInvocationsProduceMultipleMacrosInOneInvocation(InputType inputType, StreamType streamType) throws Exception {
-        byte[] data = macroInvocationsProduceMultipleMacrosInOneInvocation(streamType);
+    public void modifyMultipleMacrosInTableInOneInvocation(InputType inputType, StreamType streamType) throws Exception {
+        byte[] data = modifyMultipleMacrosInTableInOneInvocation(streamType);
         try (IonReader reader = inputType.newReader(data)) {
             assertEquals(IonType.SYMBOL, reader.next());
             assertEquals("Pi", reader.stringValue());
@@ -2075,6 +2147,51 @@ public class EncodingDirectiveCompilationTest {
             assertEquals(IonType.SYMBOL, reader.next());
             assertEquals("foo", reader.stringValue());
 
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void expressionGroupAsMacroArgument(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        writer.stepInEExp(SystemMacro.Values);
+        writer.stepInExpressionGroup(false);
+        writer.stepInList(false);
+        writer.stepInList(true);
+        writer.writeInt(1);
+        writer.stepOut();
+        writer.writeInt(2);
+        writer.stepOut(); // list
+        writer.stepInSExp(true);
+        writer.writeInt(3);
+        writer.stepOut(); // s-expression
+        writer.stepOut(); // expression group
+        writer.stepOut(); // Values e-expression
+
+        byte[] data = getBytes(writer, out);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.LIST, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.LIST, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(2, reader.intValue());
+            reader.stepOut();
+            assertEquals(IonType.SEXP, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(3, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
             assertNull(reader.next());
         }
     }

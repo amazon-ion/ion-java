@@ -117,6 +117,14 @@ class LazyMacroEvaluator {
             set(value) { _expansion = value }
 
         fun produceNext(): ExpressionType {
+            if (type == Type.Struct) {
+                val structTape = expansion.environmentContext.tape!!
+                structTape.next()
+                if (structTape.type() == ExpressionType.FIELD_NAME) {
+                    structTape.prepareNext()
+                    return ExpressionType.FIELD_NAME
+                }
+            }
             return expansion.produceNext()
         }
     }
@@ -1013,7 +1021,17 @@ class LazyMacroEvaluator {
     fun currentFieldName(): SymbolToken {
         return when {
             currentExpr!! == ExpressionType.FIELD_NAME -> {
-                val expansion = currentExpansion()
+                var expansion = containerStack.peek().expansion
+                // TODO avoid having to do this traversal every time
+                // Find the expansion that declared the field name.
+                while (expansion.childExpansion != null) {
+                    val childTape = expansion.environmentContext.tape!!
+                    if (!childTape.isExhausted && childTape.type() == ExpressionType.FIELD_NAME) {
+                        break
+                    }
+                    expansion = expansion.childExpansion!!
+                }
+
                 expansion.environmentContext.context() as SymbolToken
             }
 
@@ -1048,10 +1066,14 @@ class LazyMacroEvaluator {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
-        val expansion = containerStack.peek().expansion
-        expansion.environmentContext.tape!!.advanceToAfterEndContainer()
+        val current = currentExpansion()
+        if (current.expansionKind == ExpansionKind.Variable) {
+            // The container being stepped out of was an argument to a variable.
+            current.reachedEndOfExpression = true
+        }
         // TODO should the following go in ExpansionInfo.close()?
-        expansion.session.environment!!.finishChildEnvironments(popped.expansion.environmentContext)
+        popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
+        popped.expansion.session.environment!!.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
     }
 
