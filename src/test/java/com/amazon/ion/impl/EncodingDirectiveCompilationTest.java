@@ -30,6 +30,7 @@ import com.amazon.ion.system.IonSystemBuilder;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -2014,6 +2015,68 @@ public class EncodingDirectiveCompilationTest {
             substringCount("(:Pi)", 1),
             substringCount("(:foo)", 0)
         );
+    }
+
+    private static byte[] macroInvocationsProduceMultipleMacrosInOneInvocation(StreamType streamType) {
+        BigDecimal pi = new BigDecimal("3.14159");
+        SortedMap<String, Macro> macroTable = new TreeMap<>();
+        macroTable.put("Pi", new TemplateMacro(
+            Collections.emptyList(),
+            Collections.singletonList(new Expression.DecimalValue(Collections.emptyList(), pi))
+        ));
+        macroTable.put("foo", new TemplateMacro(
+            Collections.emptyList(),
+            Collections.singletonList(new Expression.StringValue(Collections.emptyList(), "bar"))
+        ));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+
+        Map<String, Integer> symbols = systemSymbols();
+        writeSymbolTableAppendEExpression(writer, symbols, "Pi", "foo"); // appends Pi and foo after the system symbols.
+
+        writer.stepInEExp(SystemMacro.SetMacros); // TODO try AddMacros too
+        writer.stepInExpressionGroup(false);
+        startMacro(writer, symbols, "Pi");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeDecimal(pi);
+        endMacro(writer);
+        startMacro(writer, symbols, "foo");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeString("bar");
+        endMacro(writer);
+        writer.stepOut(); // expression group
+        writer.stepOut(); // SetMacros e-expression
+
+        writer.writeSymbol(SystemSymbols_1_1.size() + FIRST_LOCAL_SYMBOL_ID); // Pi
+        streamType.startMacroInvocationByName(writer, "Pi", macroTable);
+        writer.stepOut();
+
+        writer.stepInEExp(1, false, macroTable.get("foo"));
+        writer.stepOut();
+        writer.writeSymbol(FIRST_LOCAL_SYMBOL_ID + 1); // foo
+        return getBytes(writer, out);
+    }
+
+    @Disabled
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void macroInvocationsProduceMultipleMacrosInOneInvocation(InputType inputType, StreamType streamType) throws Exception {
+        byte[] data = macroInvocationsProduceMultipleMacrosInOneInvocation(streamType);
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Pi", reader.stringValue());
+            assertEquals(IonType.DECIMAL, reader.next());
+            assertEquals(new BigDecimal("3.14159"), reader.bigDecimalValue());
+
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("bar", reader.stringValue());
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("foo", reader.stringValue());
+
+            assertNull(reader.next());
+        }
     }
 
     @ParameterizedTest(name = "{0},{1}")

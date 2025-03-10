@@ -144,6 +144,18 @@ class LazyMacroEvaluator {
                 }
                 val nextType = expressionTape.type()
                 if (nextType.isEnd) {
+                    /*
+                    if (thisExpansion.expansionKind == ExprGroup) {
+                        if (nextType == ExpressionType.EXPRESSION_GROUP_END) {
+                            expressionTape.prepareNext()
+                            return ExpressionType.END_OF_EXPANSION
+                        }
+                        if (nextType == ExpressionType.DATA_MODEL_CONTAINER_END) {
+                            return ExpressionType.CONTINUE_EXPANSION
+                        }
+                    }
+
+                     */
                     if (nextType == ExpressionType.EXPRESSION_GROUP_END || nextType == ExpressionType.E_EXPRESSION_END) {
                         // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
                         // here.
@@ -166,7 +178,7 @@ class LazyMacroEvaluator {
                     }
                     ExpressionType.E_EXPRESSION -> {
                         val macro = expressionTape.context() as Macro
-                        val macroBodyTape = ExpressionTape.from(macro.body ?: emptyList()) // TODO put this in the compiler before measuring performance
+                        val macroBodyTape = ExpressionTape(macro.bodyTape) // TODO pool the tape instances, or move the indices into NestedContext
                         expressionTape.prepareNext()
                         expressionTape.next() // TODO adding this did nothing; try removing
                         val newEnvironment = thisExpansion.session.environment!!.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
@@ -196,7 +208,7 @@ class LazyMacroEvaluator {
                         ExpressionType.DATA_MODEL_CONTAINER
                     }
                     ExpressionType.VARIABLE -> {
-                        expressionTape.prepareNext()
+                        expressionTape.prepareNext() // TODO don't do this yet -- the variable might have more than one value (i.e. an expr group). But it has to be done somewhere. When?
                         thisExpansion.childExpansion = thisExpansion.readArgument(expressionTape.context() as Int)
                         ExpressionType.CONTINUE_EXPANSION
                     }
@@ -230,7 +242,10 @@ class LazyMacroEvaluator {
         Variable {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 if (thisExpansion.reachedEndOfExpression) {
+                    //thisExpansion.environmentContext.tape!!.prepareNext()
                     thisExpansion.session.environment!!.finishChildEnvironment()
+                    // TODO this tape is being advanced too far somewhere else. Find where. Should stay on the variable until
+                    //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                     thisExpansion.expansionKind = Empty
                     thisExpansion.childExpansion = null
                     return ExpressionType.CONTINUE_EXPANSION
@@ -240,7 +255,9 @@ class LazyMacroEvaluator {
                     if (expression == ExpressionType.DATA_MODEL_SCALAR) {
                         thisExpansion.reachedEndOfExpression = true
                     } else if (expression == ExpressionType.CONTINUE_EXPANSION) {
+                        //thisExpansion.environmentContext.tape!!.prepareNext()
                         thisExpansion.session.environment!!.finishChildEnvironment()
+                        //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                         thisExpansion.expansionKind = Empty
                         thisExpansion.childExpansion = null
                     }
@@ -261,7 +278,19 @@ class LazyMacroEvaluator {
         /** Alias of [Stream] to aid in debugging */
         ExprGroup {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
-                return Stream.produceNext(thisExpansion)
+                val expression = Stream.produceNext(thisExpansion)
+                // TODO goal: prevent DATA_MODEL_CONTAINER_END from ending the expression group. A group may contain multiple containers.
+                // TODO learn more about how DATA_MODEL_CONTAINER_END is handled. Might require changes to allow it to be conveyed upward
+                //  properly without ending the chain of expanders.
+                /*
+                if (expression == ExpressionType.END_OF_EXPANSION) {
+                    thisExpansion.expansionKind = Empty
+                    thisExpansion.childExpansion = null
+                    //return ExpressionType.CONTINUE_EXPANSION
+                }
+
+                 */
+                return expression
             }
         },
         ExactlyOneValueStream {

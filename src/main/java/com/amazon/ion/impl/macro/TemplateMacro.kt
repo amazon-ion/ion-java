@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
+import com.amazon.ion.impl.*
+
 /**
  * Represents a template macro. A template macro is defined by a signature, and a list of template expressions.
  * A template macro only gains a name and/or ID when it is added to a macro table.
  */
-class TemplateMacro(override val signature: List<Macro.Parameter>, override val body: List<Expression.TemplateBodyExpression>) :
-    Macro {
+class TemplateMacro @JvmOverloads constructor(
+    override val signature: List<Macro.Parameter>,
+    override val body: List<Expression.TemplateBodyExpression>,
+    override val bodyTape: ExpressionTape.Core = ExpressionTape.from(body)
+) : Macro {
+
     // TODO: Consider rewriting the body of the macro if we discover that there are any macros invoked using only
     //       constants as arguments—either at compile time or lazily.
     //       For example, the body of: (macro foo (x)  (values (make_string "foo" "bar") x))

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
+import com.amazon.ion.impl.ExpressionTape
 import com.amazon.ion.impl.TaglessEncoding
 
 /**
@@ -11,6 +12,7 @@ sealed interface Macro {
     val signature: List<Parameter>
     val body: List<Expression.TemplateBodyExpression>?
     val dependencies: Iterable<Macro>
+    val bodyTape: ExpressionTape.Core
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
