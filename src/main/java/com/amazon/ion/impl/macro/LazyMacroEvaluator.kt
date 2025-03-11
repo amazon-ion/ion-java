@@ -52,7 +52,7 @@ class LazyMacroEvaluator {
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
         private var expanderPoolIndex = 0
-        var environment: LazyEnvironment? = null
+        val environment: LazyEnvironment = LazyEnvironment.create()
         var sideEffectExpander: ExpansionInfo? = null
 
         /**
@@ -91,10 +91,10 @@ class LazyMacroEvaluator {
             }
         }
 
-        fun reset(environment: LazyEnvironment) {
+        fun reset(arguments: ExpressionTape) {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
-            this.environment = environment
+            environment.reset(arguments)
             sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment!!.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
         }
@@ -980,12 +980,11 @@ class LazyMacroEvaluator {
      * Initialize the macro evaluator with an E-Expression.
      */
     fun initExpansion(encodingExpressions: ExpressionTape) {
-        val environment = LazyEnvironment.create(encodingExpressions)
-        session.reset(environment)
+        session.reset(encodingExpressions)
         val ci = containerStack.push { _ -> }
         ci.type = ContainerInfo.Type.TopLevel
 
-        ci.expansion = session.getExpander(ExpansionKind.Stream, environment.currentContext)
+        ci.expansion = session.getExpander(ExpansionKind.Stream, session.environment.currentContext)
     }
 
     /**

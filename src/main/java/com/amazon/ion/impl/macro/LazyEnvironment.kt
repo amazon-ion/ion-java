@@ -22,14 +22,19 @@ import java.util.*
  */
 class LazyEnvironment {
 
-    val arguments: ExpressionTape?
+    var arguments: ExpressionTape? = null
     val sideEffects: ExpressionTape = ExpressionTape(null, 4)
     val sideEffectContext: NestedContext = NestedContext(sideEffects, null, -1)
     var currentContext: NestedContext = NestedContext(null, null, -1)
+    private var nestedContexts: Array<NestedContext?> = Array(16) {
+        NestedContext(null, null, -1)
+    }
+    private var nestedContextIndex = 0
 
-    constructor(arguments: ExpressionTape?) {
+    fun reset(arguments: ExpressionTape?) {
         this.arguments = arguments
-        currentContext = nestedContexts[++nestedContextIndex]!!
+        nestedContextIndex = 0
+        currentContext = nestedContexts[0]!!
         currentContext.tape = arguments
         currentContext.arguments = arguments // TODO ?
         currentContext.firstArgumentStartIndex = 0
@@ -102,11 +107,6 @@ class LazyEnvironment {
             return tape!!.highestVariableIndex()
         }
     }
-
-    private var nestedContexts: Array<NestedContext?> = Array(16) {
-         NestedContext(null, null, -1)
-    }
-    private var nestedContextIndex = -1
 
     private fun growContextStack() {
         nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
@@ -213,8 +213,8 @@ class LazyEnvironment {
     companion object {
         val EMPTY_ARRAY = IntArray(0)
         @JvmStatic
-        val EMPTY = LazyEnvironment(null)
+        val EMPTY = create()
         @JvmStatic
-        fun create(arguments: ExpressionTape) = LazyEnvironment(arguments)
+        fun create() = LazyEnvironment()
     }
 }
