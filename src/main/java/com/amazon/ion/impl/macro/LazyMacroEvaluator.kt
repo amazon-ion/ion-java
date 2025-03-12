@@ -54,6 +54,7 @@ class LazyMacroEvaluator {
         private var expanderPoolIndex = 0
         val environment: LazyEnvironment = LazyEnvironment.create()
         var sideEffectExpander: ExpansionInfo? = null
+        var currentExpander: ExpansionInfo? = null
 
         /**
          * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
@@ -79,6 +80,7 @@ class LazyMacroEvaluator {
             expansion.additionalState = null
             expansion.childExpansion = null
             expansion.reachedEndOfExpression = false
+            currentExpander = expansion
             return expansion
         }
 
@@ -97,6 +99,7 @@ class LazyMacroEvaluator {
             environment.reset(arguments)
             sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment!!.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
+            currentExpander = null
         }
     }
 
@@ -237,6 +240,7 @@ class LazyMacroEvaluator {
                         result == ExpressionType.END_OF_EXPANSION -> {
                             delegate.close()
                             thisExpansion.childExpansion = null
+                            thisExpansion.session.currentExpander = thisExpansion
                             ExpressionType.CONTINUE_EXPANSION
                         }
                         else -> unreachable()
@@ -256,6 +260,7 @@ class LazyMacroEvaluator {
                     //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                     thisExpansion.expansionKind = Empty
                     thisExpansion.childExpansion = null
+                    thisExpansion.session.currentExpander = thisExpansion
                     return ExpressionType.CONTINUE_EXPANSION
                 }
                 val expression = Stream.produceNext(thisExpansion)
@@ -268,6 +273,7 @@ class LazyMacroEvaluator {
                         //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                         thisExpansion.expansionKind = Empty
                         thisExpansion.childExpansion = null
+                        thisExpansion.session.currentExpander = thisExpansion
                     }
                 }
                 return expression
@@ -717,6 +723,7 @@ class LazyMacroEvaluator {
             sideEffectTape.rewindTo(0)
             // The first child expansion is the expression group; add another child to that.
             childExpansion = session.sideEffectExpander
+            session.currentExpander = childExpansion
         }
 
         fun ExpansionInfo.produceFieldNameSideEffect(value: Any) {
@@ -726,6 +733,7 @@ class LazyMacroEvaluator {
             sideEffectTape.rewindTo(0)
             // The first child expansion is the expression group; add another child to that.
             childExpansion = session.sideEffectExpander
+            session.currentExpander = childExpansion
         }
 
         /**
@@ -897,6 +905,7 @@ class LazyMacroEvaluator {
             if (childExpansion != null) {
                 childExpansion!!.close()
                 childExpansion = null
+                session.currentExpander = this
             }
             return ExpressionType.CONTINUE_EXPANSION
         }
@@ -931,6 +940,7 @@ class LazyMacroEvaluator {
             this.additionalState = other.additionalState
             this.environmentContext = session.environment!!.tailCall()
             this.reachedEndOfExpression = false
+            session.currentExpander = this
             // Close `other`
             other.childExpansion = null
             other.close()
@@ -1008,13 +1018,7 @@ class LazyMacroEvaluator {
     }
 
     private fun currentExpansion(): ExpansionInfo {
-        val currentContainer = containerStack.peek()
-        var expansion = currentContainer.expansion
-        // TODO avoid having to do this traversal every time
-        while (expansion.childExpansion != null) {
-            expansion = expansion.childExpansion!!
-        }
-        return expansion
+        return session.currentExpander!!
     }
 
     fun currentFieldName(): SymbolToken {
@@ -1065,10 +1069,10 @@ class LazyMacroEvaluator {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
-        val current = currentExpansion()
-        if (current.expansionKind == ExpansionKind.Variable) {
+        session.currentExpander = containerStack.peek().expansion.top()
+        if (session.currentExpander!!.expansionKind == ExpansionKind.Variable) {
             // The container being stepped out of was an argument to a variable.
-            current.reachedEndOfExpression = true
+            session.currentExpander!!.reachedEndOfExpression = true
         }
         // TODO should the following go in ExpansionInfo.close()?
         popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
