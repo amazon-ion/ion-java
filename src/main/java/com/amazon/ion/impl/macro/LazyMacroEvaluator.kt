@@ -16,7 +16,7 @@ import java.util.*
  *
  * General Usage:
  *  - To start evaluating an e-expression, call [initExpansion]
- *  - Call [expandNext] to get the next field name or value, or null
+ *  - Call [next] to get the next field name or value, or null
  *    if the end of the container or end of expansion has been reached.
  *  - Call [stepIn] when positioned on a container to step into that container.
  *  - Call [stepOut] to step out of the current container.
@@ -28,7 +28,7 @@ import java.util.*
  * The macro evaluator consists of a stack of containers, each of which has an implicit stream (i.e. the
  * expressions in that container) which is modeled as an expansion frame ([ExpansionInfo]).
  *
- * When calling [expandNext], the evaluator looks at the top container in the stack and requests the next value from
+ * When calling [next], the evaluator looks at the top container in the stack and requests the next value from
  * its expansion frame. That expansion frame may produce a result all on its own (i.e. if the next value is a literal
  * value), or it may create and delegate to a child expansion frame if the next source expression is something that
  * needs to be expanded (e.g. macro invocation, variable expansion, etc.). When delegating to a child expansion frame,
@@ -37,116 +37,6 @@ import java.util.*
  * input to the macro evaluator.
  */
 class LazyMacroEvaluator : IonReader {
-
-
-    private var currentFieldName: SymbolToken? = null
-    private var currentAnnotations: List<SymbolToken>? = null
-    private var currentValueType: IonType? = null
-
-    override fun next(): IonType? {
-        currentValueType = null
-        while (currentValueType == null) {
-            val nextCandidate = expandNext()
-            when {
-                nextCandidate == null -> {
-                    currentFieldName = null
-                    currentAnnotations = null
-                    return null
-                }
-                nextCandidate == ExpressionType.FIELD_NAME -> currentFieldName = currentFieldName()
-                nextCandidate == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
-                nextCandidate.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
-            }
-        }
-        return currentValueType
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun hasNext(): Boolean {
-        throw UnsupportedOperationException("hasNext() not implemented. Call next() and check for null.")
-    }
-
-    /**
-     * Transcodes the e-expression argument expressions provided to this MacroEvaluator
-     * without evaluation.
-     * @param writer the writer to which the expressions will be transcoded.
-     */
-    fun transcodeArgumentsTo(writer: MacroAwareIonWriter) {
-        var index = 0
-        val arguments: ExpressionTape = getArgumentTape()
-        arguments.rewindTo(0)
-
-        // TODO all the null-setting within the when branches might not be necessary
-
-        currentAnnotations = null // Annotations are written only via Annotation expressions
-        currentFieldName = null // Field names are written only via FieldName expressions
-        while (index < arguments.size()) {
-            currentValueType = null
-            arguments.next()
-            arguments.prepareNext()
-            val argument = arguments.type()
-            if (argument.isEnd) {
-                currentAnnotations = null
-                currentFieldName = null
-                writer.stepOut()
-                index++;
-                continue
-            }
-            when (argument) {
-                ExpressionType.ANNOTATION -> {
-                    currentAnnotations = arguments.context() as List<SymbolToken>
-                    writer.setTypeAnnotationSymbols(*currentAnnotations!!.toTypedArray())
-                }
-                ExpressionType.DATA_MODEL_CONTAINER -> {
-                    currentValueType = arguments.ionType()
-                    writer.stepIn(currentValueType)
-                    currentFieldName = null
-                    currentAnnotations = null
-                }
-                ExpressionType.DATA_MODEL_SCALAR -> {
-                    currentValueType = arguments.ionType()
-                    when (currentValueType) {
-                        IonType.NULL -> writer.writeNull()
-                        IonType.BOOL -> writer.writeBool(this.booleanValue())
-                        IonType.INT -> {
-                            when (this.integerSize) {
-                                IntegerSize.INT -> writer.writeInt(this.longValue())
-                                IntegerSize.LONG -> writer.writeInt(this.longValue())
-                                IntegerSize.BIG_INTEGER ->writer.writeInt(this.bigIntegerValue())
-                            }
-                        }
-                        IonType.FLOAT -> writer.writeFloat(this.doubleValue())
-                        IonType.DECIMAL -> writer.writeDecimal(this.decimalValue())
-                        IonType.TIMESTAMP -> writer.writeTimestamp(this.timestampValue())
-                        IonType.SYMBOL -> writer.writeSymbolToken(this.symbolValue())
-                        IonType.STRING -> writer.writeString(this.stringValue())
-                        IonType.BLOB -> writer.writeBlob(this.newBytes())
-                        IonType.CLOB -> writer.writeClob(this.newBytes())
-                        else -> throw IllegalStateException("Unexpected branch")
-                    }
-                    currentFieldName = null
-                    currentAnnotations = null
-                }
-                ExpressionType.FIELD_NAME -> {
-                    currentFieldName = arguments.context() as SymbolToken
-                    writer.setFieldNameSymbol(currentFieldName)
-                }
-                ExpressionType.E_EXPRESSION -> {
-                    writer.startMacro(arguments.context() as Macro)
-                    currentAnnotations = null
-                    currentFieldName = null
-                }
-                ExpressionType.EXPRESSION_GROUP -> {
-                    writer.startExpressionGroup()
-                    currentAnnotations = null
-                    currentFieldName = null
-                }
-                else -> throw IllegalStateException("Unexpected branch")
-            }
-            index++
-        }
-        arguments.rewindTo(0)
-    }
 
     /**
      * Holds state that is shared across all macro evaluations that are part of this evaluator.
@@ -1093,12 +983,9 @@ class LazyMacroEvaluator : IonReader {
     private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
     private var currentExpr: ExpressionType? = null
 
-    /**
-     * Returns the e-expression argument expression tape that this MacroEvaluator would evaluate.
-     */
-    fun getArgumentTape(): ExpressionTape {
-        return session.environment.arguments!!
-    }
+    private var currentFieldName: SymbolToken? = null
+    private var currentAnnotations: List<SymbolToken>? = null
+    private var currentValueType: IonType? = null
 
     /**
      * Initialize the macro evaluator with an E-Expression.
@@ -1111,24 +998,32 @@ class LazyMacroEvaluator : IonReader {
         ci.expansion = session.getExpander(ExpansionKind.Stream, session.environment.currentContext)
     }
 
-    /**
-     * Evaluate the macro expansion until the next [DataModelExpression] can be returned.
-     * Returns null if at the end of a container or at the end of the expansion.
-     */
-    private fun expandNext(): ExpressionType? {
-        currentExpr = null
-        val currentContainer = containerStack.peek()
-        val nextExpansionOutput = currentContainer.produceNext()
-        when {
-            nextExpansionOutput.isDataModelExpression -> currentExpr = nextExpansionOutput
-            nextExpansionOutput == ExpressionType.END_OF_EXPANSION -> {
-                if (currentContainer.type == ContainerInfo.Type.TopLevel) {
-                    currentContainer.close()
-                    containerStack.pop()
+    override fun next(): IonType? {
+        currentValueType = null
+        while (currentValueType == null) {
+            val currentContainer = containerStack.peek()
+            currentExpr = currentContainer.produceNext()
+            when {
+                currentExpr == ExpressionType.FIELD_NAME -> currentFieldName = currentFieldName()
+                currentExpr == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
+                currentExpr!!.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
+                currentExpr == ExpressionType.END_OF_EXPANSION -> {
+                    if (currentContainer.type == ContainerInfo.Type.TopLevel) {
+                        currentContainer.close()
+                        containerStack.pop()
+                    }
+                    currentFieldName = null
+                    currentAnnotations = null
+                    return null
                 }
             }
         }
-        return currentExpr
+        return currentValueType
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun hasNext(): Boolean {
+        throw UnsupportedOperationException("hasNext() not implemented. Call next() and check for null.")
     }
 
     private fun currentFieldName(): SymbolToken {
@@ -1205,6 +1100,88 @@ class LazyMacroEvaluator : IonReader {
         } else {
             throw IonException("Not positioned on a container.")
         }
+    }
+
+    /**
+     * Transcodes the e-expression argument expressions provided to this MacroEvaluator
+     * without evaluation.
+     * @param writer the writer to which the expressions will be transcoded.
+     */
+    fun transcodeArgumentsTo(writer: MacroAwareIonWriter) {
+        var index = 0
+        val arguments: ExpressionTape = session.environment.arguments!!
+        arguments.rewindTo(0)
+
+        // TODO all the null-setting within the when branches might not be necessary
+
+        currentAnnotations = null // Annotations are written only via Annotation expressions
+        currentFieldName = null // Field names are written only via FieldName expressions
+        while (index < arguments.size()) {
+            currentValueType = null
+            arguments.next()
+            arguments.prepareNext()
+            val argument = arguments.type()
+            if (argument.isEnd) {
+                currentAnnotations = null
+                currentFieldName = null
+                writer.stepOut()
+                index++;
+                continue
+            }
+            when (argument) {
+                ExpressionType.ANNOTATION -> {
+                    currentAnnotations = arguments.context() as List<SymbolToken>
+                    writer.setTypeAnnotationSymbols(*currentAnnotations!!.toTypedArray())
+                }
+                ExpressionType.DATA_MODEL_CONTAINER -> {
+                    currentValueType = arguments.ionType()
+                    writer.stepIn(currentValueType)
+                    currentFieldName = null
+                    currentAnnotations = null
+                }
+                ExpressionType.DATA_MODEL_SCALAR -> {
+                    currentValueType = arguments.ionType()
+                    when (currentValueType) {
+                        IonType.NULL -> writer.writeNull()
+                        IonType.BOOL -> writer.writeBool(this.booleanValue())
+                        IonType.INT -> {
+                            when (this.integerSize) {
+                                IntegerSize.INT -> writer.writeInt(this.longValue())
+                                IntegerSize.LONG -> writer.writeInt(this.longValue())
+                                IntegerSize.BIG_INTEGER ->writer.writeInt(this.bigIntegerValue())
+                            }
+                        }
+                        IonType.FLOAT -> writer.writeFloat(this.doubleValue())
+                        IonType.DECIMAL -> writer.writeDecimal(this.decimalValue())
+                        IonType.TIMESTAMP -> writer.writeTimestamp(this.timestampValue())
+                        IonType.SYMBOL -> writer.writeSymbolToken(this.symbolValue())
+                        IonType.STRING -> writer.writeString(this.stringValue())
+                        IonType.BLOB -> writer.writeBlob(this.newBytes())
+                        IonType.CLOB -> writer.writeClob(this.newBytes())
+                        else -> throw IllegalStateException("Unexpected branch")
+                    }
+                    currentFieldName = null
+                    currentAnnotations = null
+                }
+                ExpressionType.FIELD_NAME -> {
+                    currentFieldName = arguments.context() as SymbolToken
+                    writer.setFieldNameSymbol(currentFieldName)
+                }
+                ExpressionType.E_EXPRESSION -> {
+                    writer.startMacro(arguments.context() as Macro)
+                    currentAnnotations = null
+                    currentFieldName = null
+                }
+                ExpressionType.EXPRESSION_GROUP -> {
+                    writer.startExpressionGroup()
+                    currentAnnotations = null
+                    currentFieldName = null
+                }
+                else -> throw IllegalStateException("Unexpected branch")
+            }
+            index++
+        }
+        arguments.rewindTo(0)
     }
 
     override fun close() { /* Nothing to do (yet) */ }
