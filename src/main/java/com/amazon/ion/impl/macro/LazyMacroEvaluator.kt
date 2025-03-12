@@ -43,6 +43,7 @@ class LazyMacroEvaluator : IonReader {
     private var currentAnnotations: List<SymbolToken>? = null
     private var currentValueType: IonType? = null
 
+    // TODO are both queued and current necessary?
     private var queuedFieldName: SymbolToken? = null
     private var queuedAnnotations: List<SymbolToken>? = null
     private var queuedValueType: IonType? = null
@@ -1303,71 +1304,22 @@ class LazyMacroEvaluator : IonReader {
 
     /** TODO: Throw on data loss */
     override fun intValue(): Int = longValue().toInt()
-
     override fun decimalValue(): Decimal = Decimal.valueOf(bigDecimalValue())
     override fun dateValue(): Date = timestampValue().dateValue()
 
     override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
         TODO("Not yet implemented")
     }
-
-    override fun longValue(): Long {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.longValue()
-    }
-
-    override fun bigIntegerValue(): BigInteger {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.bigIntegerValue()
-    }
-
-    override fun getIntegerSize(): IntegerSize {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.integerSize()
-    }
-
-    override fun stringValue(): String {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.textValue()
-    }
-
-    override fun symbolValue(): SymbolToken {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.symbolValue()
-    }
-
-    override fun bigDecimalValue(): BigDecimal {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.bigDecimalValue()
-    }
-
-    override fun byteSize(): Int {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.lobSize()
-    }
-
-    override fun newBytes(): ByteArray {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.lobValue().copyOf()
-    }
-
-    override fun doubleValue(): Double {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.doubleValue()
-    }
-
-    override fun timestampValue(): Timestamp {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.timestampValue()
-    }
-
-    override fun isNullValue(): Boolean {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.isNullValue()
-    }
-
-    override fun booleanValue(): Boolean {
-        val expansion = currentExpansion()
-        return expansion.environmentContext.booleanValue()
-    }
+    override fun longValue(): Long  = session.currentExpander!!.environmentContext.longValue()
+    override fun bigIntegerValue(): BigInteger = session.currentExpander!!.environmentContext.bigIntegerValue()
+    override fun getIntegerSize(): IntegerSize = session.currentExpander!!.environmentContext.integerSize()
+    override fun stringValue(): String = session.currentExpander!!.environmentContext.textValue()
+    override fun symbolValue(): SymbolToken = session.currentExpander!!.environmentContext.symbolValue()
+    override fun bigDecimalValue(): BigDecimal = session.currentExpander!!.environmentContext.bigDecimalValue()
+    override fun byteSize(): Int = session.currentExpander!!.environmentContext.lobSize()
+    override fun newBytes(): ByteArray = session.currentExpander!!.environmentContext.lobValue().copyOf()
+    override fun doubleValue(): Double = session.currentExpander!!.environmentContext.doubleValue()
+    override fun timestampValue(): Timestamp = session.currentExpander!!.environmentContext.timestampValue()
+    override fun isNullValue(): Boolean = session.currentExpander!!.environmentContext.isNullValue()
+    override fun booleanValue(): Boolean = session.currentExpander!!.environmentContext.booleanValue()
 }
