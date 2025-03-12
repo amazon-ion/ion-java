@@ -1000,6 +1000,7 @@ class LazyMacroEvaluator : IonReader {
     private fun currentFieldName(): SymbolToken {
         var expansion = containerStack.peek().expansion
         // TODO avoid having to do this traversal every time
+        // TODO can `currentFieldName` be set as it is encountered in make_field and Stream.produceNext?
         // Find the expansion that declared the field name.
         while (expansion.childExpansion != null) {
             val childTape = expansion.environmentContext.tape!!
