@@ -1076,9 +1076,6 @@ class LazyMacroEvaluator : IonReader {
         var index = 0
         val arguments: ExpressionTape = session.environment.arguments!!
         arguments.rewindTo(0)
-
-        // TODO all the null-setting within the when branches might not be necessary
-
         currentAnnotations = null // Annotations are written only via Annotation expressions
         currentFieldName = null // Field names are written only via FieldName expressions
         while (index < arguments.size()) {
@@ -1101,8 +1098,6 @@ class LazyMacroEvaluator : IonReader {
                 ExpressionType.DATA_MODEL_CONTAINER -> {
                     currentValueType = arguments.ionType()
                     writer.stepIn(currentValueType)
-                    currentFieldName = null
-                    currentAnnotations = null
                 }
                 ExpressionType.DATA_MODEL_SCALAR -> {
                     currentValueType = arguments.ionType()
@@ -1125,23 +1120,13 @@ class LazyMacroEvaluator : IonReader {
                         IonType.CLOB -> writer.writeClob(this.newBytes())
                         else -> throw IllegalStateException("Unexpected branch")
                     }
-                    currentFieldName = null
-                    currentAnnotations = null
                 }
                 ExpressionType.FIELD_NAME -> {
                     currentFieldName = arguments.context() as SymbolToken
                     writer.setFieldNameSymbol(currentFieldName)
                 }
-                ExpressionType.E_EXPRESSION -> {
-                    writer.startMacro(arguments.context() as Macro)
-                    currentAnnotations = null
-                    currentFieldName = null
-                }
-                ExpressionType.EXPRESSION_GROUP -> {
-                    writer.startExpressionGroup()
-                    currentAnnotations = null
-                    currentFieldName = null
-                }
+                ExpressionType.E_EXPRESSION -> writer.startMacro(arguments.context() as Macro)
+                ExpressionType.EXPRESSION_GROUP -> writer.startExpressionGroup()
                 else -> throw IllegalStateException("Unexpected branch")
             }
             index++
