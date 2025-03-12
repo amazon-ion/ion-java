@@ -43,44 +43,27 @@ class LazyMacroEvaluator : IonReader {
     private var currentAnnotations: List<SymbolToken>? = null
     private var currentValueType: IonType? = null
 
-    // TODO are both queued and current necessary?
-    private var queuedFieldName: SymbolToken? = null
-    private var queuedAnnotations: List<SymbolToken>? = null
-    private var queuedValueType: IonType? = null
-
-    private fun queueNext() {
-        queuedValueType = null
-        while (queuedValueType == null) {
+    override fun next(): IonType? {
+        currentValueType = null
+        while (currentValueType == null) {
             val nextCandidate = expandNext()
             when {
                 nextCandidate == null -> {
-                    queuedFieldName = null
-                    queuedAnnotations = null
-                    return
+                    currentFieldName = null
+                    currentAnnotations = null
+                    return null
                 }
-                nextCandidate == ExpressionType.FIELD_NAME -> queuedFieldName = currentFieldName()
-                nextCandidate == ExpressionType.ANNOTATION -> queuedAnnotations = currentAnnotations()
-                nextCandidate.isDataModelValue -> queuedValueType = currentValueType()
+                nextCandidate == ExpressionType.FIELD_NAME -> currentFieldName = currentFieldName()
+                nextCandidate == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
+                nextCandidate.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
             }
         }
+        return currentValueType
     }
 
     @Deprecated("Deprecated in Java")
     override fun hasNext(): Boolean {
-        if (queuedValueType == null) queueNext()
-        return queuedValueType != null
-    }
-
-    override fun next(): IonType? {
-        if (!hasNext()) {
-            currentValueType = null
-            return null
-        }
-        currentValueType = queuedValueType
-        currentFieldName = queuedFieldName
-        currentAnnotations = queuedAnnotations
-        queuedValueType = null
-        return currentValueType
+        throw UnsupportedOperationException("hasNext() not implemented. Call next() and check for null.")
     }
 
     /**
@@ -224,7 +207,7 @@ class LazyMacroEvaluator : IonReader {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
             environment.reset(arguments)
-            sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment!!.sideEffectContext)
+            sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
         }
@@ -323,7 +306,7 @@ class LazyMacroEvaluator : IonReader {
                         val macroBodyTape = ExpressionTape(macro.bodyTape) // TODO pool the tape instances, or move the indices into NestedContext
                         expressionTape.prepareNext()
                         expressionTape.next() // TODO adding this did nothing; try removing
-                        val newEnvironment = thisExpansion.session.environment!!.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
+                        val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
                         val expansionKind = forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = expansionKind,
@@ -386,7 +369,7 @@ class LazyMacroEvaluator : IonReader {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 if (thisExpansion.reachedEndOfExpression) {
                     //thisExpansion.environmentContext.tape!!.prepareNext()
-                    thisExpansion.session.environment!!.finishChildEnvironment()
+                    thisExpansion.session.environment.finishChildEnvironment()
                     // TODO this tape is being advanced too far somewhere else. Find where. Should stay on the variable until
                     //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                     thisExpansion.expansionKind = Empty
@@ -400,7 +383,7 @@ class LazyMacroEvaluator : IonReader {
                         thisExpansion.reachedEndOfExpression = true
                     } else if (expression == ExpressionType.CONTINUE_EXPANSION) {
                         //thisExpansion.environmentContext.tape!!.prepareNext()
-                        thisExpansion.session.environment!!.finishChildEnvironment()
+                        thisExpansion.session.environment.finishChildEnvironment()
                         //thisExpansion.session.environment!!.currentContext.tape!!.prepareNext() // Move past the variable
                         thisExpansion.expansionKind = Empty
                         thisExpansion.childExpansion = null
@@ -415,7 +398,7 @@ class LazyMacroEvaluator : IonReader {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 val expression = Stream.produceNext(thisExpansion)
                 if (expression == ExpressionType.CONTINUE_EXPANSION && thisExpansion.environmentContext.tape!!.isExhausted) {
-                    thisExpansion.session.environment!!.seekPastFinalArgument()
+                    thisExpansion.session.environment.seekPastFinalArgument()
                 }
                 return expression
             }
@@ -839,16 +822,16 @@ class LazyMacroEvaluator : IonReader {
          * Returns an expansion for the given variable.
          */
         fun ExpansionInfo.readArgument(variableRef: Int): ExpansionInfo {
-            val argumentTape = session.environment!!.seekToArgument(variableRef)
+            val argumentTape = session.environment.seekToArgument(variableRef)
                 ?: return session.getExpander(Empty, LazyEnvironment.EMPTY.currentContext) // Argument was elided.
             return session.getExpander(
                 expansionKind = Variable,
-                environmentContext = session.environment!!.startChildEnvironment(argumentTape, argumentTape, argumentTape.currentIndex()) // TODO ensure this is the right source
+                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape, argumentTape.currentIndex()) // TODO ensure this is the right source
             )
         }
 
         fun ExpansionInfo.produceValueSideEffect(type: IonType, value: Any) {
-            val sideEffectTape = session.environment!!.sideEffects
+            val sideEffectTape = session.environment.sideEffects
             sideEffectTape.clear()
             sideEffectTape.addScalar(type, value)
             sideEffectTape.rewindTo(0)
@@ -858,7 +841,7 @@ class LazyMacroEvaluator : IonReader {
         }
 
         fun ExpansionInfo.produceFieldNameSideEffect(value: Any) {
-            val sideEffectTape = session.environment!!.sideEffects
+            val sideEffectTape = session.environment.sideEffects
             sideEffectTape.clear()
             sideEffectTape.addFieldName(value)
             sideEffectTape.rewindTo(0)
@@ -1069,7 +1052,7 @@ class LazyMacroEvaluator : IonReader {
             this.expansionKind = other.expansionKind
             this.childExpansion = other.childExpansion
             this.additionalState = other.additionalState
-            this.environmentContext = session.environment!!.tailCall()
+            this.environmentContext = session.environment.tailCall()
             this.reachedEndOfExpression = false
             session.currentExpander = this
             // Close `other`
@@ -1114,7 +1097,7 @@ class LazyMacroEvaluator : IonReader {
      * Returns the e-expression argument expression tape that this MacroEvaluator would evaluate.
      */
     fun getArgumentTape(): ExpressionTape {
-        return session.environment!!.arguments!!
+        return session.environment.arguments!!
     }
 
     /**
@@ -1132,7 +1115,7 @@ class LazyMacroEvaluator : IonReader {
      * Evaluate the macro expansion until the next [DataModelExpression] can be returned.
      * Returns null if at the end of a container or at the end of the expansion.
      */
-    fun expandNext(): ExpressionType? {
+    private fun expandNext(): ExpressionType? {
         currentExpr = null
         val currentContainer = containerStack.peek()
         val nextExpansionOutput = currentContainer.produceNext()
@@ -1148,11 +1131,7 @@ class LazyMacroEvaluator : IonReader {
         return currentExpr
     }
 
-    private fun currentExpansion(): ExpansionInfo {
-        return session.currentExpander!!
-    }
-
-    fun currentFieldName(): SymbolToken {
+    private fun currentFieldName(): SymbolToken {
         return when {
             currentExpr!! == ExpressionType.FIELD_NAME -> {
                 var expansion = containerStack.peek().expansion
@@ -1173,26 +1152,6 @@ class LazyMacroEvaluator : IonReader {
         }
     }
 
-    fun currentAnnotations(): List<SymbolToken> {
-        return when {
-            currentExpr!! == ExpressionType.ANNOTATION -> {
-                val expansion = currentExpansion()
-                expansion.environmentContext.annotations()
-            }
-            else -> throw IonException("Not positioned on annotations")
-        }
-    }
-
-    fun currentValueType(): IonType {
-        return when {
-            currentExpr!!.isDataModelValue -> {
-                val expansion = currentExpansion()
-                expansion.environmentContext.type()
-            }
-            else -> throw IonException("Not positioned on a value")
-        }
-    }
-
     /**
      * Steps out of the current [DataModelContainer].
      */
@@ -1200,23 +1159,18 @@ class LazyMacroEvaluator : IonReader {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
-        session.currentExpander = containerStack.peek().expansion.top()
+        val currentContainer = containerStack.peek()
+        session.currentExpander = currentContainer.expansion.top()
         if (session.currentExpander!!.expansionKind == ExpansionKind.Variable) {
             // The container being stepped out of was an argument to a variable.
             session.currentExpander!!.reachedEndOfExpression = true
         }
-        // TODO should the following go in ExpansionInfo.close()?
         popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
-        popped.expansion.session.environment!!.finishChildEnvironments(popped.expansion.environmentContext)
+        popped.expansion.session.environment.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
-        //containerStack.pop()
-        // This is essentially a no-op for Lists and SExps
-        currentFieldName = containerStack.peek()?.currentFieldName // TODO container stack is already peeked above; reuse
+        currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
         currentAnnotations = null
-        queuedFieldName = null
-        queuedValueType = null
-        queuedAnnotations = null
     }
 
     /**
@@ -1230,15 +1184,15 @@ class LazyMacroEvaluator : IonReader {
             currentContainer.currentFieldName = this.currentFieldName
             val topExpansion = currentContainer.expansion.top()
             val ci = containerStack.push { _ -> }
-            ci.container = topExpansion.environmentContext.type() // tODO currentValueType?
-            ci.type = when (ci.container) {
+            val topEnvironmentContext = topExpansion.environmentContext
+            ci.container = currentValueType
+            ci.type = when (currentValueType) {
                 IonType.LIST -> ContainerInfo.Type.List
                 IonType.SEXP -> ContainerInfo.Type.Sexp
                 IonType.STRUCT -> ContainerInfo.Type.Struct
                 else -> unreachable()
             }
-            val topEnvironmentContext = topExpansion.environmentContext
-            val environmentContext = topExpansion.session.environment!!.startChildEnvironment(topEnvironmentContext.tape!!, topEnvironmentContext.arguments!!, topEnvironmentContext.firstArgumentStartIndex)
+            val environmentContext = topExpansion.session.environment.startChildEnvironment(topEnvironmentContext.tape!!, topEnvironmentContext.arguments!!, topEnvironmentContext.firstArgumentStartIndex)
             ci.expansion = session.getExpander(
                 expansionKind = ExpansionKind.Stream,
                 environmentContext = environmentContext,
@@ -1248,9 +1202,6 @@ class LazyMacroEvaluator : IonReader {
             currentFieldName = null
             currentValueType = null
             currentAnnotations = null
-            queuedFieldName = null
-            queuedValueType = null
-            queuedAnnotations = null
         } else {
             throw IonException("Not positioned on a container.")
         }
