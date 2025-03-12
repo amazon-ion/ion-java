@@ -36,7 +36,133 @@ import java.util.*
  * In this way, the expansion frames model a lazily constructed expression tree over the flat list of expressions in the
  * input to the macro evaluator.
  */
-class LazyMacroEvaluator {
+class LazyMacroEvaluator : IonReader {
+
+
+    private var currentFieldName: SymbolToken? = null
+    private var currentAnnotations: List<SymbolToken>? = null
+    private var currentValueType: IonType? = null
+
+    private var queuedFieldName: SymbolToken? = null
+    private var queuedAnnotations: List<SymbolToken>? = null
+    private var queuedValueType: IonType? = null
+
+    private fun queueNext() {
+        queuedValueType = null
+        while (queuedValueType == null) {
+            val nextCandidate = expandNext()
+            when {
+                nextCandidate == null -> {
+                    queuedFieldName = null
+                    queuedAnnotations = null
+                    return
+                }
+                nextCandidate == ExpressionType.FIELD_NAME -> queuedFieldName = currentFieldName()
+                nextCandidate == ExpressionType.ANNOTATION -> queuedAnnotations = currentAnnotations()
+                nextCandidate.isDataModelValue -> queuedValueType = currentValueType()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun hasNext(): Boolean {
+        if (queuedValueType == null) queueNext()
+        return queuedValueType != null
+    }
+
+    override fun next(): IonType? {
+        if (!hasNext()) {
+            currentValueType = null
+            return null
+        }
+        currentValueType = queuedValueType
+        currentFieldName = queuedFieldName
+        currentAnnotations = queuedAnnotations
+        queuedValueType = null
+        return currentValueType
+    }
+
+    /**
+     * Transcodes the e-expression argument expressions provided to this MacroEvaluator
+     * without evaluation.
+     * @param writer the writer to which the expressions will be transcoded.
+     */
+    fun transcodeArgumentsTo(writer: MacroAwareIonWriter) {
+        var index = 0
+        val arguments: ExpressionTape = getArgumentTape()
+        arguments.rewindTo(0)
+
+        // TODO all the null-setting within the when branches might not be necessary
+
+        currentAnnotations = null // Annotations are written only via Annotation expressions
+        currentFieldName = null // Field names are written only via FieldName expressions
+        while (index < arguments.size()) {
+            currentValueType = null
+            arguments.next()
+            arguments.prepareNext()
+            val argument = arguments.type()
+            if (argument.isEnd) {
+                currentAnnotations = null
+                currentFieldName = null
+                writer.stepOut()
+                index++;
+                continue
+            }
+            when (argument) {
+                ExpressionType.ANNOTATION -> {
+                    currentAnnotations = arguments.context() as List<SymbolToken>
+                    writer.setTypeAnnotationSymbols(*currentAnnotations!!.toTypedArray())
+                }
+                ExpressionType.DATA_MODEL_CONTAINER -> {
+                    currentValueType = arguments.ionType()
+                    writer.stepIn(currentValueType)
+                    currentFieldName = null
+                    currentAnnotations = null
+                }
+                ExpressionType.DATA_MODEL_SCALAR -> {
+                    currentValueType = arguments.ionType()
+                    when (currentValueType) {
+                        IonType.NULL -> writer.writeNull()
+                        IonType.BOOL -> writer.writeBool(this.booleanValue())
+                        IonType.INT -> {
+                            when (this.integerSize) {
+                                IntegerSize.INT -> writer.writeInt(this.longValue())
+                                IntegerSize.LONG -> writer.writeInt(this.longValue())
+                                IntegerSize.BIG_INTEGER ->writer.writeInt(this.bigIntegerValue())
+                            }
+                        }
+                        IonType.FLOAT -> writer.writeFloat(this.doubleValue())
+                        IonType.DECIMAL -> writer.writeDecimal(this.decimalValue())
+                        IonType.TIMESTAMP -> writer.writeTimestamp(this.timestampValue())
+                        IonType.SYMBOL -> writer.writeSymbolToken(this.symbolValue())
+                        IonType.STRING -> writer.writeString(this.stringValue())
+                        IonType.BLOB -> writer.writeBlob(this.newBytes())
+                        IonType.CLOB -> writer.writeClob(this.newBytes())
+                        else -> throw IllegalStateException("Unexpected branch")
+                    }
+                    currentFieldName = null
+                    currentAnnotations = null
+                }
+                ExpressionType.FIELD_NAME -> {
+                    currentFieldName = arguments.context() as SymbolToken
+                    writer.setFieldNameSymbol(currentFieldName)
+                }
+                ExpressionType.E_EXPRESSION -> {
+                    writer.startMacro(arguments.context() as Macro)
+                    currentAnnotations = null
+                    currentFieldName = null
+                }
+                ExpressionType.EXPRESSION_GROUP -> {
+                    writer.startExpressionGroup()
+                    currentAnnotations = null
+                    currentFieldName = null
+                }
+                else -> throw IllegalStateException("Unexpected branch")
+            }
+            index++
+        }
+        arguments.rewindTo(0)
+    }
 
     /**
      * Holds state that is shared across all macro evaluations that are part of this evaluator.
@@ -112,12 +238,16 @@ class LazyMacroEvaluator {
         fun close() {
             _expansion?.close()
             _expansion = null
+            currentFieldName = null
+            container = null
             type = Type.Uninitialized
         }
 
         var expansion: ExpansionInfo
             get() = _expansion!!
             set(value) { _expansion = value }
+        @JvmField var currentFieldName: SymbolToken? = null
+        @JvmField var container: IonType? = null
 
         fun produceNext(): ExpressionType {
             if (type == Type.Struct) {
@@ -1065,7 +1195,7 @@ class LazyMacroEvaluator {
     /**
      * Steps out of the current [DataModelContainer].
      */
-    fun stepOut() {
+    override fun stepOut() {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
@@ -1078,19 +1208,29 @@ class LazyMacroEvaluator {
         popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
         popped.expansion.session.environment!!.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
+        //containerStack.pop()
+        // This is essentially a no-op for Lists and SExps
+        currentFieldName = containerStack.peek()?.currentFieldName // TODO container stack is already peeked above; reuse
+        currentValueType = null // Must call `next()` to get the next value
+        currentAnnotations = null
+        queuedFieldName = null
+        queuedValueType = null
+        queuedAnnotations = null
     }
 
     /**
      * Steps in to the current [DataModelContainer].
      * Throws [IonException] if not positioned on a container.
      */
-    fun stepIn() {
+    override fun stepIn() {
         val expressionType = requireNotNull(currentExpr) { "Not positioned on a value" }
         if (expressionType == ExpressionType.DATA_MODEL_CONTAINER) {
             val currentContainer = containerStack.peek()
+            currentContainer.currentFieldName = this.currentFieldName
             val topExpansion = currentContainer.expansion.top()
             val ci = containerStack.push { _ -> }
-            ci.type = when (topExpansion.environmentContext.type()) {
+            ci.container = topExpansion.environmentContext.type() // tODO currentValueType?
+            ci.type = when (ci.container) {
                 IonType.LIST -> ContainerInfo.Type.List
                 IonType.SEXP -> ContainerInfo.Type.Sexp
                 IonType.STRUCT -> ContainerInfo.Type.Struct
@@ -1102,68 +1242,131 @@ class LazyMacroEvaluator {
                 expansionKind = ExpansionKind.Stream,
                 environmentContext = environmentContext,
             )
+            ci.currentFieldName = null
             currentExpr = null
+            currentFieldName = null
+            currentValueType = null
+            currentAnnotations = null
+            queuedFieldName = null
+            queuedValueType = null
+            queuedAnnotations = null
         } else {
             throw IonException("Not positioned on a container.")
         }
     }
 
-    fun longValue(): Long {
+    override fun close() { /* Nothing to do (yet) */ }
+    override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing? = null
+    override fun getDepth(): Int = containerStack.size() - 1 // Note: the top-level pseudo-container is included in the stack.
+    override fun getSymbolTable(): SymbolTable? = null
+
+    override fun getType(): IonType? = currentValueType
+
+    fun hasAnnotations(): Boolean = currentAnnotations != null && currentAnnotations!!.isNotEmpty()
+
+    override fun getTypeAnnotations(): Array<String> = currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } } ?: emptyArray()
+    override fun getTypeAnnotationSymbols(): Array<SymbolToken> = currentAnnotations?.toTypedArray() ?: emptyArray()
+
+    private class SymbolTokenAsStringIterator(val tokens: List<SymbolToken>) : MutableIterator<String> {
+
+        var index = 0
+
+        override fun hasNext(): Boolean {
+            return index < tokens.size
+        }
+
+        override fun next(): String {
+            if (index >= tokens.size) {
+                throw NoSuchElementException()
+            }
+            return tokens[index++].assumeText()
+        }
+
+        override fun remove() {
+            throw UnsupportedOperationException("This iterator does not support removal")
+        }
+    }
+
+    override fun iterateTypeAnnotations(): MutableIterator<String> {
+        return if (currentAnnotations?.isNotEmpty() == true) {
+            SymbolTokenAsStringIterator(currentAnnotations!!)
+        } else {
+            Collections.emptyIterator()
+        }
+    }
+
+    override fun isInStruct(): Boolean = containerStack.peek()?.container == IonType.STRUCT
+
+    override fun getFieldId(): Int = currentFieldName?.sid ?: 0
+    override fun getFieldName(): String? = currentFieldName?.text
+    override fun getFieldNameSymbol(): SymbolToken? = currentFieldName
+
+    /** TODO: Throw on data loss */
+    override fun intValue(): Int = longValue().toInt()
+
+    override fun decimalValue(): Decimal = Decimal.valueOf(bigDecimalValue())
+    override fun dateValue(): Date = timestampValue().dateValue()
+
+    override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun longValue(): Long {
         val expansion = currentExpansion()
         return expansion.environmentContext.longValue()
     }
 
-    fun bigIntegerValue(): BigInteger {
+    override fun bigIntegerValue(): BigInteger {
         val expansion = currentExpansion()
         return expansion.environmentContext.bigIntegerValue()
     }
 
-    fun getIntegerSize(): IntegerSize {
+    override fun getIntegerSize(): IntegerSize {
         val expansion = currentExpansion()
         return expansion.environmentContext.integerSize()
     }
 
-    fun stringValue(): String {
+    override fun stringValue(): String {
         val expansion = currentExpansion()
         return expansion.environmentContext.textValue()
     }
 
-    fun symbolValue(): SymbolToken {
+    override fun symbolValue(): SymbolToken {
         val expansion = currentExpansion()
         return expansion.environmentContext.symbolValue()
     }
 
-    fun bigDecimalValue(): BigDecimal {
+    override fun bigDecimalValue(): BigDecimal {
         val expansion = currentExpansion()
         return expansion.environmentContext.bigDecimalValue()
     }
 
-    fun lobSize(): Int {
+    override fun byteSize(): Int {
         val expansion = currentExpansion()
         return expansion.environmentContext.lobSize()
     }
 
-    fun lobValue(): ByteArray {
+    override fun newBytes(): ByteArray {
         val expansion = currentExpansion()
-        return expansion.environmentContext.lobValue()
+        return expansion.environmentContext.lobValue().copyOf()
     }
 
-    fun doubleValue(): Double {
+    override fun doubleValue(): Double {
         val expansion = currentExpansion()
         return expansion.environmentContext.doubleValue()
     }
 
-    fun timestampValue(): Timestamp {
+    override fun timestampValue(): Timestamp {
         val expansion = currentExpansion()
         return expansion.environmentContext.timestampValue()
     }
 
-    fun isNullValue(): Boolean {
+    override fun isNullValue(): Boolean {
         val expansion = currentExpansion()
         return expansion.environmentContext.isNullValue()
     }
 
-    fun booleanValue(): Boolean {
+    override fun booleanValue(): Boolean {
         val expansion = currentExpansion()
         return expansion.environmentContext.booleanValue()
     }

@@ -23,15 +23,12 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
 import com.amazon.ion.impl.macro.EncodingContext;
 import com.amazon.ion.impl.macro.IonReaderFromReaderAdapter;
 import com.amazon.ion.impl.macro.LazyMacroEvaluator;
-import com.amazon.ion.impl.macro.LazyMacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroCompiler;
 import com.amazon.ion.impl.macro.MacroTable;
 import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
-import com.amazon.ion.impl.macro.MacroEvaluator;
-import com.amazon.ion.impl.macro.MacroEvaluatorAsIonReader;
 import com.amazon.ion.impl.macro.MacroRef;
 import com.amazon.ion.impl.macro.SystemMacro;
 
@@ -122,10 +119,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private final IntList annotationSids;
 
     // The core MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    private final LazyMacroEvaluator macroEvaluator = new LazyMacroEvaluator();
-
-    // The IonReader-like MacroEvaluator that this core reader delegates to when evaluating a macro invocation.
-    protected LazyMacroEvaluatorAsIonReader macroEvaluatorIonReader = new LazyMacroEvaluatorAsIonReader(macroEvaluator);
+    protected final LazyMacroEvaluator macroEvaluatorIonReader = new LazyMacroEvaluator();
 
     // The encoding context (macro table) that is currently active.
     private EncodingContext encodingContext = EncodingContext.getDefault();
@@ -1811,7 +1805,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private boolean evaluateNext() {
         IonType type = macroEvaluatorIonReader.next();
         if (type == null) {
-            if (macroEvaluatorIonReader.getDepth() == 0) {
+            if (macroEvaluatorIonReader.getDepth() <= 0) { // Note: < 0 means the macro is exhausted; == 0 means it was partially skipped.
                 // Evaluation of this macro is complete. Resume reading from the stream.
                 expressionArgsReader.finishEvaluatingMacroInvocation();
                 isEvaluatingEExpression = false;
@@ -1902,7 +1896,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = super.nextValue();
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
-                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader);
                 macroEvaluatorIonReader.transcodeArgumentsTo(macroAwareTranscoder);
                 isEvaluatingEExpression = true;
                 if (evaluateNext()) {
@@ -2003,7 +1997,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
                 if (evaluateUserMacroInvocations() || isSystemInvocation()) {
-                    expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
+                    expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader);
                     isEvaluatingEExpression = true;
                     if (evaluateNext()) {
                         continue;
