@@ -93,7 +93,24 @@ class LazyMacroEvaluator : IonReader {
             variable.close()
         }
 
-        fun incrementStepCounter() {
+        fun produceNext(): ExpressionType {
+            while (true) {
+                //val currentExpander = currentExpander!!
+                currentExpander!!.environmentContext.tape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
+                val next = currentExpander!!.expansionKind.produceNext(currentExpander!!)
+                if (next == ExpressionType.CONTINUE_EXPANSION) continue
+                // This the only place where we count the expansion steps.
+                // It is theoretically possible to have macro expansions that are millions of levels deep because this
+                // only counts macro invocations at the end of their expansion, but this will still work to catch things
+                // like a  billion laughs attack because it does place a limit on the number of _values_ produced.
+                // This counts every value _at every level_, so most values will be counted multiple times. If possible
+                // without impacting performance, count values only once in order to have more predictable behavior.
+                incrementStepCounter()
+                return next
+            }
+        }
+
+        private fun incrementStepCounter() {
             numExpandedExpressions++
             if (numExpandedExpressions > expansionLimit) {
                 // Technically, we are not counting "steps" because we don't have a true definition of what a "step" is,
@@ -312,9 +329,9 @@ class LazyMacroEvaluator : IonReader {
 
                  */
 
-                val type = valueToAnnotateExpansion.produceNext() // TODO apply the annotations
+                val type = valueToAnnotateExpansion.session.produceNext() // TODO apply the annotations
 
-                if (valueToAnnotateExpansion.produceNext() != ExpressionType.END_OF_EXPANSION) {
+                if (valueToAnnotateExpansion.session.produceNext() != ExpressionType.END_OF_EXPANSION) {
                     throw IonException("Can only annotate exactly one value")
                 }
 
@@ -479,10 +496,10 @@ class LazyMacroEvaluator : IonReader {
 
                 val currentChildExpansion = thisExpansion.childExpansion
 
-                val next = currentChildExpansion?.produceNext()
+                val next = currentChildExpansion?.session?.produceNext()
                 if (next == null) {
                     // Only possible if expansionDelegate is null
-                    val nextSequence = argumentExpansion.produceNext()
+                    val nextSequence = argumentExpansion.session.produceNext()
                     thisExpansion.session.currentExpander = thisExpansion
                     return when {
                         nextSequence == ExpressionType.DATA_MODEL_CONTAINER -> {
@@ -526,9 +543,9 @@ class LazyMacroEvaluator : IonReader {
 
                 val currentChildExpansion = thisExpansion.childExpansion
 
-                val next = currentChildExpansion?.produceNext()
+                val next = currentChildExpansion?.session?.produceNext()
                 if (next == null) {
-                    val nextSequence = argumentExpansion.produceNext()
+                    val nextSequence = argumentExpansion.session.produceNext()
                     thisExpansion.session.currentExpander = thisExpansion
                     return when {
                         nextSequence == ExpressionType.DATA_MODEL_CONTAINER -> {
@@ -584,7 +601,7 @@ class LazyMacroEvaluator : IonReader {
                     delegate.parentExpansion = thisExpansion
                 }
                 thisExpansion.session.currentExpander = delegate
-                val nextExpandedArg = delegate.produceNext()
+                val nextExpandedArg = delegate.session.produceNext()
                 when {
                     nextExpandedArg.isDataModelValue  -> {
                         val nextDelta = asBigInteger(delegate)
@@ -629,7 +646,7 @@ class LazyMacroEvaluator : IonReader {
                 }
 
                 val repeated = thisExpansion.childExpansion!!
-                val maybeNext = repeated.produceNext()
+                val maybeNext = repeated.session.produceNext()
                 thisExpansion.childExpansion = null // TODO repeated.close()?
                 return when {
                     maybeNext.isDataModelExpression -> maybeNext
@@ -651,7 +668,7 @@ class LazyMacroEvaluator : IonReader {
             val testArg = readArgument(0)
             var n = 0
             while (n < 2) {
-                if (testArg.produceNext() == ExpressionType.END_OF_EXPANSION) break
+                if (testArg.session.produceNext() == ExpressionType.END_OF_EXPANSION) break
                 n++
             }
             testArg.close()
@@ -704,7 +721,7 @@ class LazyMacroEvaluator : IonReader {
             val savedCurrent = session.currentExpander
             val variableExpansion = readArgument(variableRef)
             while (true) {
-                val next = session.currentExpander!!.produceNext()
+                val next = session.produceNext()
                 when {
                     next == ExpressionType.END_OF_EXPANSION -> {
                         session.currentExpander = savedCurrent // TODO check this is necessary
@@ -723,7 +740,7 @@ class LazyMacroEvaluator : IonReader {
             val variableExpansion = readArgument(variableRef)
             val result = mutableListOf<T>()
             while (true) {
-                val next = variableExpansion.produceNext()
+                val next = variableExpansion.session.produceNext()
                 when {
                     next == ExpressionType.END_OF_EXPANSION -> return result
                     next.isDataModelExpression -> result.add(transform(next))
@@ -767,7 +784,7 @@ class LazyMacroEvaluator : IonReader {
             val argExpansion = readArgument(variableRef)
             var argValue: T? = null
             while (true) {
-                val it = argExpansion.produceNext()
+                val it = argExpansion.session.produceNext()
                 when {
                     it.isDataModelValue -> {
                         if (argValue == null) {
@@ -903,29 +920,6 @@ class LazyMacroEvaluator : IonReader {
             other.close()
         }
 
-        /**
-         * Produces the next value from this expansion, preparing the expression to be read from the environment.
-         */
-        fun produceNext(): ExpressionType {
-            if (this != session.currentExpander) {
-                throw IllegalStateException("Current expander mismatch.") // TODO temporary; refactor this method so that it's not called on instances
-            }
-            while (true) {
-                val currentExpander = session.currentExpander!!
-                currentExpander.environmentContext.tape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
-                val next = currentExpander.expansionKind.produceNext(currentExpander)
-                if (next == ExpressionType.CONTINUE_EXPANSION) continue
-                // This the only place where we count the expansion steps.
-                // It is theoretically possible to have macro expansions that are millions of levels deep because this
-                // only counts macro invocations at the end of their expansion, but this will still work to catch things
-                // like a  billion laughs attack because it does place a limit on the number of _values_ produced.
-                // This counts every value _at every level_, so most values will be counted multiple times. If possible
-                // without impacting performance, count values only once in order to have more predictable behavior.
-                session.incrementStepCounter()
-                return next
-            }
-        }
-
         // TODO
         override fun toString() = """
         |ExpansionInfo(
@@ -967,13 +961,13 @@ class LazyMacroEvaluator : IonReader {
                     currentFieldName = currentFieldName()
                 }
             }
-            currentExpr = session.currentExpander!!.produceNext()
+            currentExpr = session.produceNext()
             when {
                 currentExpr == ExpressionType.FIELD_NAME -> currentFieldName = currentFieldName()
                 currentExpr == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
                 currentExpr!!.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
                 currentExpr == ExpressionType.END_OF_EXPANSION -> { // TODO should this go in ExpansionInfo.produceNext?
-                    var currentExpander = session.currentExpander!!
+                    val currentExpander = session.currentExpander!!
                     if (currentExpander.parentExpansion != null) {
                         session.currentExpander = currentExpander.parentExpansion
                         if (session.currentExpander!!.expansionKind != ExpansionKind.Delta) {
