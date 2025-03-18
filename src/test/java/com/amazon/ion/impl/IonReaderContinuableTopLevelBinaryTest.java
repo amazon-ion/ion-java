@@ -6658,6 +6658,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void makeListUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x0E, // System macro 14 (make_list)
+            0x00 // AEB: argument not present
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.LIST, reader.next());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+    }
+
     // TODO test continuable reading and skipping of non-prefixed macro invocations.
     // TODO test skipping macro invocations (especially length-prefixed ones) that expand to system values.
     // TODO Ion 1.1 symbol tables with all kinds of annotation encodings (opcodes E4 - E9, inline and SID)

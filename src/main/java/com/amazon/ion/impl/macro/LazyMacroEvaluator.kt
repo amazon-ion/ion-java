@@ -86,6 +86,13 @@ class LazyMacroEvaluator : IonReader {
             return expansion
         }
 
+        fun finishVariable() {
+            val variable = currentExpander!!
+            currentExpander = variable.parentExpansion
+            environment.finishChildEnvironment()
+            variable.close()
+        }
+
         fun incrementStepCounter() {
             numExpandedExpressions++
             if (numExpandedExpressions > expansionLimit) {
@@ -218,14 +225,12 @@ class LazyMacroEvaluator : IonReader {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 if (thisExpansion.reachedEndOfExpression) {
                     thisExpansion.session.environment.finishChildEnvironment()
-                    thisExpansion.childExpansion = null // Does the child expansion need to be close()d?
-                    thisExpansion.session.currentExpander = thisExpansion // TODO redundant?
                     return ExpressionType.END_OF_EXPANSION
                 }
                 val expression = Stream.produceNext(thisExpansion)
                 if (thisExpansion.childExpansion == null) {
                     if (expression == ExpressionType.DATA_MODEL_SCALAR) {
-                        thisExpansion.reachedEndOfExpression = true // TODO can we just END_OF_EXPANSION right now?
+                        thisExpansion.reachedEndOfExpression = true
                     }
                 }
                 return expression
@@ -478,6 +483,7 @@ class LazyMacroEvaluator : IonReader {
                 if (next == null) {
                     // Only possible if expansionDelegate is null
                     val nextSequence = argumentExpansion.produceNext()
+                    thisExpansion.session.currentExpander = thisExpansion
                     return when {
                         nextSequence == ExpressionType.DATA_MODEL_CONTAINER -> {
                             // TODO require this to be a struct
@@ -494,6 +500,7 @@ class LazyMacroEvaluator : IonReader {
                         else -> unreachable()
                     }
                 }
+                thisExpansion.session.currentExpander = thisExpansion
                 return when {
                     next.isDataModelExpression -> next
                     next == ExpressionType.END_OF_EXPANSION-> return ExpressionType.END_OF_EXPANSION //thisExpansion.closeDelegateAndContinue()
@@ -522,6 +529,7 @@ class LazyMacroEvaluator : IonReader {
                 val next = currentChildExpansion?.produceNext()
                 if (next == null) {
                     val nextSequence = argumentExpansion.produceNext()
+                    thisExpansion.session.currentExpander = thisExpansion
                     return when {
                         nextSequence == ExpressionType.DATA_MODEL_CONTAINER -> {
                             // TODO if type is struct, throw:
@@ -540,6 +548,7 @@ class LazyMacroEvaluator : IonReader {
                         else -> unreachable()
                     }
                 }
+                thisExpansion.session.currentExpander = thisExpansion
                 return when {
                     next.isDataModelExpression -> next
                     next == ExpressionType.END_OF_EXPANSION -> ExpressionType.END_OF_EXPANSION
@@ -964,7 +973,7 @@ class LazyMacroEvaluator : IonReader {
                 currentExpr == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
                 currentExpr!!.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
                 currentExpr == ExpressionType.END_OF_EXPANSION -> { // TODO should this go in ExpansionInfo.produceNext?
-                    val currentExpander = session.currentExpander!!
+                    var currentExpander = session.currentExpander!!
                     if (currentExpander.parentExpansion != null) {
                         session.currentExpander = currentExpander.parentExpansion
                         if (session.currentExpander!!.expansionKind != ExpansionKind.Delta) {
@@ -972,7 +981,7 @@ class LazyMacroEvaluator : IonReader {
                         }
                         if (session.currentExpander!!.expansionKind == ExpansionKind.Variable) {
                             // The variable has been satisfied
-                            session.currentExpander!!.reachedEndOfExpression = true
+                            session.finishVariable()
                         }
                         currentExpander.close()
                         continue
