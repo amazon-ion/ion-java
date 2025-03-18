@@ -660,6 +660,91 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
+    @ParameterizedTest(name = "{0},{1}")
+    @MethodSource("allCombinations")
+    public void structMacroWithEmptyContainersInBody(InputType inputType, StreamType streamType) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = streamType.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "struct", "list", "string", "filledList");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "attributes");
+        writeMacroSignature(writer, symbols, "string");
+        // The macro body
+        writer.stepInStruct(false);
+        writeFieldName(writer, symbols, "struct");
+        writer.stepInStruct(true);
+        writer.stepOut();
+        writeFieldName(writer, symbols, "list");
+        writer.stepInList(false);
+        writer.stepOut();
+        writeVariableField(writer, symbols, "string", "string");
+        writeFieldName(writer, symbols, "filledList");
+        writer.stepInList(true);
+        writer.writeString("foo");
+        writer.stepOut();
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("attributes", new TemplateMacro(
+            Collections.singletonList(
+                new Macro.Parameter("string", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne)
+            ),
+            Arrays.asList(
+                new Expression.StructValue(Collections.emptyList(), 0, 10, Collections.emptyMap()),
+                new Expression.FieldName(new FakeSymbolToken("struct", symbols.get("struct"))),
+                new Expression.StructValue(Collections.emptyList(), 1, 2, Collections.emptyMap()),
+                new Expression.FieldName(new FakeSymbolToken("list", symbols.get("list"))),
+                new Expression.ListValue(Collections.emptyList(), 3, 4),
+                new Expression.FieldName(new FakeSymbolToken("string", symbols.get("string"))),
+                new Expression.VariableRef(0),
+                new Expression.FieldName(new FakeSymbolToken("filledList", symbols.get("filledList"))),
+                new Expression.ListValue(Collections.emptyList(), 8, 10),
+                new Expression.StringValue(Collections.emptyList(), "foo")
+            )
+        ));
+        streamType.startMacroInvocationByName(writer, "attributes", expectedMacroTable);
+        writer.writeString("abcd");
+        writer.stepOut();
+        //writer.writeInt(42); // Not a macro invocation
+        byte[] data = getBytes(writer, out);
+
+        try (IonReader reader = inputType.newReader(data)) {
+            assertEquals(IonType.STRUCT, reader.next());
+            //assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
+            reader.stepIn();
+            assertEquals(1, reader.getDepth());
+            assertEquals(IonType.STRUCT, reader.next());
+            assertEquals("struct", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("list", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("string", reader.getFieldName());
+            assertEquals("abcd", reader.stringValue());
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("filledList", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.STRING, reader.next());
+            assertEquals("foo", reader.stringValue());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
+            //assertEquals(IonType.INT, reader.next());
+            //assertEquals(42, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
     private byte[] macroInvocationWithinStruct(StreamType streamType, SortedMap<String, Macro> expectedMacroTable) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = streamType.newWriter(out);

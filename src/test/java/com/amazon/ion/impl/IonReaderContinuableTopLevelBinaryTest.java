@@ -6620,6 +6620,24 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void repeatUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x04, // System macro 4 (repeat)
+            0x01, // AEB: optional is present
+            0x61, 0x01,  // Int 1
+            0x61, 0x01  // Int 1
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void makeFieldUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
         int[] data = new int[] {
             0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
