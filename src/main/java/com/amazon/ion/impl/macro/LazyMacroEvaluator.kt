@@ -982,10 +982,8 @@ class LazyMacroEvaluator : IonReader {
         val expressionType = requireNotNull(currentExpr) { "Not positioned on a value" }
         if (expressionType == ExpressionType.DATA_MODEL_CONTAINER) {
             val currentContainer = containerStack.peek()
-            currentContainer.currentFieldName = session.currentFieldName //this.currentFieldName
-            val topExpansion = currentContainer.expansion.top()
+            currentContainer.currentFieldName = session.currentFieldName
             val ci = containerStack.push { _ -> }
-            val topEnvironmentContext = topExpansion.environmentContext
             ci.container = currentValueType
             ci.type = when (currentValueType) {
                 IonType.LIST -> ContainerInfo.Type.List
@@ -993,7 +991,8 @@ class LazyMacroEvaluator : IonReader {
                 IonType.STRUCT -> ContainerInfo.Type.Struct
                 else -> unreachable()
             }
-            val environmentContext = topExpansion.session.environment.startChildEnvironment(topEnvironmentContext.tape!!, topEnvironmentContext.arguments!!, topEnvironmentContext.firstArgumentStartIndex)
+            val topEnvironmentContext = session.currentExpander!!.environmentContext
+            val environmentContext = session.environment.startChildEnvironment(topEnvironmentContext.tape!!, topEnvironmentContext.arguments!!, topEnvironmentContext.firstArgumentStartIndex)
             ci.expansion = session.getExpander(
                 expansionKind = ExpansionKind.Stream,
                 environmentContext = environmentContext,

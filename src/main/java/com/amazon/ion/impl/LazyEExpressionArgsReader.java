@@ -49,7 +49,7 @@ abstract class LazyEExpressionArgsReader {
      */
     LazyEExpressionArgsReader(IonReaderContinuableCoreBinary reader) {
         this.reader = reader;
-        expressionTape = new ExpressionTape(reader, 128);
+        expressionTape = new ExpressionTape(reader, 256);
         this.reader.setLeftShiftHandler(expressionTape::shiftIndicesLeft);
     }
 
