@@ -57,6 +57,7 @@ class LazyMacroEvaluator : IonReader {
         var sideEffectExpander: ExpansionInfo? = null
         var currentExpander: ExpansionInfo? = null
         var currentFieldName: SymbolToken? = null
+        var currentAnnotations: List<SymbolToken>? = null
 
         /**
          * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
@@ -127,6 +128,7 @@ class LazyMacroEvaluator : IonReader {
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
             currentFieldName = null
+            currentAnnotations = null
         }
     }
 
@@ -191,8 +193,9 @@ class LazyMacroEvaluator : IonReader {
                         ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.ANNOTATION -> {
+                        thisExpansion.session.currentAnnotations = expressionTape.annotations()
                         expressionTape.prepareNext() // TODO set `currentAnnotations` and continue
-                        ExpressionType.ANNOTATION
+                        ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.E_EXPRESSION -> {
                         val macro = expressionTape.context() as Macro
@@ -319,30 +322,14 @@ class LazyMacroEvaluator : IonReader {
                         else -> unreachable("Unreachable without stepping in to a container")
                     }
                 }
-
+                thisExpansion.session.currentAnnotations = annotations
                 val valueToAnnotateExpansion = thisExpansion.readArgument(VALUE_TO_ANNOTATE_ARG)
 
-                // TODO this needs to be fixed
-                /*
-                val annotatedExpression = valueToAnnotateExpansion.produceNext().let {
-                    it as? Expression.DataModelValue ?: throw IonException("Required at least one value.")
-                    it.withAnnotations(annotations + it.annotations)
-                }
-
-                 */
-
+                // TODO this needs testing -- https://github.com/amazon-ion/ion-tests/issues/151
                 val type = valueToAnnotateExpansion.session.produceNext() // TODO apply the annotations
-
-                if (valueToAnnotateExpansion.session.produceNext() != ExpressionType.END_OF_EXPANSION) {
+                if (type == ExpressionType.END_OF_EXPANSION) {
                     throw IonException("Can only annotate exactly one value")
                 }
-
-                /*
-                return annotatedExpression.also {
-                    thisExpansion.tailCall(valueToAnnotateExpansion)
-                }
-
-                 */
                 thisExpansion.tailCall(valueToAnnotateExpansion)
                 return type
             }
@@ -696,17 +683,6 @@ class LazyMacroEvaluator : IonReader {
             session.currentExpander = childExpansion
         }
 
-        fun ExpansionInfo.produceFieldNameSideEffect(value: Any) {
-            val sideEffectTape = session.environment.sideEffects
-            sideEffectTape.clear()
-            sideEffectTape.addFieldName(value)
-            sideEffectTape.rewindTo(0)
-            // The first child expansion is the expression group; add another child to that.
-            childExpansion = session.sideEffectExpander
-            childExpansion!!.parentExpansion = this
-            session.currentExpander = childExpansion
-        }
-
         /**
          * Performs the given [action] for each value produced by the expansion of [variableRef].
          */
@@ -926,8 +902,6 @@ class LazyMacroEvaluator : IonReader {
     private val session = Session(expansionLimit = 1_000_000)
     private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
     private var currentExpr: ExpressionType? = null
-
-    private var currentAnnotations: List<SymbolToken>? = null
     private var currentValueType: IonType? = null
 
     /**
@@ -946,7 +920,6 @@ class LazyMacroEvaluator : IonReader {
         while (currentValueType == null) {
             currentExpr = session.produceNext()
             when {
-                currentExpr == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
                 currentExpr!!.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
                 currentExpr == ExpressionType.END_OF_EXPANSION -> { // TODO should this go in ExpansionInfo.produceNext?
                     val currentExpander = session.currentExpander!!
@@ -966,7 +939,7 @@ class LazyMacroEvaluator : IonReader {
                         containerStack.pop().close()
                     }
                     session.currentFieldName = null
-                    currentAnnotations = null
+                    session.currentAnnotations = null
                     return null
                 }
                 else -> unreachable()
@@ -998,7 +971,7 @@ class LazyMacroEvaluator : IonReader {
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
-        currentAnnotations = null
+        session.currentAnnotations = null
     }
 
     /**
@@ -1029,7 +1002,7 @@ class LazyMacroEvaluator : IonReader {
             currentExpr = null
             session.currentFieldName = null
             currentValueType = null
-            currentAnnotations = null
+            session.currentAnnotations = null
         } else {
             throw IonException("Not positioned on a container.")
         }
@@ -1044,7 +1017,7 @@ class LazyMacroEvaluator : IonReader {
         var index = 0
         val arguments: ExpressionTape = session.environment.arguments!!
         arguments.rewindTo(0)
-        currentAnnotations = null // Annotations are written only via Annotation expressions
+        session.currentAnnotations = null // Annotations are written only via Annotation expressions
         session.currentFieldName = null // Field names are written only via FieldName expressions
         while (index < arguments.size()) {
             currentValueType = null
@@ -1052,7 +1025,7 @@ class LazyMacroEvaluator : IonReader {
             arguments.prepareNext()
             val argument = arguments.type()
             if (argument.isEnd) {
-                currentAnnotations = null
+                session.currentAnnotations = null
                 session.currentFieldName = null
                 writer.stepOut()
                 index++;
@@ -1060,8 +1033,8 @@ class LazyMacroEvaluator : IonReader {
             }
             when (argument) {
                 ExpressionType.ANNOTATION -> {
-                    currentAnnotations = arguments.context() as List<SymbolToken>
-                    writer.setTypeAnnotationSymbols(*currentAnnotations!!.toTypedArray())
+                    session.currentAnnotations = arguments.context() as List<SymbolToken>
+                    writer.setTypeAnnotationSymbols(*session.currentAnnotations!!.toTypedArray())
                 }
                 ExpressionType.DATA_MODEL_CONTAINER -> {
                     currentValueType = arguments.ionType()
@@ -1109,10 +1082,10 @@ class LazyMacroEvaluator : IonReader {
 
     override fun getType(): IonType? = currentValueType
 
-    fun hasAnnotations(): Boolean = currentAnnotations != null && currentAnnotations!!.isNotEmpty()
+    fun hasAnnotations(): Boolean = session.currentAnnotations != null && session.currentAnnotations!!.isNotEmpty()
 
-    override fun getTypeAnnotations(): Array<String> = currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } } ?: emptyArray()
-    override fun getTypeAnnotationSymbols(): Array<SymbolToken> = currentAnnotations?.toTypedArray() ?: emptyArray()
+    override fun getTypeAnnotations(): Array<String> = session.currentAnnotations?.let { Array(it.size) { i -> it[i].assumeText() } } ?: emptyArray()
+    override fun getTypeAnnotationSymbols(): Array<SymbolToken> = session.currentAnnotations?.toTypedArray() ?: emptyArray()
 
     private class SymbolTokenAsStringIterator(val tokens: List<SymbolToken>) : MutableIterator<String> {
 
@@ -1135,8 +1108,8 @@ class LazyMacroEvaluator : IonReader {
     }
 
     override fun iterateTypeAnnotations(): MutableIterator<String> {
-        return if (currentAnnotations?.isNotEmpty() == true) {
-            SymbolTokenAsStringIterator(currentAnnotations!!)
+        return if (session.currentAnnotations?.isNotEmpty() == true) {
+            SymbolTokenAsStringIterator(session.currentAnnotations!!)
         } else {
             Collections.emptyIterator()
         }
