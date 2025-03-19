@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_ScalarConversions.getValueTypeName;
@@ -42,7 +29,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
-import java.lang.Character;
 
 /**
  * This reader calls the {@link IonReaderTextRawX} for low level events.
@@ -191,9 +177,14 @@ class IonReaderTextSystemX
         private static boolean magnitudeLessThanOrEqualTo(String lhs, int lhsLen, char[] rhs)
         {
             assert lhsLen == rhs.length;
-            for (int i = lhsLen - 1; i >= 0; i--)
+            for (int i = 0; i < lhsLen; i++)
             {
-                if (lhs.charAt(i) > rhs[i])
+                char lhc = lhs.charAt(i);
+                char rhc = rhs[i];
+                if (lhc < rhc) {
+                    return true;
+                }
+                if (lhc > rhc)
                 {
                     return false;
                 }

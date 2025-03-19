@@ -1,22 +1,11 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Test;
 
 
@@ -507,6 +496,23 @@ public class IntTest
         assertNull(nullValue.bigDecimalValue());
     }
 
+    @Test
+    public void testGetIntegerSizeNearBoundariesUsingReader() {
+        assertIntegerSizeForValue(IntegerSize.INT, Integer.toString(Integer.MAX_VALUE - 10));
+        assertIntegerSizeForValue(IntegerSize.INT, Integer.toString(Integer.MIN_VALUE + 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, Long.toString(Long.MAX_VALUE - 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, Long.toString(Long.MIN_VALUE + 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, (BigInteger.valueOf(Long.MAX_VALUE - 10).toString()));
+        assertIntegerSizeForValue(IntegerSize.LONG, (BigInteger.valueOf(Long.MIN_VALUE + 10).toString()));
+    }
+
+    private void assertIntegerSizeForValue(IntegerSize expected, String ionData) {
+        IonReader reader = IonSystemBuilder.standard().build().newReader(ionData);
+        reader.next();
+        IntegerSize size = reader.getIntegerSize();
+        assertEquals(expected, size);
+    }
+
     private void testGetIntegerSizeLongBoundary(long boundaryValue) {
         BigInteger boundary = BigInteger.valueOf(boundaryValue);
         IonInt boundaryIon = (IonInt)oneValue(boundary.toString());
@@ -517,6 +523,11 @@ public class IntTest
         IonInt pastBoundaryIon = (IonInt)oneValue(pastBoundary.toString());
         assertEquals(IntegerSize.BIG_INTEGER, pastBoundaryIon.getIntegerSize());
         assertEquals(pastBoundary, pastBoundaryIon.bigIntegerValue());
+
+        long withinBoundary =  boundaryValue  - 10L * Long.signum(boundaryValue);
+        IonInt withinBoundaryIon = (IonInt)oneValue(Long.toString(withinBoundary));
+        assertEquals(IntegerSize.LONG, withinBoundaryIon.getIntegerSize());
+        assertEquals(withinBoundary, withinBoundaryIon.longValue());
     }
 
     private void testGetIntegerSizeIntBoundary(int boundaryValue) {
@@ -529,6 +540,11 @@ public class IntTest
         IonInt pastBoundaryIon = (IonInt)oneValue(pastBoundary.toString());
         assertEquals(IntegerSize.LONG, pastBoundaryIon.getIntegerSize());
         assertEquals(pastBoundary.longValue(), pastBoundaryIon.longValue());
+
+        int withinBoundary =  boundaryValue  - 10 * Integer.signum(boundaryValue);
+        IonInt withinBoundaryIon = (IonInt)oneValue(Integer.toString(withinBoundary));
+        assertEquals(IntegerSize.INT, withinBoundaryIon.getIntegerSize());
+        assertEquals(withinBoundary, withinBoundaryIon.intValue());
     }
 
 }
