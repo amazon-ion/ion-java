@@ -191,8 +191,11 @@ class IonReaderTextSystemX
         private static boolean magnitudeLessThanOrEqualTo(String lhs, int lhsLen, char[] rhs)
         {
             assert lhsLen == rhs.length;
-            for (int i = lhsLen - 1; i >= 0; i--)
+            for (int i = 0; i < lhsLen; i++)
             {
+                if (lhs.charAt(i) < rhs[i]) {
+                    return true;
+                }
                 if (lhs.charAt(i) > rhs[i])
                 {
                     return false;
