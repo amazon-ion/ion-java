@@ -17,6 +17,8 @@ package com.amazon.ion;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Test;
 
 
@@ -505,6 +507,23 @@ public class IntTest
 
         IonNumber nullValue = (IonNumber) oneValue("null.int");
         assertNull(nullValue.bigDecimalValue());
+    }
+
+    @Test
+    public void testGetIntegerSizeNearBoundariesUsingReader() {
+        assertIntegerSizeForValue(IntegerSize.INT, Integer.toString(Integer.MAX_VALUE - 10));
+        assertIntegerSizeForValue(IntegerSize.INT, Integer.toString(Integer.MIN_VALUE + 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, Long.toString(Long.MAX_VALUE - 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, Long.toString(Long.MIN_VALUE + 10));
+        assertIntegerSizeForValue(IntegerSize.LONG, (BigInteger.valueOf(Long.MAX_VALUE - 10).toString()));
+        assertIntegerSizeForValue(IntegerSize.LONG, (BigInteger.valueOf(Long.MIN_VALUE + 10).toString()));
+    }
+
+    private void assertIntegerSizeForValue(IntegerSize expected, String ionData) {
+        IonReader reader = IonSystemBuilder.standard().build().newReader(ionData);
+        reader.next();
+        IntegerSize size = reader.getIntegerSize();
+        assertEquals(expected, size);
     }
 
     private void testGetIntegerSizeLongBoundary(long boundaryValue) {
