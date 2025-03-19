@@ -192,10 +192,12 @@ class IonReaderTextSystemX
             assert lhsLen == rhs.length;
             for (int i = 0; i < lhsLen; i++)
             {
-                if (lhs.charAt(i) < rhs[i]) {
+                char lhc = lhs.charAt(i);
+                char rhc = rhs[i];
+                if (lhc < rhc) {
                     return true;
                 }
-                if (lhs.charAt(i) > rhs[i])
+                if (lhc > rhc)
                 {
                     return false;
                 }

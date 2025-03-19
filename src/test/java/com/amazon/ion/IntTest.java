@@ -537,7 +537,7 @@ public class IntTest
         assertEquals(IntegerSize.BIG_INTEGER, pastBoundaryIon.getIntegerSize());
         assertEquals(pastBoundary, pastBoundaryIon.bigIntegerValue());
 
-        long withinBoundary = (boundaryValue < 0) ? boundaryValue + 10 : boundaryValue - 10;
+        long withinBoundary =  boundaryValue  - 10L * Long.signum(boundaryValue);
         IonInt withinBoundaryIon = (IonInt)oneValue(Long.toString(withinBoundary));
         assertEquals(IntegerSize.LONG, withinBoundaryIon.getIntegerSize());
         assertEquals(withinBoundary, withinBoundaryIon.longValue());
@@ -554,7 +554,7 @@ public class IntTest
         assertEquals(IntegerSize.LONG, pastBoundaryIon.getIntegerSize());
         assertEquals(pastBoundary.longValue(), pastBoundaryIon.longValue());
 
-        int withinBoundary = (boundaryValue < 0) ? boundaryValue + 10 : boundaryValue - 10;
+        int withinBoundary =  boundaryValue  - 10 * Integer.signum(boundaryValue);
         IonInt withinBoundaryIon = (IonInt)oneValue(Integer.toString(withinBoundary));
         assertEquals(IntegerSize.INT, withinBoundaryIon.getIntegerSize());
         assertEquals(withinBoundary, withinBoundaryIon.intValue());
