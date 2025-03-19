@@ -56,6 +56,7 @@ class LazyMacroEvaluator : IonReader {
         val environment: LazyEnvironment = LazyEnvironment.create()
         var sideEffectExpander: ExpansionInfo? = null
         var currentExpander: ExpansionInfo? = null
+        var currentFieldName: SymbolToken? = null
 
         /**
          * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
@@ -95,7 +96,6 @@ class LazyMacroEvaluator : IonReader {
 
         fun produceNext(): ExpressionType {
             while (true) {
-                //val currentExpander = currentExpander!!
                 currentExpander!!.environmentContext.tape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
                 val next = currentExpander!!.expansionKind.produceNext(currentExpander!!)
                 if (next == ExpressionType.CONTINUE_EXPANSION) continue
@@ -126,6 +126,7 @@ class LazyMacroEvaluator : IonReader {
             sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
+            currentFieldName = null
         }
     }
 
@@ -185,8 +186,9 @@ class LazyMacroEvaluator : IonReader {
 
                 return when (nextType) {
                     ExpressionType.FIELD_NAME -> {
+                        thisExpansion.session.currentFieldName = expressionTape.context() as SymbolToken
                         expressionTape.prepareNext() // TODO set `currentFieldName` and continue?
-                        ExpressionType.FIELD_NAME
+                        ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.ANNOTATION -> {
                         expressionTape.prepareNext() // TODO set `currentAnnotations` and continue
@@ -465,16 +467,7 @@ class LazyMacroEvaluator : IonReader {
             private val FIELD_VALUE = 1
 
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
-
-                if (thisExpansion.additionalState == null) {
-                    thisExpansion.additionalState = 1
-                    val fieldName = thisExpansion.readExactlyOneArgument(FIELD_NAME, ::asSymbol)
-                    thisExpansion.produceFieldNameSideEffect(fieldName)
-                    return ExpressionType.FIELD_NAME
-
-                }
-                // Remove the delegation to the side effect tape, which held the field name.
-                thisExpansion.childExpansion = null
+                thisExpansion.session.currentFieldName = thisExpansion.readExactlyOneArgument(FIELD_NAME, ::asSymbol)
 
                 val valueExpansion = thisExpansion.readArgument(FIELD_VALUE)
 
@@ -934,7 +927,6 @@ class LazyMacroEvaluator : IonReader {
     private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
     private var currentExpr: ExpressionType? = null
 
-    private var currentFieldName: SymbolToken? = null
     private var currentAnnotations: List<SymbolToken>? = null
     private var currentValueType: IonType? = null
 
@@ -952,18 +944,8 @@ class LazyMacroEvaluator : IonReader {
     override fun next(): IonType? {
         currentValueType = null
         while (currentValueType == null) {
-            val currentContainer = containerStack.peek()
-            if (currentContainer.type == Type.Struct) {
-                val structTape = currentContainer.expansion.environmentContext.tape!! // TODO should currentContainer.expansion not always be session.currentExpander?
-                structTape.next()
-                if (structTape.type() == ExpressionType.FIELD_NAME) {
-                    structTape.prepareNext()
-                    currentFieldName = currentFieldName()
-                }
-            }
             currentExpr = session.produceNext()
             when {
-                currentExpr == ExpressionType.FIELD_NAME -> currentFieldName = currentFieldName()
                 currentExpr == ExpressionType.ANNOTATION -> currentAnnotations = session.currentExpander!!.environmentContext.annotations()
                 currentExpr!!.isDataModelValue -> currentValueType = session.currentExpander!!.environmentContext.type()
                 currentExpr == ExpressionType.END_OF_EXPANSION -> { // TODO should this go in ExpansionInfo.produceNext?
@@ -983,10 +965,11 @@ class LazyMacroEvaluator : IonReader {
                     if (containerStack.peek().type == Type.TopLevel) {
                         containerStack.pop().close()
                     }
-                    currentFieldName = null
+                    session.currentFieldName = null
                     currentAnnotations = null
                     return null
                 }
+                else -> unreachable()
             }
         }
         return currentValueType
@@ -995,22 +978,6 @@ class LazyMacroEvaluator : IonReader {
     @Deprecated("Deprecated in Java")
     override fun hasNext(): Boolean {
         throw UnsupportedOperationException("hasNext() not implemented. Call next() and check for null.")
-    }
-
-    private fun currentFieldName(): SymbolToken {
-        var expansion = containerStack.peek().expansion
-        // TODO avoid having to do this traversal every time
-        // TODO can `currentFieldName` be set as it is encountered in make_field and Stream.produceNext?
-        // Find the expansion that declared the field name.
-        while (expansion.childExpansion != null) {
-            val childTape = expansion.environmentContext.tape!!
-            if (!childTape.isExhausted && childTape.type() == ExpressionType.FIELD_NAME) {
-                break
-            }
-            expansion = expansion.childExpansion!!
-        }
-
-        return expansion.environmentContext.context() as SymbolToken
     }
 
     /**
@@ -1029,7 +996,7 @@ class LazyMacroEvaluator : IonReader {
         popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
         popped.expansion.session.environment.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
-        currentFieldName = currentContainer.currentFieldName
+        session.currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
         currentAnnotations = null
     }
@@ -1042,7 +1009,7 @@ class LazyMacroEvaluator : IonReader {
         val expressionType = requireNotNull(currentExpr) { "Not positioned on a value" }
         if (expressionType == ExpressionType.DATA_MODEL_CONTAINER) {
             val currentContainer = containerStack.peek()
-            currentContainer.currentFieldName = this.currentFieldName
+            currentContainer.currentFieldName = session.currentFieldName //this.currentFieldName
             val topExpansion = currentContainer.expansion.top()
             val ci = containerStack.push { _ -> }
             val topEnvironmentContext = topExpansion.environmentContext
@@ -1060,7 +1027,7 @@ class LazyMacroEvaluator : IonReader {
             )
             ci.currentFieldName = null
             currentExpr = null
-            currentFieldName = null
+            session.currentFieldName = null
             currentValueType = null
             currentAnnotations = null
         } else {
@@ -1078,7 +1045,7 @@ class LazyMacroEvaluator : IonReader {
         val arguments: ExpressionTape = session.environment.arguments!!
         arguments.rewindTo(0)
         currentAnnotations = null // Annotations are written only via Annotation expressions
-        currentFieldName = null // Field names are written only via FieldName expressions
+        session.currentFieldName = null // Field names are written only via FieldName expressions
         while (index < arguments.size()) {
             currentValueType = null
             arguments.next()
@@ -1086,7 +1053,7 @@ class LazyMacroEvaluator : IonReader {
             val argument = arguments.type()
             if (argument.isEnd) {
                 currentAnnotations = null
-                currentFieldName = null
+                session.currentFieldName = null
                 writer.stepOut()
                 index++;
                 continue
@@ -1123,8 +1090,8 @@ class LazyMacroEvaluator : IonReader {
                     }
                 }
                 ExpressionType.FIELD_NAME -> {
-                    currentFieldName = arguments.context() as SymbolToken
-                    writer.setFieldNameSymbol(currentFieldName)
+                    session.currentFieldName = arguments.context() as SymbolToken
+                    writer.setFieldNameSymbol(session.currentFieldName)
                 }
                 ExpressionType.E_EXPRESSION -> writer.startMacro(arguments.context() as Macro)
                 ExpressionType.EXPRESSION_GROUP -> writer.startExpressionGroup()
@@ -1177,9 +1144,9 @@ class LazyMacroEvaluator : IonReader {
 
     override fun isInStruct(): Boolean = containerStack.peek()?.container == IonType.STRUCT
 
-    override fun getFieldId(): Int = currentFieldName?.sid ?: 0
-    override fun getFieldName(): String? = currentFieldName?.text
-    override fun getFieldNameSymbol(): SymbolToken? = currentFieldName
+    override fun getFieldId(): Int = session.currentFieldName?.sid ?: 0
+    override fun getFieldName(): String? = session.currentFieldName?.text
+    override fun getFieldNameSymbol(): SymbolToken? = session.currentFieldName
 
     /** TODO: Throw on data loss */
     override fun intValue(): Int = longValue().toInt()
