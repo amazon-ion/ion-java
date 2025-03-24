@@ -42,7 +42,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    private final Core core;
+    private Core core;
     private final IonReaderContinuableCoreBinary reader; // If null, then the values are materialized
     private boolean backedByReader;
     private int i = 0;
@@ -58,6 +58,11 @@ public class ExpressionTape { // TODO make internal
         reader = null;
         backedByReader = false;
         this.core = core;
+    }
+
+    public void reset(Core core) {
+        this.core = core;
+        rewindTo(0);
     }
 
     void add(Object context, ExpressionType type, int start, int end) {

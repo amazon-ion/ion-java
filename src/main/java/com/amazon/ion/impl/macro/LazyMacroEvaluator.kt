@@ -53,6 +53,10 @@ class LazyMacroEvaluator : IonReader {
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
         private var expanderPoolIndex = 0
+
+        private val tapePool: ArrayList<ExpressionTape> = ArrayList(64)
+        private var tapePoolIndex = 0
+
         val environment: LazyEnvironment = LazyEnvironment.create()
         var sideEffectExpander: ExpansionInfo? = null
         var currentExpander: ExpansionInfo? = null
@@ -86,6 +90,19 @@ class LazyMacroEvaluator : IonReader {
             expansion.reachedEndOfExpression = false
             currentExpander = expansion
             return expansion
+        }
+
+        fun getTape(core: ExpressionTape.Core): ExpressionTape {
+            val tape: ExpressionTape
+            if (tapePoolIndex >= tapePool.size) {
+                tape = ExpressionTape(core)
+                tapePool.add(tape)
+            } else {
+                tape = tapePool[tapePoolIndex]
+                tape.reset(core)
+            }
+            tapePoolIndex++
+            return tape
         }
 
         fun finishVariable() {
@@ -123,6 +140,7 @@ class LazyMacroEvaluator : IonReader {
         fun reset(arguments: ExpressionTape) {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
+            tapePoolIndex = 0
             environment.reset(arguments)
             sideEffectExpander = getExpander(ExpansionKind.Empty, this.environment.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
@@ -199,7 +217,7 @@ class LazyMacroEvaluator : IonReader {
                     }
                     ExpressionType.E_EXPRESSION -> {
                         val macro = expressionTape.context() as Macro
-                        val macroBodyTape = ExpressionTape(macro.bodyTape) // TODO pool the tape instances, or move the indices into NestedContext
+                        val macroBodyTape = thisExpansion.session.getTape(macro.bodyTape)
                         expressionTape.prepareNext()
                         expressionTape.next()
                         val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
