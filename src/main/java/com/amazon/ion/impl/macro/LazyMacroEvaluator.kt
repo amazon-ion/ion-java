@@ -189,19 +189,19 @@ class LazyMacroEvaluator : IonReader {
                 return when (nextType) {
                     ExpressionType.FIELD_NAME -> {
                         thisExpansion.session.currentFieldName = expressionTape.context() as SymbolToken
-                        expressionTape.prepareNext() // TODO set `currentFieldName` and continue?
+                        expressionTape.prepareNext()
                         ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.ANNOTATION -> {
                         thisExpansion.session.currentAnnotations = expressionTape.annotations()
-                        expressionTape.prepareNext() // TODO set `currentAnnotations` and continue
+                        expressionTape.prepareNext()
                         ExpressionType.CONTINUE_EXPANSION
                     }
                     ExpressionType.E_EXPRESSION -> {
                         val macro = expressionTape.context() as Macro
                         val macroBodyTape = ExpressionTape(macro.bodyTape) // TODO pool the tape instances, or move the indices into NestedContext
                         expressionTape.prepareNext()
-                        expressionTape.next() // TODO adding this did nothing; try removing
+                        expressionTape.next()
                         val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
                         val expansionKind = forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
@@ -264,6 +264,7 @@ class LazyMacroEvaluator : IonReader {
                 val expression = Stream.produceNext(thisExpansion)
                 if (expression == ExpressionType.END_OF_EXPANSION) {
                     thisExpansion.session.environment.seekPastFinalArgument()
+                    thisExpansion.session.environment.finishChildEnvironment()
                 }
                 return expression
             }
@@ -355,10 +356,6 @@ class LazyMacroEvaluator : IonReader {
             private val STRINGS_ARG = 0
 
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
-                // TODO what is this for? Try removing
-                if (thisExpansion.additionalState != null) return ExpressionType.END_OF_EXPANSION
-                thisExpansion.additionalState = Unit
-
                 val sb = StringBuilder()
                 thisExpansion.forEach(STRINGS_ARG) {
                     when {
@@ -687,15 +684,11 @@ class LazyMacroEvaluator : IonReader {
          * Performs the given [action] for each value produced by the expansion of [variableRef].
          */
         inline fun ExpansionInfo.forEach(variableRef: Int, action: (LazyEnvironment.NestedContext) -> Unit) {
-            val savedCurrent = session.currentExpander
             val variableExpansion = readArgument(variableRef)
             while (true) {
                 val next = session.produceNext()
                 when {
-                    next == ExpressionType.END_OF_EXPANSION -> {
-                        session.currentExpander = savedCurrent // TODO check this is necessary
-                        return
-                    }
+                    next == ExpressionType.END_OF_EXPANSION -> return
                     next.isDataModelExpression -> action(variableExpansion.environmentContext)
                 }
             }

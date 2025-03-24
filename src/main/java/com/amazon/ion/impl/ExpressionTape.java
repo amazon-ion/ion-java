@@ -138,10 +138,16 @@ public class ExpressionTape { // TODO make internal
     }
 
     public int findIndexAfterEndEExpression() {
-        // TODO won't this be fooled by encountering a nested expression before the end?
+        int relativeDepth = 0;
         for (int index = i; index < core.size; index++) {
-            if (core.types[index] == ExpressionType.E_EXPRESSION_END) {
-                return index + 1;
+            ExpressionType type = core.types[index];
+            if (type == ExpressionType.E_EXPRESSION) {
+                relativeDepth++;
+            } else if (type == ExpressionType.E_EXPRESSION_END) {
+                if (relativeDepth == 0) {
+                    return index + 1;
+                }
+                relativeDepth--;
             }
         }
         return i;
@@ -153,21 +159,34 @@ public class ExpressionTape { // TODO make internal
         i = iCurrent;
     }
 
+    // TODO deduplicate the following methods
     public void advanceToAfterEndEExpression() {
-        // TODO won't this be fooled by encountering a nested expression before the end?
+        int relativeDepth = 0;
         while (i < core.size) {
-            if (core.types[i++] == ExpressionType.E_EXPRESSION_END) {
-                break;
+            ExpressionType type = core.types[i++];
+            if (type == ExpressionType.E_EXPRESSION) {
+                relativeDepth++;
+            } else if (type == ExpressionType.E_EXPRESSION_END) {
+                if (relativeDepth == 0) {
+                    break;
+                }
+                relativeDepth--;
             }
         }
         iNext = i;
     }
 
     public void advanceToAfterEndContainer() {
-        // TODO won't this be fooled by encountering a nested expression before the end?
+        int relativeDepth = 0;
         while (i < core.size) {
-            if (core.types[i++].isEnd()) {
-                break;
+            ExpressionType type = core.types[i++];
+            if (type == ExpressionType.DATA_MODEL_CONTAINER) {
+                relativeDepth++;
+            } else if (type == ExpressionType.DATA_MODEL_CONTAINER_END) {
+                if (relativeDepth == 0) {
+                    break;
+                }
+                relativeDepth--;
             }
         }
         iNext = i;
@@ -656,7 +675,6 @@ public class ExpressionTape { // TODO make internal
             i++;
         }
         if (argIndex < indexRelativeToStart || i >= core.size) {
-            iNext = i;
             return ExpressionType.END_OF_EXPANSION;
         }
         ExpressionType targetType = core.types[i];

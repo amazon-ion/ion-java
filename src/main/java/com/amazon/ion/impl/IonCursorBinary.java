@@ -1246,18 +1246,19 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
-     * Reads the length of a FlexUInt (or FlexInt) at the given position.
-     * Does not alter the state of the peekIndex. May fill data, if needed.
-     * @return the number of bytes used to encode the FlexUInt (or FlexInt) that starts a "position"
+     * Reads the length of a FlexUInt (or FlexInt) at `peekIndex`.
+     * Does not alter the state of the peekIndex unless filling the required data results in a buffer shift.
+     * @return the number of bytes used to encode the FlexUInt (or FlexInt) that starts `peekIndex`
      *         or -1 if the end of the stream has been reached
      */
-    private long slowReadLengthOfFlexUInt_1_1(long position) {
+    private long slowReadLengthOfFlexUInt_1_1() {
         int length = 1;
+        int i = 0;
         while (true) {
-            if (!fillAt(position, 1)) {
+            if (!fillAt(peekIndex + i, 1)) { // TODO add a test that exercises the case where this fill results in a left shift.
                 return -1;
             }
-            int numZeros = Integer.numberOfTrailingZeros(buffer[(int) position]);
+            int numZeros = Integer.numberOfTrailingZeros(buffer[(int) peekIndex + i]);
             if (numZeros < 8) {
                 length += numZeros;
                 return length;
@@ -1265,7 +1266,7 @@ class IonCursorBinary implements IonCursor {
                 // We don't actually know the length without looking at even more bytes,
                 // so add 8 to length, and then look at the next byte.
                 length += 8;
-                position++;
+                i++;
             }
         }
     }
@@ -2785,7 +2786,7 @@ class IonCursorBinary implements IonCursor {
             }
         } else if (valueTid.length < 0 && minorVersion > 0) {
             // The value is itself a FlexInt or FlexUInt, so read the continuation bits to determine the length.
-            valueLength = slowReadLengthOfFlexUInt_1_1(peekIndex);
+            valueLength = slowReadLengthOfFlexUInt_1_1();
             if (valueLength < 0) {
                 return true;
             }
@@ -3003,6 +3004,7 @@ class IonCursorBinary implements IonCursor {
                 if (slowSeek(targetIndex - offset)) {
                     return true;
                 }
+                peekIndex = valueMarker.endIndex; // TODO add a test that exercises this line. Should fail if this line is deleted.
             } else {
                 peekIndex = targetIndex;
             }
@@ -3484,7 +3486,7 @@ class IonCursorBinary implements IonCursor {
         switch (taglessEncoding) {
             case FLEX_UINT:
             case FLEX_INT:
-                length = isSlowMode ? slowReadLengthOfFlexUInt_1_1(peekIndex) : uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
+                length = isSlowMode ? slowReadLengthOfFlexUInt_1_1() : uncheckedReadLengthOfFlexUInt_1_1(peekIndex);
                 break;
             case FLEX_SYM:
                 length = readFlexSymLengthAndType_1_1();
@@ -3818,6 +3820,12 @@ class IonCursorBinary implements IonCursor {
     public Event nextGroupedValue() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
         if (peekIndex < valueMarker.endIndex) {
+            if (valueMarker.endIndex > limit) {
+                // TODO add a test to exercise this.
+                if (!fillAt(peekIndex, valueMarker.endIndex - peekIndex)) {
+                    return Event.NEEDS_DATA;
+                }
+            }
             peekIndex = valueMarker.endIndex;
         }
         if (group.taglessEncoding == null) {

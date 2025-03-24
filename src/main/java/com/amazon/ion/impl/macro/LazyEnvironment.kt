@@ -110,6 +110,11 @@ class LazyEnvironment {
 
     private fun growContextStack() {
         nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
+        for (i in (nestedContexts.size / 2) until nestedContexts.size) {
+            if (nestedContexts[i] == null) {
+                nestedContexts[i] = NestedContext(null, null, -1)
+            }
+        }
     }
 
     fun finishChildEnvironments(context: NestedContext) {
@@ -186,7 +191,7 @@ class LazyEnvironment {
     }
 
     fun startChildEnvironment(tape: ExpressionTape, arguments: ExpressionTape, firstArgumentStartIndex: Int): NestedContext {
-        if (++nestedContextIndex > nestedContexts.size) {
+        if (++nestedContextIndex >= nestedContexts.size) {
             growContextStack()
         }
         currentContext = nestedContexts[nestedContextIndex]!!
