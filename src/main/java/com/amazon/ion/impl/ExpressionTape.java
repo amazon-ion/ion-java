@@ -23,7 +23,9 @@ public class ExpressionTape { // TODO make internal
         private ExpressionType[] types;
         private int[] starts;
         private int[] ends;
+        private int[] expressionStarts;
         private int size = 0;
+        private int numberOfExpressions = 0;
 
         Core(int initialSize) {
             contexts = new Object[initialSize];
@@ -31,6 +33,7 @@ public class ExpressionTape { // TODO make internal
             types = new ExpressionType[initialSize];
             starts = new int[initialSize];
             ends = new int[initialSize];
+            expressionStarts = new int[initialSize]; // TODO this should be way smaller, and doesn't need to grow at the same time as the rest.
         }
 
         void grow() {
@@ -39,6 +42,7 @@ public class ExpressionTape { // TODO make internal
             types = Arrays.copyOf(types, types.length * 2);
             starts = Arrays.copyOf(starts, starts.length * 2);
             ends = Arrays.copyOf(ends, ends.length * 2);
+            expressionStarts = Arrays.copyOf(expressionStarts, expressionStarts.length * 2);
         }
     }
 
@@ -47,6 +51,7 @@ public class ExpressionTape { // TODO make internal
     private boolean backedByReader;
     private int i = 0;
     private int iNext = 0;
+    private int depth = 0;
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -65,6 +70,26 @@ public class ExpressionTape { // TODO make internal
         rewindTo(0);
     }
 
+    private void setExpressionStart(ExpressionType type) {
+        // TODO need a different expression start array for each nested e-expression
+        if (depth > 0) {
+            if (type.isContainerStart()) {
+                if (depth == 1) {
+                    core.expressionStarts[core.numberOfExpressions++] = i;
+                }
+                depth++;
+            } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION) { // TODO what about field names and annotations?
+                if (depth == 1) {
+                    core.expressionStarts[core.numberOfExpressions++] = i;
+                }
+            } else if (type.isEnd()) {
+                depth--;
+            }
+        } else if (type == ExpressionType.E_EXPRESSION) {
+            depth++;
+        }
+    }
+
     void add(Object context, ExpressionType type, int start, int end) {
         if (i >= core.contexts.length) {
             core.grow();
@@ -73,7 +98,10 @@ public class ExpressionTape { // TODO make internal
         core.types[i] = type;
         core.values[i] = null;
         core.starts[i] = start;
-        core.ends[i] = end;
+        // For E_EXPRESSION end=0 means the expression start indices are cached.
+        // TODO this could record any depth, allowing lookup in an argument index cache for that depth.
+        core.ends[i] = (type == ExpressionType.E_EXPRESSION && depth == 0) ? 0 : end;
+        setExpressionStart(type);
         i++;
         core.size++;
     }
@@ -87,6 +115,7 @@ public class ExpressionTape { // TODO make internal
         core.values[i] = value;
         core.starts[i] = -1;
         core.ends[i] = -1;
+        setExpressionStart(type);
         i++;
         core.size++;
     }
@@ -127,9 +156,10 @@ public class ExpressionTape { // TODO make internal
         return core.size;
     }
 
-    public void rewindTo(int index) {
+    public void rewindTo(int index) { // TODO make this just rewind(), always called with 0
         i = index;
         iNext = index;
+        depth = 0;
     }
 
     public boolean isExhausted() {
@@ -140,6 +170,8 @@ public class ExpressionTape { // TODO make internal
         i = 0;
         iNext = 0;
         core.size = 0;
+        core.numberOfExpressions = 0;
+        depth = 0;
     }
 
     public int findIndexAfterEndEExpression() {
@@ -637,6 +669,22 @@ public class ExpressionTape { // TODO make internal
     public ExpressionType seekToArgument(int startIndex, int indexRelativeToStart) {
         // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
         // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
+
+        if (core.ends[startIndex - 1] == 0) {
+            // Note: core.types[startIndex - 1] should always be E_EXPRESSION
+            if (indexRelativeToStart >= core.numberOfExpressions) {
+                return ExpressionType.END_OF_EXPANSION;
+            }
+            i = core.expressionStarts[indexRelativeToStart];
+            ExpressionType targetType = core.types[i];
+            if (targetType == ExpressionType.VARIABLE) {
+                // The desired argument is a variable, so the parent tape must be consulted.
+                return ExpressionType.VARIABLE;
+            }
+            iNext = i;
+            return targetType;
+        }
+
         int argIndex = 0;
         int relativeDepth = 0;
         i = startIndex;
