@@ -5977,19 +5977,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
         byte[] input = withIvm(1, hexStringToByteArray(cleanCommentedHexBytes(bytes)));
         readerBuilder = readerBuilder.withIncrementalReadingEnabled(false);
         reader = readerFor(readerBuilder, constructFromBytes, input);
-        /*
         assertSequence(
             next(IonType.INT), intValue(0),
             next(IonType.INT), intValue(1),
             next(null)
         );
-
-         */
-        assertEquals(IonType.INT, reader.next());
-        assertEquals(0, reader.intValue());
-        assertEquals(IonType.INT, reader.next());
-        assertEquals(1, reader.intValue());
-        assertNull(reader.next());
         closeAndCount();
     }
 
@@ -6671,6 +6663,23 @@ public class IonReaderContinuableTopLevelBinaryTest {
             reader.stepIn();
             assertNull(reader.next());
             reader.stepOut();
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void makeTimestampUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x0C, // System macro 12 (make_timestamp)
+            0x00, 0x00, // AEB bytes: all optionals absent
+            0x61, 0x01 // Int 1 (year 0001T)
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.TIMESTAMP, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(Timestamp.valueOf("0001T"), reader.timestampValue());
             assertNull(reader.next());
         }
     }

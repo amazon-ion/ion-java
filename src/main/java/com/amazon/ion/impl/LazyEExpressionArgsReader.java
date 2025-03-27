@@ -214,11 +214,6 @@ abstract class LazyEExpressionArgsReader {
         expressionTape.add(null, ExpressionType.E_EXPRESSION_END, -1, -1);
     }
 
-    // TODO step 1: modify this args reader to produce some sort of "tape" of non-materialized expressions (offsets/types)
-    //  Right before calling initExpansion, materialize the tape into a list of expressions. This proves it can be done
-    // TODO step 2: modify MacroEvaluator to operate on the "tape" instead of the materialized expressions. Remove
-    //  the materialization
-
     /**
      * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
      * them to the macro evaluator.
@@ -238,7 +233,6 @@ abstract class LazyEExpressionArgsReader {
      */
     public void finishEvaluatingMacroInvocation() {
         presenceBitmapPool.clear();
-        expressionTape.clear();
         reader.unpinBytes();
         reader.returnToCheckpoint();
         expressionTape.clear();

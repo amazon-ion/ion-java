@@ -683,7 +683,7 @@ class LazyMacroEvaluator : IonReader {
                 ?: return session.getExpander(Empty, LazyEnvironment.EMPTY.currentContext) // Argument was elided.
             return session.getExpander(
                 expansionKind = Variable,
-                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape, argumentTape.currentIndex())
+                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape, session.currentExpander!!.environmentContext.firstArgumentStartIndex)
             )
         }
 

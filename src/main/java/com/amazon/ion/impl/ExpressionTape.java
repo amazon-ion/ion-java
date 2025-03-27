@@ -23,9 +23,9 @@ public class ExpressionTape { // TODO make internal
         private ExpressionType[] types;
         private int[] starts;
         private int[] ends;
-        private int[] expressionStarts;
+        private int[][] expressionStarts;
         private int size = 0;
-        private int numberOfExpressions = 0;
+        private int[] numberOfExpressions;
 
         Core(int initialSize) {
             contexts = new Object[initialSize];
@@ -33,7 +33,9 @@ public class ExpressionTape { // TODO make internal
             types = new ExpressionType[initialSize];
             starts = new int[initialSize];
             ends = new int[initialSize];
-            expressionStarts = new int[initialSize]; // TODO this should be way smaller, and doesn't need to grow at the same time as the rest.
+            expressionStarts = new int[1][];
+            expressionStarts[0] = new int[16];
+            numberOfExpressions = new int[1];
         }
 
         void grow() {
@@ -42,7 +44,27 @@ public class ExpressionTape { // TODO make internal
             types = Arrays.copyOf(types, types.length * 2);
             starts = Arrays.copyOf(starts, starts.length * 2);
             ends = Arrays.copyOf(ends, ends.length * 2);
-            expressionStarts = Arrays.copyOf(expressionStarts, expressionStarts.length * 2);
+        }
+
+        void growExpressionStartsForEExpression(int eExpressionIndex) {
+            int[] expressionStartsForEExpression = expressionStarts[eExpressionIndex];
+            expressionStarts[eExpressionIndex] = Arrays.copyOf(expressionStartsForEExpression, expressionStartsForEExpression.length * 2);
+        }
+
+        void ensureEExpressionIndexAvailable(int eExpressionIndex) {
+            if (expressionStarts.length <= eExpressionIndex) {
+                expressionStarts = Arrays.copyOf(expressionStarts, expressionStarts.length + 1);
+                expressionStarts[expressionStarts.length - 1] = new int[16];
+                numberOfExpressions = Arrays.copyOf(numberOfExpressions, numberOfExpressions.length + 1);
+            }
+        }
+
+        void setNextExpression(int eExpressionIndex, int index) {
+            int numberOfExpressionsInEExpression = numberOfExpressions[eExpressionIndex]++;
+            if (expressionStarts[eExpressionIndex].length <= numberOfExpressionsInEExpression) {
+                growExpressionStartsForEExpression(eExpressionIndex);
+            }
+            expressionStarts[eExpressionIndex][numberOfExpressionsInEExpression] = index;
         }
     }
 
@@ -52,6 +74,8 @@ public class ExpressionTape { // TODO make internal
     private int i = 0;
     private int iNext = 0;
     private int depth = 0;
+    private int numberOfEExpressions = 0;
+    private boolean[] isEExpressionActiveAtDepth = new boolean[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -70,23 +94,33 @@ public class ExpressionTape { // TODO make internal
         rewindTo(0);
     }
 
+    private void increaseDepth(boolean isEExpression) {
+        depth++;
+        if (depth >= isEExpressionActiveAtDepth.length) {
+            isEExpressionActiveAtDepth = Arrays.copyOf(isEExpressionActiveAtDepth, isEExpressionActiveAtDepth.length * 2);
+        }
+        isEExpressionActiveAtDepth[depth] = isEExpression;
+    }
+
     private void setExpressionStart(ExpressionType type) {
-        // TODO need a different expression start array for each nested e-expression
-        if (depth > 0) {
-            if (type.isContainerStart()) {
-                if (depth == 1) {
-                    core.expressionStarts[core.numberOfExpressions++] = i;
-                }
-                depth++;
-            } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION) { // TODO what about field names and annotations?
-                if (depth == 1) {
-                    core.expressionStarts[core.numberOfExpressions++] = i;
-                }
-            } else if (type.isEnd()) {
-                depth--;
+        if (type == ExpressionType.E_EXPRESSION) {
+            if (numberOfEExpressions > 0) {
+                core.setNextExpression(numberOfEExpressions - 1, i);
             }
-        } else if (type == ExpressionType.E_EXPRESSION) {
-            depth++;
+            core.ends[i] = numberOfEExpressions++;
+            core.ensureEExpressionIndexAvailable(numberOfEExpressions);
+            increaseDepth(true);
+        } else if (type.isContainerStart()) {
+            if (isEExpressionActiveAtDepth[depth]) {
+                core.setNextExpression(numberOfEExpressions - 1, i);
+            }
+            increaseDepth(false);
+        } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION || type == ExpressionType.VARIABLE) { // TODO what about field names and annotations?
+            if (isEExpressionActiveAtDepth[depth]) {
+                core.setNextExpression(numberOfEExpressions - 1, i);
+            }
+        } else if (type.isEnd()) {
+            depth--;
         }
     }
 
@@ -98,9 +132,7 @@ public class ExpressionTape { // TODO make internal
         core.types[i] = type;
         core.values[i] = null;
         core.starts[i] = start;
-        // For E_EXPRESSION end=0 means the expression start indices are cached.
-        // TODO this could record any depth, allowing lookup in an argument index cache for that depth.
-        core.ends[i] = (type == ExpressionType.E_EXPRESSION && depth == 0) ? 0 : end;
+        core.ends[i] = end;
         setExpressionStart(type);
         i++;
         core.size++;
@@ -118,10 +150,6 @@ public class ExpressionTape { // TODO make internal
         setExpressionStart(type);
         i++;
         core.size++;
-    }
-
-    public void addFieldName(Object fieldNameStringOrToken) {
-        add(fieldNameStringOrToken, ExpressionType.FIELD_NAME, null);
     }
 
     public void addScalar(IonType type, Object value) {
@@ -170,8 +198,10 @@ public class ExpressionTape { // TODO make internal
         i = 0;
         iNext = 0;
         core.size = 0;
-        core.numberOfExpressions = 0;
+        Arrays.fill(core.numberOfExpressions, 0);
+        Arrays.fill(isEExpressionActiveAtDepth, false);
         depth = 0;
+        numberOfEExpressions = 0;
     }
 
     public int findIndexAfterEndEExpression() {
@@ -244,8 +274,10 @@ public class ExpressionTape { // TODO make internal
         //  the way out. Would need to test that the stored shift amount applied only when necessary and determine
         //  whether multiple shifts could be applied to the same index (I think not)
         for (int i = 0; i < core.size; i++) {
-            core.starts[i] -= shiftAmount;
-            core.ends[i] -= shiftAmount;
+            if (core.types[i] != ExpressionType.E_EXPRESSION && core.starts[i] >= 0) {
+                core.starts[i] -= shiftAmount;
+                core.ends[i] -= shiftAmount;
+            }
         }
     }
 
@@ -667,69 +699,12 @@ public class ExpressionTape { // TODO make internal
     }
 
     public ExpressionType seekToArgument(int startIndex, int indexRelativeToStart) {
-        // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
-        // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
-
-        if (core.ends[startIndex - 1] == 0) {
-            // Note: core.types[startIndex - 1] should always be E_EXPRESSION
-            if (indexRelativeToStart >= core.numberOfExpressions) {
-                return ExpressionType.END_OF_EXPANSION;
-            }
-            i = core.expressionStarts[indexRelativeToStart];
-            ExpressionType targetType = core.types[i];
-            if (targetType == ExpressionType.VARIABLE) {
-                // The desired argument is a variable, so the parent tape must be consulted.
-                return ExpressionType.VARIABLE;
-            }
-            iNext = i;
-            return targetType;
-        }
-
-        int argIndex = 0;
-        int relativeDepth = 0;
-        i = startIndex;
-        loop: while (i < core.size) {
-            switch (core.types[i]) {
-                case FIELD_NAME:
-                    // Skip the field name; advance to the following expression.
-                    break;
-                case ANNOTATION:
-                case DATA_MODEL_SCALAR:
-                case VARIABLE:
-                    if (relativeDepth == 0) {
-                        if (argIndex == indexRelativeToStart) {
-                            break loop;
-                        }
-                        argIndex++;
-                    }
-                    break;
-                case E_EXPRESSION:
-                case EXPRESSION_GROUP:
-                case DATA_MODEL_CONTAINER:
-                    if (relativeDepth == 0) {
-                        if (argIndex == indexRelativeToStart) {
-                            break loop;
-                        }
-                        argIndex++;
-                    }
-                    relativeDepth++;
-                    break;
-                case EXPRESSION_GROUP_END:
-                case DATA_MODEL_CONTAINER_END:
-                case E_EXPRESSION_END:
-                    if (--relativeDepth < 0) {
-                        i++;
-                        break loop;
-                    }
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-            i++;
-        }
-        if (argIndex < indexRelativeToStart || i >= core.size) {
+        int targetEExpressionIndex = core.ends[startIndex - 1];
+        // Note: core.types[startIndex - 1] should always be E_EXPRESSION // TODO make firstArgumentStartIndex just point to the E-Expression
+        if (indexRelativeToStart >= core.numberOfExpressions[targetEExpressionIndex]) {
             return ExpressionType.END_OF_EXPANSION;
         }
+        i = core.expressionStarts[targetEExpressionIndex][indexRelativeToStart];
         ExpressionType targetType = core.types[i];
         if (targetType == ExpressionType.VARIABLE) {
             // The desired argument is a variable, so the parent tape must be consulted.
