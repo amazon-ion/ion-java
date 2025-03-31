@@ -723,8 +723,6 @@ public class ExpressionTape { // TODO make internal
             switch (core.types[i]) {
                 case FIELD_NAME:
                 case ANNOTATION:
-                    // Skip the field name or annotation; advance to the following expression.
-                    break;
                 case DATA_MODEL_SCALAR:
                 case VARIABLE:
                     if (relativeDepth == 0) {
@@ -747,7 +745,6 @@ public class ExpressionTape { // TODO make internal
                 case DATA_MODEL_CONTAINER_END:
                 case E_EXPRESSION_END:
                     if (--relativeDepth < 0) {
-                        i++;
                         break loop;
                     }
                     break;

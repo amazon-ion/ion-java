@@ -90,6 +90,7 @@ class MacroEvaluatorAsIonReader(
                 is Expression.DataModelValue -> {
                     currentValueExpression = argument
                     writer.writeValue(this)
+                    currentValueExpression = null // TODO test this for the binary conversion in LazyMacroEvaluator too
                 }
                 is Expression.FieldName -> {
                     writer.setFieldNameSymbol(argument.value)

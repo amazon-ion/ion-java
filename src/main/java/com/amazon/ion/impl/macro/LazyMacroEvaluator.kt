@@ -666,12 +666,17 @@ class LazyMacroEvaluator : IonReader {
                 if (testArg.session.produceNext() == ExpressionType.END_OF_EXPANSION) break
                 n++
             }
+            var isVariable = testArg.expansionKind == Variable
             testArg.close()
 
             val branch = if (condition(n)) 1 else 2
+            if (branch == 1 && isVariable) {
+                // The variable has been evaluated; clean up its child environment.
+                session.environment.finishChildEnvironment()
+            }
             // Skip any unused expressions.
             environmentContext.arguments!!.setNextAfterEndOfEExpression()
-            tailCall(readArgument(branch))
+            tailCall(readArgument(branch)) // TODO performance: often, the expander will already be positioned on this arg. May need specializations to shortcut this case.
             return ExpressionType.CONTINUE_EXPANSION
         }
 
@@ -944,6 +949,7 @@ class LazyMacroEvaluator : IonReader {
                             session.finishVariable()
                         }
                         currentExpander.close()
+                        // TODO reset field name and annotations here?
                         continue
                     }
                     if (containerStack.peek().type == Type.TopLevel) {
@@ -1002,11 +1008,9 @@ class LazyMacroEvaluator : IonReader {
                 IonType.STRUCT -> ContainerInfo.Type.Struct
                 else -> unreachable()
             }
-            val topEnvironmentContext = session.currentExpander!!.environmentContext
-            val environmentContext = session.environment.startChildEnvironment(topEnvironmentContext.tape!!, topEnvironmentContext.arguments!!, topEnvironmentContext.firstArgumentStartIndex)
             ci.expansion = session.getExpander(
                 expansionKind = ExpansionKind.Stream,
-                environmentContext = environmentContext,
+                environmentContext = session.currentExpander!!.environmentContext,
             )
             ci.currentFieldName = null
             currentExpr = null

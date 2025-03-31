@@ -6,6 +6,7 @@ import com.amazon.ion.BufferConfiguration;
 import com.amazon.ion.Decimal;
 import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonEncodingVersion;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonLoader;
 import com.amazon.ion.IonReader;
@@ -15,6 +16,8 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.IonWriter;
+import com.amazon.ion.MacroAwareIonReader;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.OversizedValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
@@ -22,12 +25,14 @@ import com.amazon.ion.SystemSymbols;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.impl.bin.IonEncoder_1_1;
 import com.amazon.ion.impl.bin._Private_IonManagedBinaryWriterBuilder;
 import com.amazon.ion.impl.bin._Private_IonManagedWriter;
 import com.amazon.ion.impl.bin._Private_IonRawWriter;
 import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
+import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.system.SimpleCatalog;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -45,6 +50,9 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -6680,6 +6688,93 @@ public class IonReaderContinuableTopLevelBinaryTest {
             assertEquals(IonType.TIMESTAMP, reader.next());
             assertEquals(0, reader.getTypeAnnotations().length);
             assertEquals(Timestamp.valueOf("0001T"), reader.timestampValue());
+            assertNull(reader.next());
+        }
+    }
+
+    @Disabled
+    @Test
+    public void rewriteAllTypes() throws Exception {
+
+        //Path file = Paths.get("/Users/greggt/Documents/real-ion-data/amazon-api/ion11", "productapi-buyingoptions-v2-request-1-1-no-makestring.10n");
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.11.ion");
+        //Path output = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large-temp.10.10n");
+        //ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        /*
+        try (
+            IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file));
+            IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(Files.newOutputStream(output))
+            //IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out)
+        ) {
+            writer.writeValues(reader);
+        }
+
+         */
+
+        Path baseline =  Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.10.10n");
+        //Path baseline =  Paths.get("/Users/greggt/Documents/real-ion-data/amazon-api/", "productapi-buyingoptions-v2-request.10n");
+        IonSystem system = IonSystemBuilder.standard().build();
+        try (IonReader oneOne = IonReaderBuilder.standard().build(Files.newInputStream(baseline));
+             //IonReader oneZero = IonReaderBuilder.standard().build(Files.newInputStream(output))) {
+            IonReader oneZero = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            //IonReader oneZero = IonReaderBuilder.standard().build(out.toByteArray())) {
+            while (true) {
+                IonType lhs = oneOne.next();
+                IonType rhs = oneZero.next();
+                if (lhs != rhs) {
+                    throw new AssertionError("One ended first");
+                }
+                if (lhs == null) {
+                    break;
+                }
+                IonValue lhsValue = system.newValue(oneOne);
+                IonValue rhsValue = system.newValue(oneZero);
+                //assertTrue(Equivalence.ionEquals(lhsValue, rhsValue));
+                assertEquals(lhsValue, rhsValue);
+            }
+        }
+    }
+
+    @Test
+    public void summaryMsTest() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary_ms_test.11.ion");
+        Path binaryOut = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary_ms_test.11.10n");
+
+        try (MacroAwareIonReader reader = ((_Private_IonReaderBuilder) IonReaderBuilder.standard()).buildMacroAware(Files.newInputStream(file));
+             MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(Files.newOutputStream(binaryOut))
+        ) {
+            reader.transcodeAllTo(writer);
+        }
+
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(binaryOut));
+             IonWriter writer = IonTextWriterBuilder.standard().build((Appendable) System.out)
+        ) {
+            writer.writeValues(reader);
+        }
+    }
+
+    @Disabled
+    @Test
+    public void summaryMsFromBinary() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary_ms_test.11.10n");
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("foo", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(3.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("ms", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
             assertNull(reader.next());
         }
     }

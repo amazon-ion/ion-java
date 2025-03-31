@@ -122,7 +122,6 @@ class LazyEnvironment {
         while (currentContext !== context) { // TODO verify this uses reference equality
             finishChildEnvironment()
         }
-        finishChildEnvironment()
     }
 
     fun seekToArgument(indexRelativeToStart: Int): ExpressionTape? {
