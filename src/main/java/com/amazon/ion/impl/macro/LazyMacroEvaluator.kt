@@ -491,9 +491,11 @@ class LazyMacroEvaluator : IonReader {
 
                 val currentChildExpansion = thisExpansion.childExpansion
 
+                // TODO set session.currentExpander to currentChildExpansion?
                 val next = currentChildExpansion?.session?.produceNext()
                 if (next == null) {
                     // Only possible if expansionDelegate is null
+                    thisExpansion.session.currentExpander = argumentExpansion
                     val nextSequence = argumentExpansion.session.produceNext()
                     thisExpansion.session.currentExpander = thisExpansion
                     return when {
@@ -538,8 +540,10 @@ class LazyMacroEvaluator : IonReader {
 
                 val currentChildExpansion = thisExpansion.childExpansion
 
+                // TODO set session.currentExpander to currentChildExpansion?
                 val next = currentChildExpansion?.session?.produceNext()
                 if (next == null) {
+                    thisExpansion.session.currentExpander = argumentExpansion // TODO add test coverage for this.
                     val nextSequence = argumentExpansion.session.produceNext()
                     thisExpansion.session.currentExpander = thisExpansion
                     return when {
@@ -978,12 +982,12 @@ class LazyMacroEvaluator : IonReader {
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
-        session.currentExpander = currentContainer.expansion.top()
+        session.currentExpander = currentContainer.expansion.top() // TODO it seems like not enough of the child expansions are cleaned up before this, resulting in duplicate work before the next next()
         if (session.currentExpander!!.expansionKind == ExpansionKind.Variable) {
             // The container being stepped out of was an argument to a variable.
             session.currentExpander!!.reachedEndOfExpression = true
         }
-        popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer()
+        popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer() // TODO what if this is a logical container?
         popped.expansion.session.environment.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName

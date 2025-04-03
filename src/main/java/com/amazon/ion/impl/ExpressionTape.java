@@ -61,7 +61,7 @@ public class ExpressionTape { // TODO make internal
 
         void setNextExpression(int eExpressionIndex, int index) {
             int numberOfExpressionsInEExpression = numberOfExpressions[eExpressionIndex]++;
-            if (expressionStarts[eExpressionIndex].length <= numberOfExpressionsInEExpression) {
+            if (expressionStarts[eExpressionIndex].length < numberOfExpressionsInEExpression) {
                 growExpressionStartsForEExpression(eExpressionIndex);
             }
             expressionStarts[eExpressionIndex][numberOfExpressionsInEExpression] = index;
@@ -75,18 +75,20 @@ public class ExpressionTape { // TODO make internal
     private int iNext = 0;
     private int depth = 0;
     private int numberOfEExpressions = 0;
-    private boolean[] isEExpressionActiveAtDepth = new boolean[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
+    private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
         backedByReader = reader != null;
         core = new Core(initialSize);
+        Arrays.fill(eExpressionActiveAtDepth, -1);
     }
 
     public ExpressionTape(Core core) {
         reader = null;
         backedByReader = false;
         this.core = core;
+        Arrays.fill(eExpressionActiveAtDepth, -1);
     }
 
     public void reset(Core core) {
@@ -96,28 +98,28 @@ public class ExpressionTape { // TODO make internal
 
     private void increaseDepth(boolean isEExpression) {
         depth++;
-        if (depth >= isEExpressionActiveAtDepth.length) {
-            isEExpressionActiveAtDepth = Arrays.copyOf(isEExpressionActiveAtDepth, isEExpressionActiveAtDepth.length * 2);
+        if (depth >= eExpressionActiveAtDepth.length) {
+            eExpressionActiveAtDepth = Arrays.copyOf(eExpressionActiveAtDepth, eExpressionActiveAtDepth.length * 2);
         }
-        isEExpressionActiveAtDepth[depth] = isEExpression;
+        eExpressionActiveAtDepth[depth] = isEExpression ? numberOfEExpressions - 1 : -1;
     }
 
     private void setExpressionStart(ExpressionType type) {
         if (type == ExpressionType.E_EXPRESSION) {
-            if (numberOfEExpressions > 0) {
-                core.setNextExpression(numberOfEExpressions - 1, i);
+            if (/*numberOfEExpressions > 0*/ eExpressionActiveAtDepth[depth] >= 0) {
+                core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             core.ends[i] = numberOfEExpressions++;
             core.ensureEExpressionIndexAvailable(numberOfEExpressions);
             increaseDepth(true);
         } else if (type.isContainerStart()) {
-            if (isEExpressionActiveAtDepth[depth]) {
-                core.setNextExpression(numberOfEExpressions - 1, i);
+            if (eExpressionActiveAtDepth[depth] >= 0) {
+                core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             increaseDepth(false);
         } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION || type == ExpressionType.VARIABLE) { // TODO what about field names and annotations?
-            if (isEExpressionActiveAtDepth[depth]) {
-                core.setNextExpression(numberOfEExpressions - 1, i);
+            if (eExpressionActiveAtDepth[depth] >= 0) {
+                core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
         } else if (type.isEnd()) {
             depth--;
@@ -199,7 +201,7 @@ public class ExpressionTape { // TODO make internal
         iNext = 0;
         core.size = 0;
         Arrays.fill(core.numberOfExpressions, 0);
-        Arrays.fill(isEExpressionActiveAtDepth, false);
+        Arrays.fill(eExpressionActiveAtDepth, -1);
         depth = 0;
         numberOfEExpressions = 0;
     }

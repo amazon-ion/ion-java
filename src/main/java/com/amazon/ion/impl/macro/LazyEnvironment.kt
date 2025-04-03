@@ -36,7 +36,7 @@ class LazyEnvironment {
         nestedContextIndex = 0
         currentContext = nestedContexts[0]!!
         currentContext.tape = arguments
-        currentContext.arguments = arguments // TODO ?
+        currentContext.arguments = null
         currentContext.firstArgumentStartIndex = 0
     }
 
@@ -139,6 +139,10 @@ class LazyEnvironment {
                     // This pass-through variable has now been consumed.
                     sourceTape.prepareNext()
                     context = nestedContexts[--contextIndex]!!
+                    while (context.arguments === sourceTape) {
+                        // The parent context is evaluating a variable. Go up one level to find the argument source.
+                        context = nestedContexts[--contextIndex]!!
+                    }
                     startIndex = context.firstArgumentStartIndex
                     sourceTape = context.arguments!!
 
@@ -164,9 +168,9 @@ class LazyEnvironment {
                 ExpressionType.END_OF_EXPANSION -> break
                 ExpressionType.VARIABLE -> {
                     // The new search index is the index of the variable in the parent tape
-                    searchIndex = sourceTape.context() as Int
                     sourceTape.prepareNext() // Advance past this variable, which has been consumed.
                     context = nestedContexts[--contextIndex]!!
+                    searchIndex = context.highestVariableIndex()
                     startIndex = context.firstArgumentStartIndex
                     sourceTape = context.arguments!!
                 }
