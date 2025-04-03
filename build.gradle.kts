@@ -217,6 +217,12 @@ lateinit var sourcesJar: AbstractArchiveTask
 lateinit var javadocJar: AbstractArchiveTask
 lateinit var minifyJar: ProGuardTask
 
+tasks.withType<JavaCompile>().configureEach {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
