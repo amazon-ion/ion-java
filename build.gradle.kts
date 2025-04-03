@@ -35,7 +35,7 @@ plugins {
     id("com.github.spotbugs") version "5.0.13"
     id("org.jlleitschuh.gradle.ktlint") version "11.3.2"
 
-    id("com.diffplug.spotless") version "6.11.0"
+    id("com.diffplug.spotless") version "7.0.2"
 
     // Used for generating the third party attribution document
     id("com.github.jk1.dependency-license-report") version "2.5"
@@ -46,7 +46,7 @@ plugins {
     // the "spotbugsMain" task, causing it to fail. Instead, we will create a separate task to generate the bundle info.
     id("biz.aQute.bnd.builder") version "6.4.0" apply false
 
-    id("me.champeau.jmh") version "0.7.2"
+    id("me.champeau.jmh") version "0.7.3"
 }
 
 jacoco {
@@ -400,6 +400,9 @@ tasks {
     // spotbugs-gradle-plugin creates a :spotbugsTest task by default, but we don't want it
     // see: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/391
     project.gradle.startParameter.excludedTaskNames.add(":spotbugsTest")
+    // same for :spotbugsJmh, we don't need to run Spotbugs on our JMH code
+    // Alternatively we *could* set the toolchain for this task as we do for :spotBugsMain, but this is easier.
+    project.gradle.startParameter.excludedTaskNames.add(":spotbugsJmh")
 
     spotbugsMain {
         launcher.set(
