@@ -227,6 +227,7 @@ tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
     }
+
     withType<KotlinCompile<KotlinJvmOptions>> {
         kotlinOptions {
             // Kotlin jvmTarget must match the JavaCompile release version
