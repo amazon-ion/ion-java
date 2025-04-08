@@ -64,9 +64,10 @@ val SUPPORTED_JRE_VERSIONS = listOf(8, 11, 17, 21)
 
 java {
     toolchain {
-        // Always build with the minimum supported Java version so that builds are reproducible,
-        // and so it automatically targets the min supported version.
-        languageVersion.set(JavaLanguageVersion.of(SUPPORTED_JRE_VERSIONS.min()))
+        // Build with a consistent Java version so that builds are reproducible. We use the max version because the min
+        // is more likely to run into deprecation or compatibility issues with Gradle plugins.
+        // We still target the minimum supported Java version in compilation with the `--release` flag.
+        languageVersion.set(JavaLanguageVersion.of(SUPPORTED_JRE_VERSIONS.max()))
         vendor.set(JvmVendorSpec.AMAZON)
     }
 }
@@ -217,15 +218,11 @@ lateinit var sourcesJar: AbstractArchiveTask
 lateinit var javadocJar: AbstractArchiveTask
 lateinit var minifyJar: ProGuardTask
 
-tasks.withType<JavaCompile>().configureEach {
-    javaCompiler = javaToolchains.compilerFor {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
-}
-
 tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
+        // https://docs.gradle.org/current/userguide/building_java_projects.html#sec:compiling_with_release
+        options.release = SUPPORTED_JRE_VERSIONS.min()
     }
 
     withType<KotlinCompile<KotlinJvmOptions>> {
