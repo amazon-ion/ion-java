@@ -201,6 +201,7 @@ class LazyMacroEvaluator : IonReader {
                     if (nextType != ExpressionType.E_EXPRESSION_END) { // TODO why the special case?
                         return ExpressionType.END_OF_EXPANSION
                     }
+                    // thisExpansion.session.environment.finishChildEnvironment() // TODO is this missing? Causes things to break.
                     return ExpressionType.CONTINUE_EXPANSION // TODO should end of expansion be conveyed in any case here?
                 }
 
@@ -220,7 +221,7 @@ class LazyMacroEvaluator : IonReader {
                         val macroBodyTape = thisExpansion.session.getTape(macro.bodyTape)
                         expressionTape.prepareNext()
                         expressionTape.next()
-                        val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, expressionTape.currentIndex())
+                        val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, /*expressionTape.currentIndex(),*/ true)
                         val expansionKind = forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = expansionKind,
@@ -281,7 +282,7 @@ class LazyMacroEvaluator : IonReader {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 val expression = Stream.produceNext(thisExpansion)
                 if (expression == ExpressionType.END_OF_EXPANSION) {
-                    thisExpansion.session.environment.seekPastFinalArgument()
+                    thisExpansion.session.environment.seekPastFinalArgument() // TODO can *almost* get rid of this. See if there's an alternative.
                     thisExpansion.session.environment.finishChildEnvironment()
                 }
                 return expression
@@ -692,7 +693,7 @@ class LazyMacroEvaluator : IonReader {
                 ?: return session.getExpander(Empty, LazyEnvironment.EMPTY.currentContext) // Argument was elided.
             return session.getExpander(
                 expansionKind = Variable,
-                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape, session.currentExpander!!.environmentContext.firstArgumentStartIndex)
+                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape/*, session.currentExpander!!.environmentContext.nextVariablePointerIndex*/)
             )
         }
 
@@ -953,6 +954,7 @@ class LazyMacroEvaluator : IonReader {
                             session.finishVariable()
                         }
                         currentExpander.close()
+                        session.environment.finishChildEnvironments(session.currentExpander!!.environmentContext)
                         // TODO reset field name and annotations here?
                         continue
                     }

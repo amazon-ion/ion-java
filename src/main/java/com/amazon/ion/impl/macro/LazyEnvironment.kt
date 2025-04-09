@@ -8,6 +8,7 @@ import com.amazon.ion.util.*
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * An `Environment` contains variable bindings for a given macro evaluation.
@@ -24,10 +25,10 @@ class LazyEnvironment {
 
     var arguments: ExpressionTape? = null
     val sideEffects: ExpressionTape = ExpressionTape(null, 4)
-    val sideEffectContext: NestedContext = NestedContext(sideEffects, null, -1)
-    var currentContext: NestedContext = NestedContext(null, null, -1)
+    val sideEffectContext: NestedContext = NestedContext(sideEffects, null, -1, -1, null)
+    var currentContext: NestedContext = NestedContext(null, null, -1, -1, null) // TODO this is throwaway
     private var nestedContexts: Array<NestedContext?> = Array(16) {
-        NestedContext(null, null, -1)
+        NestedContext(null, null, -1, -1)
     }
     private var nestedContextIndex = 0
 
@@ -37,10 +38,14 @@ class LazyEnvironment {
         currentContext = nestedContexts[0]!!
         currentContext.tape = arguments
         currentContext.arguments = null
-        currentContext.firstArgumentStartIndex = 0
+        currentContext.nextVariablePointerIndex = 0
+        currentContext.variablePointerStartIndex = 0
+        //arguments!!.cacheExpressionPointers(currentContext) // TODO redundant? Done before the e-expression is evaluated. Try removing
     }
 
-    data class NestedContext(var tape: ExpressionTape?, var arguments: ExpressionTape?, var firstArgumentStartIndex: Int) {
+    // TODO variablePointerStartIndex is not doing anything
+    // TODO looks like nextVariablePointerIndex isn't either
+    data class NestedContext(var tape: ExpressionTape?, var arguments: ExpressionTape?, var variablePointerStartIndex: Int, var nextVariablePointerIndex: Int, var variablePointers: ArrayList<ExpressionTape.VariablePointer>? = ArrayList(8)) {
 
         fun annotations(): List<SymbolToken> {
             return tape!!.annotations()
@@ -102,17 +107,20 @@ class LazyEnvironment {
             return tape!!.readBoolean()
         }
 
+        /*
         fun highestVariableIndex(): Int {
             // TODO performance: store this to avoid recomputing
             return tape!!.highestVariableIndex()
         }
+
+         */
     }
 
     private fun growContextStack() {
         nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
         for (i in (nestedContexts.size / 2) until nestedContexts.size) {
             if (nestedContexts[i] == null) {
-                nestedContexts[i] = NestedContext(null, null, -1)
+                nestedContexts[i] = NestedContext(null, null, -1, -1)
             }
         }
     }
@@ -125,6 +133,11 @@ class LazyEnvironment {
     }
 
     fun seekToArgument(indexRelativeToStart: Int): ExpressionTape? {
+        // TODO this doesn't advance any pass-through variables.
+        val sourceContext = currentContext.variablePointers!![indexRelativeToStart].visit()
+        sourceContext.nextVariablePointerIndex = indexRelativeToStart + 1
+        return sourceContext.tape
+        /*
         var context = currentContext
         var contextIndex = nestedContextIndex
         var startIndex = context.firstArgumentStartIndex
@@ -152,12 +165,28 @@ class LazyEnvironment {
                 }
             }
         }
+
+         */
     }
 
     fun seekPastFinalArgument() {
         // TODO perf: depending on the final design of the invocation stack, it might not be necessary for this to go
         //  upward recursively, e.g. if the invocation stack is still modeled recursively, this might be called at
         //  each depth anyway, so there would be duplicate work under the current implementation.
+        val variablePointers = currentContext.variablePointers!!
+        for (variablePointer in variablePointers) {
+            // TODO this won't work for out-of-order arguments. Need to ensure only the highest one is visited.
+            val sourceContext = variablePointer.visit()
+            sourceContext.tape!!.seekPastExpression()
+        }
+        /*
+        if (variablePointers.isNotEmpty()) { // TODO seek past the final contained argument for all parent tapes
+            val sourceContext = currentContext.variablePointers!![currentContext.variablePointers!!.size - 1].visit()
+            sourceContext.tape!!.seekPastExpression() // TODO might be able to pre-calculate this
+        }
+
+         */
+        /*
         var context = currentContext
         var contextIndex = nestedContextIndex
         var startIndex = context.firstArgumentStartIndex
@@ -181,6 +210,8 @@ class LazyEnvironment {
                 }
             }
         }
+
+         */
     }
 
     fun tailCall(): NestedContext {
@@ -189,18 +220,38 @@ class LazyEnvironment {
         finishChildEnvironment()
         currentContext.tape = context.tape
         currentContext.arguments = context.arguments
-        currentContext.firstArgumentStartIndex = context.firstArgumentStartIndex
+        currentContext.nextVariablePointerIndex = context.nextVariablePointerIndex
+        currentContext.variablePointerStartIndex = context.variablePointerStartIndex
         return currentContext
     }
 
-    fun startChildEnvironment(tape: ExpressionTape, arguments: ExpressionTape, firstArgumentStartIndex: Int): NestedContext {
+    fun startChildEnvironment(tape: ExpressionTape, arguments: ExpressionTape, resolveVariables: Boolean = false): NestedContext {
+        val parentContext = nestedContexts[nestedContextIndex]!!
         if (++nestedContextIndex >= nestedContexts.size) {
             growContextStack()
         }
         currentContext = nestedContexts[nestedContextIndex]!!
         currentContext.tape = tape
         currentContext.arguments = arguments
-        currentContext.firstArgumentStartIndex = firstArgumentStartIndex
+        currentContext.nextVariablePointerIndex = 0
+        currentContext.variablePointers!!.clear()
+        if (resolveVariables) {
+            // TODO just move this into the call site
+            arguments.cacheExpressionPointers(parentContext, currentContext) // TODO make sure this is actually saving work
+            /*
+            tape.resolveVariables(
+                parentContext,
+                //arguments,
+                currentContext.variablePointers
+            )
+
+             */
+        } else {
+            // This child environment is for a variable evaluation whose variable pointers have already been resolved.
+            // TODO just add the one that applies to this variable
+            currentContext.variablePointers!!.addAll(parentContext.variablePointers!!)
+            currentContext.variablePointerStartIndex = 0
+        }
         return currentContext
     }
 
