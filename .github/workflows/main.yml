@@ -9,11 +9,13 @@ on:
   push:
   pull_request:
     branches: [ master ]
-    types: [ opened, reopened ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # We want to run on external PRs, but not on internal ones as push automatically builds
+    # H/T: https://github.com/Dart-Code/Dart-Code/commit/612732d5879730608baa9622bf7f5e5b7b51ae65
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != 'amazon-ion/ion-java'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -44,6 +46,7 @@ jobs:
       matrix:
         java: [8, 11, 17, 21]
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != 'amazon-ion/ion-java'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
