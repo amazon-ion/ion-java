@@ -13,6 +13,7 @@ import com.amazon.ionelement.api.SexpElement
 import com.amazon.ionelement.api.StringElement
 import com.amazon.ionelement.api.TextElement
 import java.lang.AssertionError
+import java.math.BigInteger
 import kotlin.streams.toList
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -222,17 +223,32 @@ private fun TestCaseSupport.denotesDecimal(expectation: SeqElement, reader: IonR
     assertEquals(IonType.DECIMAL, reader.type, createFailureMessage(expectation))
     val actualValue = reader.decimalValue()
 
-    val exponent = expectation.values[2].bigIntegerValue
+    val exponent = expectation.values[2].bigIntegerValue.toInt()
     assertEquals(exponent, actualValue.scale() * -1, createFailureMessage(expectation, "exponent not equal"))
+
     when (val coefficient = expectation.values[1]) {
-        is IntElement -> assertEquals(
-            coefficient.bigIntegerValue,
-            actualValue.bigDecimalValue().unscaledValue(),
-            createFailureMessage(expectation, "coefficient not equal")
-        )
+        is IntElement -> {
+            assertEquals(
+                coefficient.bigIntegerValue,
+                actualValue.bigDecimalValue().unscaledValue(),
+                createFailureMessage(expectation, "coefficient not equal")
+            )
+            if (coefficient.bigIntegerValue == BigInteger.ZERO) {
+                assertFalse(
+                    actualValue.isNegativeZero,
+                    createFailureMessage(expectation, "coefficient expected to be positive 0")
+                )
+            }
+        }
         is TextElement -> {
             if (coefficient.textValue != "negative_0") reportSyntaxError(coefficient, "model-decimal")
-            assertTrue(actualValue.isNegativeZero, createFailureMessage(expectation, "coefficient expected to be negative 0"))
+            assertTrue(
+                actualValue.isNegativeZero,
+                createFailureMessage(expectation, "coefficient expected to be negative 0")
+            )
+        }
+        else -> {
+            reportSyntaxError(coefficient, "model-decimal")
         }
     }
 }
