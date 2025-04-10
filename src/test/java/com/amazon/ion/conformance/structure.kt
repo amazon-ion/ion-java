@@ -180,8 +180,8 @@ private fun ParserState.readContinuation(): DynamicNode {
  */
 private fun ParserState.readExpectation(): DynamicNode? {
     return when (sexp.head) {
-        "and" -> TODO("'and' not implemented")
-        "not" -> TODO("'not' not implemented")
+        "and" -> builder.build { TODO("'and' not implemented") }
+        "not" -> builder.build { TODO("'not' not implemented") }
         "produces" -> builder.build {
             val actual = loadAllElements(createFragmentReader()).toList()
             assertEquals(sexp.tail, actual, createFailureMessage(sexp))

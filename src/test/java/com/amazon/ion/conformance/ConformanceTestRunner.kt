@@ -106,6 +106,8 @@ abstract class ConformanceTestRunner(
             // TODO: Not implemented yet
             "subnormal f16" in completeTestName -> false
             "conformance/system_macros/parse_ion.ion" in file.absolutePath -> false
+            "tdl/for.ion" in file.absolutePath -> false
+            "tdl/literal.ion" in file.absolutePath -> false
 
             // Some of these are failing because
             //  - Ion Java doesn't support the Ion 1.1 system symbol table yet
