@@ -297,18 +297,20 @@ enum class SystemMacro(
 
         @JvmStatic
         override operator fun get(address: MacroRef): SystemMacro? {
-            return when (address) {
-                is MacroRef.ById -> get(address.id)
-                is MacroRef.ByName -> get(address.name)
+            return if (address.hasId()) {
+                get(address.id)
+            } else {
+                get(address.name!!)
             }
         }
 
         /** Gets a [SystemMacro] by name, including those which are not in the system table (i.e. special forms) */
         @JvmStatic
         fun getMacroOrSpecialForm(ref: MacroRef): SystemMacro? {
-            return when (ref) {
-                is MacroRef.ById -> get(ref.id)
-                is MacroRef.ByName -> MACROS_BY_NAME[ref.name]
+            return if (ref.hasId()) {
+                get(ref.id)
+            } else {
+                MACROS_BY_NAME[ref.name!!]
             }
         }
 

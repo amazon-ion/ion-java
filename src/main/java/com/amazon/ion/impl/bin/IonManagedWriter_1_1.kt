@@ -287,10 +287,11 @@ internal class IonManagedWriter_1_1(
             macroTable.clear()
             newMacros.clear()
         }
-        for (entry in macros.entries) {
-            when (entry.key) {
-                is MacroRef.ByName -> getOrAssignMacroAddressAndName((entry.key as MacroRef.ByName).name, entry.value)
-                is MacroRef.ById -> getOrAssignMacroAddress(entry.value)
+        for ((macroRef, macro) in macros.entries) {
+            if (macroRef.hasName()) {
+                getOrAssignMacroAddressAndName(macroRef.name!!, macro)
+            } else {
+                getOrAssignMacroAddress(macro)
             }
         }
         if (encodingDirectiveAlreadyWritten) {

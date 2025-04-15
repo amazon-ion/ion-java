@@ -5,7 +5,6 @@ package com.amazon.ion.apps.macroize;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroMatcher;
-import com.amazon.ion.impl.macro.MacroRef;
 
 /**
  * A {@link MacroMatcher} that uses a {@link ManualEncodingContext} and can produce {@link SuggestedSignature}s.
@@ -13,7 +12,7 @@ import com.amazon.ion.impl.macro.MacroRef;
 class MacroizeMacroMatcher extends MacroMatcher {
 
     public MacroizeMacroMatcher(IonReader macroReader, ManualEncodingContext symbolTable) {
-        super(macroReader, ref -> symbolTable.getMacro(((MacroRef.ByName) ref).getName()));
+        super(macroReader, ref -> symbolTable.getMacro(ref.getName()));
         symbolTable.addMacro(name(), macro());
     }
 
