@@ -56,9 +56,9 @@ internal class EncodingDirectiveReader(private val reader: IonReader, private va
 
     private fun classifySexpWithinModuleDirective() {
         val name: String = reader.stringValue()
-        state = if (SystemSymbols_1_1.SYMBOL_TABLE.text == name) {
+        state = if (SystemSymbols_1_1.SYMBOLS.text == name) {
             State.IN_SYMBOL_TABLE_SEXP
-        } else if (SystemSymbols_1_1.MACRO_TABLE.text == name) {
+        } else if (SystemSymbols_1_1.MACROS.text == name) {
             State.IN_MACRO_TABLE_SEXP
         } else {
             throw IonException("'$name' clause not supported in module definition")

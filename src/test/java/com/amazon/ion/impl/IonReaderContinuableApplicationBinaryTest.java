@@ -203,17 +203,17 @@ public class IonReaderContinuableApplicationBinaryTest {
             0xE0, 0x01, 0x01, 0xEA,
             0xE7, 0xF9, '$', 'i', 'o', 'n', // $ion::
             0xCD, // s-expression, length 13
-            0xEE, 0x10, // 'module' (encoded as system symbol ID 16)
+            0xEE, 0x0F, // 'module' (encoded as system symbol ID 15)
             0xA1, '_', // Inline symbol '_'
             0xC8, // s-expression, length 8
-            0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
+            0xEE, 0x07, // 'symbols' (encoded as system symbol ID 7)
             0xB5, 0x94, '$', 'i', 'o', 'n', // ["$ion"]
             0xE4, 0x03, // $1::, where $1 is a local SID that points to the text "$ion"
             0xCA, // s-expression, length 10
-            0xEE, 0x10, // 'module' (encoded as system symbol ID 16)
+            0xEE, 0x0F, // 'module' (encoded as system symbol ID 15)
             0xA1, '_', // Inline symbol '_'
             0xC5, // s-expression, length 5
-            0xEE, 0x0F, // 'symbol_table' (encoded as system symbol ID 15)
+            0xEE, 0x07, // 'symbols' (encoded as system symbol ID 7)
             0xB2, 0x91, 'a', // ["a"]
             0xE1, 0x01 // $1, which now points to "a"
         );

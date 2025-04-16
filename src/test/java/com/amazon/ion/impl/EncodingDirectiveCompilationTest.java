@@ -91,7 +91,7 @@ public class EncodingDirectiveCompilationTest {
 
     private static void writeEncodingDirectiveSymbolTable(IonRawWriter_1_1 writer, boolean append, String... userSymbols) {
         writer.stepInSExp(false);
-        writer.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE);
+        writer.writeSymbol(SystemSymbols_1_1.SYMBOLS);
         if (append) {
             writer.writeSymbol(SystemSymbols.DEFAULT_MODULE);
         }
@@ -125,7 +125,7 @@ public class EncodingDirectiveCompilationTest {
 
     private static void startMacroTable(IonRawWriter_1_1 writer) {
         writer.stepInSExp(false);
-        writer.writeSymbol(SystemSymbols_1_1.MACRO_TABLE);
+        writer.writeSymbol(SystemSymbols_1_1.MACROS);
     }
 
     private static void endMacroTable(IonRawWriter_1_1 writer) {
@@ -712,8 +712,8 @@ public class EncodingDirectiveCompilationTest {
         verifyStream(data, out, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 2),
-            substringCount(SystemSymbols_1_1.SYMBOL_TABLE, 2),
-            substringCount(SystemSymbols_1_1.MACRO_TABLE, 1),
+            substringCount(SystemSymbols_1_1.SYMBOLS, 2),
+            substringCount(SystemSymbols_1_1.MACROS, 1),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 0),
@@ -766,8 +766,8 @@ public class EncodingDirectiveCompilationTest {
         verifyStream(data, out, outputFormat,
             substringCount("$ion_1_1", 1),
             substringCount(DEFAULT_MODULE_DIRECTIVE_PREFIX, 0),
-            substringCount(SystemSymbols_1_1.SYMBOL_TABLE, 0),
-            substringCount(SystemSymbols_1_1.MACRO_TABLE, 0),
+            substringCount("(symbols", 0),
+            substringCount(SystemSymbols_1_1.MACROS, 0),
             substringCount(SystemSymbols_1_1.ADD_SYMBOLS, 0),
             substringCount(SystemSymbols_1_1.ADD_MACROS, 0),
             substringCount(SystemSymbols_1_1.SET_SYMBOLS, 1),
@@ -801,7 +801,7 @@ public class EncodingDirectiveCompilationTest {
             Arrays.asList(
                 new Expression.SExpValue(Collections.singletonList(new FakeSymbolToken(SystemSymbols_1_1.ION.name(), SystemSymbols_1_1.ION.getId())), 0, 5),
                 new Expression.SExpValue(Collections.emptyList(), 1, 5),
-                new Expression.SymbolValue(Collections.emptyList(), new FakeSymbolToken(SystemSymbols_1_1.SYMBOL_TABLE.name(), SystemSymbols_1_1.SYMBOL_TABLE.getId())),
+                new Expression.SymbolValue(Collections.emptyList(), new FakeSymbolToken(SystemSymbols_1_1.SYMBOLS.name(), SystemSymbols_1_1.SYMBOLS.getId())),
                 new Expression.ListValue(Collections.emptyList(), 3, 5),
                 new Expression.StringValue(Collections.emptyList(), "abc"),
                 new Expression.StringValue(Collections.emptyList(), "def")
@@ -2025,7 +2025,7 @@ public class EncodingDirectiveCompilationTest {
 
         startModuleDirectiveForDefaultModule(writer);
         writer.stepInSExp(false);
-        writer.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE);
+        writer.writeSymbol(SystemSymbols_1_1.SYMBOLS);
         writer.stepInList(false);
         writer.writeString("foo");
         writer.stepOut();
