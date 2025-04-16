@@ -49,7 +49,7 @@ internal class MacroCompiler(
             reader.confirmNoAnnotations("macro signature")
             reader.readSignature()
             confirm(reader.nextValue()) { "Macro definition is missing a template body expression." }
-            reader.compileTemplateBodyExpression()
+            reader.compileTemplateBodyExpression(readLiterally = false)
             confirm(!reader.nextValue()) { "Unexpected ${reader.encodingType()} after template body expression." }
         }
         return TemplateMacro(signature.toList(), expressions.toList())
@@ -126,7 +126,7 @@ internal class MacroCompiler(
      *
      * If called when the reader is not positioned on any value, throws [IllegalStateException].
      */
-    private fun ReaderAdapter.compileTemplateBodyExpression() {
+    private fun ReaderAdapter.compileTemplateBodyExpression(readLiterally: Boolean) {
         // NOTE: `toList()` does not allocate for an empty list.
         val annotations: List<SymbolToken> = getTypeAnnotationSymbols()
 
@@ -148,9 +148,9 @@ internal class MacroCompiler(
             IonType.BLOB -> expressions.add(BlobValue(annotations, newBytes()))
             IonType.CLOB -> expressions.add(ClobValue(annotations, newBytes()))
             IonType.SYMBOL -> expressions.add(SymbolValue(annotations, symbolValue()))
-            IonType.LIST -> compileList(annotations)
-            IonType.SEXP -> compileSExpression(annotations)
-            IonType.STRUCT -> compileStruct(annotations)
+            IonType.LIST -> compileList(annotations, readLiterally)
+            IonType.SEXP -> compileSExpression(annotations, readLiterally)
+            IonType.STRUCT -> compileStruct(annotations, readLiterally)
             // IonType.NULL, IonType.DATAGRAM, null
             else -> throw IllegalStateException("Found ${encodingType()}; this should be unreachable.")
         }
@@ -162,7 +162,7 @@ internal class MacroCompiler(
      * If this function returns normally, it will be stepped out of the struct.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun ReaderAdapter.compileStruct(annotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileStruct(annotations: List<SymbolToken>, readLiterally: Boolean) {
         val start = expressions.size
         expressions.add(Placeholder)
         val templateStructIndex = mutableMapOf<String, ArrayList<Int>>()
@@ -174,7 +174,7 @@ internal class MacroCompiler(
                 // Default is an array list with capacity of 1, since the most common case is that a field name occurs once.
                 templateStructIndex.getOrPut(it) { ArrayList(1) } += valueIndex
             }
-            compileTemplateBodyExpression()
+            compileTemplateBodyExpression(readLiterally)
         }
         val end = expressions.size
         expressions[start] = StructValue(annotations, start, end, templateStructIndex)
@@ -186,11 +186,11 @@ internal class MacroCompiler(
      * If this function returns normally, it will be stepped out of the sequence.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun ReaderAdapter.compileList(annotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileList(annotations: List<SymbolToken>, readLiterally: Boolean) {
         val start = expressions.size
         stepIntoContainer()
         expressions.add(Placeholder)
-        compileExpressionTail(start) { end -> ListValue(annotations, start, end) }
+        compileExpressionTail(start, readLiterally) { end -> ListValue(annotations, start, end) }
     }
 
     /**
@@ -199,12 +199,12 @@ internal class MacroCompiler(
      * If this function returns normally, it will be stepped out of the sexp.
      * Caller will need to call [IonReader.next] to get the next value.
      */
-    private fun ReaderAdapter.compileSExpression(sexpAnnotations: List<SymbolToken>) {
+    private fun ReaderAdapter.compileSExpression(sexpAnnotations: List<SymbolToken>, readLiterally: Boolean) {
         val start = expressions.size
         stepIntoContainer()
         expressions.add(Placeholder)
         if (nextValue()) {
-            if (encodingType() == IonType.SYMBOL) {
+            if (encodingType() == IonType.SYMBOL && !readLiterally) {
                 when (stringValue()) {
                     TDL_VARIABLE_EXPANSION_SIGIL -> {
                         confirm(sexpAnnotations.isEmpty()) { "Variable expansion may not be annotated" }
@@ -216,7 +216,7 @@ internal class MacroCompiler(
                     TDL_EXPRESSION_GROUP_SIGIL -> {
                         confirm(sexpAnnotations.isEmpty()) { "Expression group may not be annotated" }
                         confirmNoAnnotations("Expression group operator")
-                        compileExpressionTail(start) { end -> ExpressionGroup(start, end) }
+                        compileExpressionTail(start, readLiterally) { end -> ExpressionGroup(start, end) }
                         return
                     }
 
@@ -224,42 +224,57 @@ internal class MacroCompiler(
                         confirm(sexpAnnotations.isEmpty()) { "Macro invocation may not be annotated" }
                         confirmNoAnnotations("Macro invocation operator")
                         nextValue()
-                        val macro = readMacroReference()
-                        compileExpressionTail(start) { end -> MacroInvocation(macro, start, end) }
+                        val macroRef = readMacroReference()
+
+                        // TODO: Come up with a consistent strategy for handling special forms.
+                        if (macroRef.hasName()) when (macroRef.name) {
+                            SystemSymbols_1_1.LITERAL.text -> {
+                                // Drop the placeholder.
+                                expressions.removeLastOrNull()
+                                forEachRemaining { compileTemplateBodyExpression(readLiterally = true) }
+                                stepOutOfContainer()
+                                return
+                            }
+                        }
+
+                        val macro = if (macroRef.isUnqualified()) {
+                            getMacro(macroRef)
+                        } else if (macroRef.isSystemMacro()) {
+                            SystemMacro.getMacroOrSpecialForm(macroRef)
+                        } else {
+                            TODO("Qualified macros for non-system modules")
+                        }
+                        macro ?: throw IonException("Unrecognized macro: $macroRef")
+                        compileExpressionTail(start, readLiterally) { end -> MacroInvocation(macro, start, end) }
                         return
                     }
                 }
             }
             // Compile the value we're already positioned on before compiling the rest of the s-expression
-            compileTemplateBodyExpression()
+            compileTemplateBodyExpression(readLiterally)
         }
-        compileExpressionTail(start) { end -> SExpValue(sexpAnnotations, start, end) }
+        compileExpressionTail(start, readLiterally) { end -> SExpValue(sexpAnnotations, start, end) }
     }
 
     /**
      * Must be positioned on the (expected) macro reference.
      */
-    private fun ReaderAdapter.readMacroReference(): Macro {
-
+    private fun ReaderAdapter.readMacroReference(): MacroRef {
         val annotations = getTypeAnnotationSymbols()
-        val isQualifiedSystemMacro = annotations.size == 1 && SystemSymbols_1_1.ION.text == annotations[0].getText()
-
-        val macroRef = when (encodingType()) {
-            IonType.SYMBOL -> {
-                val macroName = stringValue()
-                // TODO: Come up with a consistent strategy for handling special forms.
-                MacroRef.ByName(macroName)
-            }
-
+        val moduleName = when (annotations.size) {
+            0 -> null
+            1 -> annotations[0].text
+            else -> throw IonException("macro name may only be qualified by one module name")
+        }
+        return when (encodingType()) {
+            IonType.SYMBOL -> MacroRef.byName(moduleName, stringValue())
             IonType.INT -> {
                 val sid = intValue()
                 if (sid < 0) throw IonException("Macro ID must be non-negative: $sid")
-                MacroRef.ById(intValue())
+                MacroRef.byId(moduleName, intValue())
             }
             else -> throw IonException("macro invocation must start with an id (int) or identifier (symbol); found ${encodingType() ?: "nothing"}\"")
         }
-        val m = if (isQualifiedSystemMacro) SystemMacro.getMacroOrSpecialForm(macroRef) else getMacro(macroRef)
-        return m ?: throw IonException("Unrecognized macro: $macroRef")
     }
 
     private fun ReaderAdapter.compileVariableExpansion(placeholderIndex: Int) {
@@ -274,8 +289,8 @@ internal class MacroCompiler(
         stepOutOfContainer()
     }
 
-    private inline fun ReaderAdapter.compileExpressionTail(seqStart: Int, constructor: (Int) -> TemplateBodyExpression) {
-        forEachRemaining { compileTemplateBodyExpression() }
+    private inline fun ReaderAdapter.compileExpressionTail(seqStart: Int, readLiterally: Boolean, constructor: (Int) -> TemplateBodyExpression) {
+        forEachRemaining { compileTemplateBodyExpression(readLiterally) }
         val seqEnd = expressions.size
         expressions[seqStart] = constructor(seqEnd)
         stepOutOfContainer()

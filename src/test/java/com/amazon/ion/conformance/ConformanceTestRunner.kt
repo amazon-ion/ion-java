@@ -75,6 +75,11 @@ abstract class ConformanceTestRunner(
             "conformance/system_macros/" in file.absolutePath &&
                 "in binary with a user macro address" in completeTestName -> false
 
+            // FIXME: Fails due to unknown symbol text because IonReaderTextUserX doesn't have support for
+            //        Ion 1.1 encoding modules or system symbol table
+            "conformance/system_symbols.ion" in file.absolutePath &&
+                "Ion 1.1 system symbol" in completeTestName -> false
+
             // FIXME: Timestamp should not allow an offset of +/-1440
             "the offset argument must be less than 1440" in completeTestName -> false
             "the offset argument must be greater than -1440" in completeTestName -> false
@@ -107,15 +112,17 @@ abstract class ConformanceTestRunner(
             "subnormal f16" in completeTestName -> false
             "conformance/system_macros/parse_ion.ion" in file.absolutePath -> false
             "tdl/for.ion" in file.absolutePath -> false
-            "tdl/literal.ion" in file.absolutePath -> false
 
-            // Some of these are failing because
-            //  - Ion Java doesn't support the Ion 1.1 system symbol table yet
-            //  - The tokens `$ion_1_0` and `'$ion_1_0'` are never user values.
-            // TODO: Add test names once they are added to this file
-            file.endsWith("system_symbols.ion") -> false
             // $ion_literal not supported yet
             file.endsWith("ion_literal.ion") -> false
+
+            // WON'T FIX (probably): The top-level tokens `$ion_1_0` and `'$ion_1_0'` are never user values in IonJava
+            "Ion 1.0 system symbol '\$ion_1_0'" in completeTestName -> false
+            "Ion 1.1 system symbol '\$ion_1_0'" in completeTestName -> false
+            "a symbol that looks like an Ion 1.0 IVM" in completeTestName -> false
+            // FIXME: Even if we can't fix it for $ion_1_0, we can maybe fix it for $ion_1_1
+            "a symbol that looks like an Ion 1.1 IVM" in completeTestName -> false
+
             else -> true
         }
     }

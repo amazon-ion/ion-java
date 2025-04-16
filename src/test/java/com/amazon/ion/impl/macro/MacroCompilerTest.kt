@@ -28,11 +28,7 @@ class MacroCompilerTest {
     val ion: IonSystem = IonSystemBuilder.standard().build()
 
     private val fakeMacroTable: (MacroRef) -> Macro? = {
-        when (it) {
-            ById(12) -> SystemMacro.Values
-            ByName("values") -> SystemMacro.Values
-            else -> null
-        }
+        if (it.name == "values" || it.id == 12) SystemMacro.Values else null
     }
 
     private data class MacroSourceAndTemplate(val source: String, val template: TemplateMacro) : Arguments {
