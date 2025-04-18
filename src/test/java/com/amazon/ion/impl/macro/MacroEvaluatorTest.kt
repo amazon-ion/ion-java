@@ -1186,8 +1186,8 @@ class MacroEvaluatorTest {
         evaluator.assertExpansion(
             """
             $ion::(module _
-              (symbol_table [a, b, c])
-              (macro_table _)
+              (macros _)
+              (symbols [a, b, c])
             )
             """
         )
@@ -1208,8 +1208,8 @@ class MacroEvaluatorTest {
         evaluator.assertExpansion(
             """
             $ion::(module _
-              (symbol_table _ [a, b, c])
-              (macro_table _)
+              (macros _)
+              (symbols _ [a, b, c])
             )
             """
         )
@@ -1233,9 +1233,9 @@ class MacroEvaluatorTest {
         evaluator.assertExpansion(
             """
             $ion::(module _
-              (symbol_table _)
-              (macro_table
+              (macros
                 (macro answer () 42))
+              (symbols _)
             )
             """
         )
@@ -1259,10 +1259,10 @@ class MacroEvaluatorTest {
         evaluator.assertExpansion(
             """
             $ion::(module _
-              (symbol_table _)
-              (macro_table
+              (macros
                 _
                 (macro answer () 42))
+              (symbols _)
             )
             """
         )
@@ -1281,8 +1281,8 @@ class MacroEvaluatorTest {
             """
             $ion::(module _
               (import the_module "com.amazon.Foo" 2)
-              (symbol_table _ the_module)
-              (macro_table _ the_module)
+              (macros _ the_module)
+              (symbols _ the_module)
             )
             """
         )
@@ -1300,9 +1300,9 @@ class MacroEvaluatorTest {
         evaluator.assertExpansion(
             """
             $ion::(module _
-              (import the_module "com.amazon.Foo" 1)
-              (symbol_table _ the_module)
-              (macro_table _ the_module)
+              (import the_module "com.amazon.Foo")
+              (macros _ the_module)
+              (symbols _ the_module)
             )
             """
         )

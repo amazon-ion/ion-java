@@ -373,8 +373,8 @@ internal class IonManagedWriter_1_1(
         writeSystemSexp {
             writeSymbol(SystemSymbols_1_1.MODULE)
             writeSymbol(SystemSymbols.DEFAULT_MODULE)
-            writeVerboseSymbolTableClause()
             writeVerboseMacroTableClause()
+            writeVerboseSymbolTableClause()
         }
         symbolTable.putAll(newSymbols)
         newSymbols.clear()
@@ -383,7 +383,7 @@ internal class IonManagedWriter_1_1(
     }
 
     /**
-     * Writes the `(symbol_table ...)` clause into the encoding expression by invoking
+     * Updates the symbols in the encoding context by invoking
      * the `add_symbols` or `set_symbols` system macro.
      * If the symbol table would be empty, writes nothing, which is equivalent
      * to an empty symbol table.
@@ -418,7 +418,7 @@ internal class IonManagedWriter_1_1(
 
         writeSystemSexp {
             forceNoNewlines(true)
-            systemData.writeSymbol(SystemSymbols_1_1.SYMBOL_TABLE)
+            systemData.writeSymbol(SystemSymbols_1_1.SYMBOLS)
 
             // Add previous symbol table
             if (hasSymbolsToRetain) {
@@ -439,7 +439,7 @@ internal class IonManagedWriter_1_1(
     }
 
     /**
-     * Writes the `(macro_table ...)` clause into the encoding expression by invoking
+     * Adds macros to the encoding context by invoking
      * the `add_macros` or `set_macros` system macro.
      * If the macro table would be empty, writes nothing, which is equivalent
      * to an empty macro table.
@@ -484,7 +484,7 @@ internal class IonManagedWriter_1_1(
 
         writeSystemSexp {
             forceNoNewlines(true)
-            writeSymbol(SystemSymbols_1_1.MACRO_TABLE)
+            writeSymbol(SystemSymbols_1_1.MACROS)
             if (newMacros.size > 0) forceNoNewlines(false)
             if (hasMacrosToRetain) {
                 writeSymbol(SystemSymbols.DEFAULT_MODULE)

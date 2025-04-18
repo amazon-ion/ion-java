@@ -84,6 +84,12 @@ abstract class ConformanceTestRunner(
             "the offset argument must be less than 1440" in completeTestName -> false
             "the offset argument must be greater than -1440" in completeTestName -> false
 
+            // FIXME: Require these to be invoked at top level
+            "set_symbols may not be invoked" in completeTestName -> false
+            "add_symbols may not be invoked" in completeTestName -> false
+            "set_macros may not be invoked" in completeTestName -> false
+            "add_macros may not be invoked" in completeTestName -> false
+
             // FIXME: Ensure Ion 1.1 symbol tables are properly validated
             "add_symbols does not accept null.symbol" in completeTestName -> false
             "add_symbols does not accept null.string" in completeTestName -> false

@@ -481,7 +481,7 @@ class IonRawBinaryWriterTest_1_1 {
             6E          | true
             02 01       | FlexSym SID 64
             6E          | true
-            01 6F       | System Symbol symbol_table
+            01 67       | System Symbol symbols
             6E          | true
             01 F0       | End delimited struct
             """
@@ -493,7 +493,7 @@ class IonRawBinaryWriterTest_1_1 {
             writeBool(true)
             writeFieldName(64)
             writeBool(true)
-            writeFieldName(SystemSymbols_1_1.SYMBOL_TABLE)
+            writeFieldName(SystemSymbols_1_1.SYMBOLS)
             writeBool(true)
             stepOut()
         }
@@ -637,12 +637,12 @@ class IonRawBinaryWriterTest_1_1 {
             FD     | Variable length Struct
             09     | Length = 4
             01     | switch to FlexSym encoding
-            01 6F  | FlexSym System Symbol 'symbol_table'
+            01 67  | FlexSym System Symbol 'symbols'
             6E     | true
             """
         ) {
             stepInStruct(usingLengthPrefix = true)
-            writeFieldName(SystemSymbols_1_1.SYMBOL_TABLE)
+            writeFieldName(SystemSymbols_1_1.SYMBOLS)
             writeBool(true)
             stepOut()
         }
@@ -824,7 +824,7 @@ class IonRawBinaryWriterTest_1_1 {
     @Test
     fun `write empty text and sid 0 annotations`() {
         // Empty text is a system symbol
-        assertWriterOutputEquals("E8 01 60 01 81 6E") {
+        assertWriterOutputEquals("E8 01 60 01 80 6E") {
             writeAnnotations(0)
             writeAnnotations("")
             writeBool(true)
@@ -1080,7 +1080,7 @@ class IonRawBinaryWriterTest_1_1 {
             E2 39 2F
             A3 66 6F 6F
             EE 0B
-            EE 21
+            EE 20
             """
         ) {
             writeSymbol(0)
@@ -1912,7 +1912,7 @@ class IonRawBinaryWriterTest_1_1 {
         // Text
         "    a, FF 61",
         "  abc, FB 61 62 63",
-        "   '', 01 81",
+        "   '', 01 80",
     )
     fun `write a tagless symbol`(value: String, expectedBytes: String) {
         val macro = dummyMacro(nArgs = 1, variadicParam(ParameterEncoding.FlexSym))

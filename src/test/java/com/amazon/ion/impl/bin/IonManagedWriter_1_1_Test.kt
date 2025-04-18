@@ -229,10 +229,10 @@ internal class IonManagedWriter_1_1_Test {
             E0 01 01 EA | IVM
             E7 01 61    | $ion::
             CA          | (
-            EE 10       |    module
+            EE 0F       |    module
             A1 5F       |    _
             C5          |    (
-            EE 0F       |       symbol_table
+            EE 07       |       symbols
             B2 91 61    |       ["a"]
                         |    )
                         | )

@@ -1069,7 +1069,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x00, // User macro ID 0
             0xF9, 0x6E, 0x61, 0x6D, 0x65, // interpreted as compact symbol (FlexSym with inline text "name")
             0x09, // interpreted as compact symbol (FlexSym with SID 4)
-            0x01, 0x81 // interpreted as compact symbol (special FlexSym)
+            0x01, 0x80 // interpreted as compact symbol (special FlexSym)
         ));
         try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
             assertSequence(
@@ -1110,9 +1110,9 @@ public class IonReaderContinuableCoreBinaryTest {
         byte[] data = withIvm(1, bytes(
             0xE7, 0x01, 0x61, // One FlexSym annotation, with opcode, opcode 61 = system symbol 1 = $ion
             0xCA, // (
-            0xEE, 0x10, // module
+            0xEE, 0x0F, // module
             0xA1, '_', // _
-            0xC5, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
+            0xC5, 0xEE, 0x07, // S-exp, system symbol 0x7 = symbols
             0xB2, 0x91, 'a', // ["a"]
             0xE1, 0x01 // $1 = a
         ));
@@ -1138,9 +1138,9 @@ public class IonReaderContinuableCoreBinaryTest {
         byte[] data = withIvm(1, bytes(
             0xE7, 0x01, 0x61, // One FlexSym annotation, with opcode, opcode 61 = system symbol 1 = $ion
             0xCC, // (
-            0xEE, 0x10, // module
+            0xEE, 0x0F, // module
             0xA1, '_', // Inline symbol '_'
-            0xC7, 0xEE, 0x0F, // S-exp, system symbol 0xF = symbol_table
+            0xC7, 0xEE, 0x07, // S-exp, system symbol 0x7 = symbols
             0xA1, '_', // Inline symbol '_'
             0xB2, 0x91, 'a', // ["a"]
             0xE1, SystemSymbols_1_1.size() + 1 // first local symbol = a
@@ -1187,7 +1187,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x93, 0x61, 0x62, 0x63, // 3-byte string, utf-8 "abc"
             0xF0, // delimited end...  of expression group
             0xE1, // SID single byte
-            0x40  // SID $64
+            0x3F  // SID $63
         ));
         assertMacroAwareTranscribeProducesEquivalentStream(data, constructFromBytes);
     }

@@ -21,56 +21,55 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
     ION_LITERAL( /*             */ 11, "\$ion_literal"),
     ION_SHARED_MODULE( /*       */ 12, "\$ion_shared_module"),
     MACRO( /*                   */ 13, "macro"),
-    MACRO_TABLE( /*             */ 14, "macro_table"),
-    SYMBOL_TABLE( /*            */ 15, "symbol_table"),
-    MODULE( /*                  */ 16, "module"),
-    EXPORT( /*                  */ 17, "export"),
-    IMPORT( /*                  */ 18, "import"),
-    FLEX_SYMBOL( /*             */ 19, "flex_symbol"),
-    FLEX_INT( /*                */ 20, "flex_int"),
-    FLEX_UINT( /*               */ 21, "flex_uint"),
-    UINT8( /*                   */ 22, "uint8"),
-    UINT16( /*                  */ 23, "uint16"),
-    UINT32( /*                  */ 24, "uint32"),
-    UINT64( /*                  */ 25, "uint64"),
-    INT8( /*                    */ 26, "int8"),
-    INT16( /*                   */ 27, "int16"),
-    INT32( /*                   */ 28, "int32"),
-    INT64( /*                   */ 29, "int64"),
-    FLOAT16( /*                 */ 30, "float16"),
-    FLOAT32( /*                 */ 31, "float32"),
-    FLOAT64( /*                 */ 32, "float64"),
-    EMPTY_TEXT( /*              */ 33, ""),
-    FOR( /*                     */ 34, "for"),
-    LITERAL( /*                 */ 35, "literal"),
-    IF_NONE( /*                 */ 36, "if_none"),
-    IF_SOME( /*                 */ 37, "if_some"),
-    IF_SINGLE( /*               */ 38, "if_single"),
-    IF_MULTI( /*                */ 39, "if_multi"),
-    NONE( /*                    */ 40, "none"),
-    VALUES( /*                  */ 41, "values"),
-    DEFAULT( /*                 */ 42, "default"),
-    META( /*                    */ 43, "meta"),
-    REPEAT( /*                  */ 44, "repeat"),
-    FLATTEN( /*                 */ 45, "flatten"),
-    DELTA( /*                   */ 46, "delta"),
-    SUM( /*                     */ 47, "sum"),
-    ANNOTATE( /*                */ 48, "annotate"),
-    MAKE_STRING( /*             */ 49, "make_string"),
-    MAKE_SYMBOL( /*             */ 50, "make_symbol"),
-    MAKE_DECIMAL( /*            */ 51, "make_decimal"),
-    MAKE_TIMESTAMP( /*          */ 52, "make_timestamp"),
-    MAKE_BLOB( /*               */ 53, "make_blob"),
-    MAKE_LIST( /*               */ 54, "make_list"),
-    MAKE_SEXP( /*               */ 55, "make_sexp"),
-    MAKE_FIELD( /*              */ 56, "make_field"),
-    MAKE_STRUCT( /*             */ 57, "make_struct"),
-    PARSE_ION( /*               */ 58, "parse_ion"),
-    SET_SYMBOLS( /*             */ 59, "set_symbols"),
-    ADD_SYMBOLS( /*             */ 60, "add_symbols"),
-    SET_MACROS( /*              */ 61, "set_macros"),
-    ADD_MACROS( /*              */ 62, "add_macros"),
-    USE( /*                     */ 63, "use"),
+    MACROS( /*                  */ 14, "macros"),
+    MODULE( /*                  */ 15, "module"),
+    EXPORT( /*                  */ 16, "export"),
+    IMPORT( /*                  */ 17, "import"),
+    FLEX_SYMBOL( /*             */ 18, "flex_symbol"),
+    FLEX_INT( /*                */ 19, "flex_int"),
+    FLEX_UINT( /*               */ 20, "flex_uint"),
+    UINT8( /*                   */ 21, "uint8"),
+    UINT16( /*                  */ 22, "uint16"),
+    UINT32( /*                  */ 23, "uint32"),
+    UINT64( /*                  */ 24, "uint64"),
+    INT8( /*                    */ 25, "int8"),
+    INT16( /*                   */ 26, "int16"),
+    INT32( /*                   */ 27, "int32"),
+    INT64( /*                   */ 28, "int64"),
+    FLOAT16( /*                 */ 29, "float16"),
+    FLOAT32( /*                 */ 30, "float32"),
+    FLOAT64( /*                 */ 31, "float64"),
+    EMPTY_TEXT( /*              */ 32, ""),
+    FOR( /*                     */ 33, "for"),
+    LITERAL( /*                 */ 34, "literal"),
+    IF_NONE( /*                 */ 35, "if_none"),
+    IF_SOME( /*                 */ 36, "if_some"),
+    IF_SINGLE( /*               */ 37, "if_single"),
+    IF_MULTI( /*                */ 38, "if_multi"),
+    NONE( /*                    */ 39, "none"),
+    VALUES( /*                  */ 40, "values"),
+    DEFAULT( /*                 */ 41, "default"),
+    META( /*                    */ 42, "meta"),
+    REPEAT( /*                  */ 43, "repeat"),
+    FLATTEN( /*                 */ 44, "flatten"),
+    DELTA( /*                   */ 45, "delta"),
+    SUM( /*                     */ 46, "sum"),
+    ANNOTATE( /*                */ 47, "annotate"),
+    MAKE_STRING( /*             */ 48, "make_string"),
+    MAKE_SYMBOL( /*             */ 49, "make_symbol"),
+    MAKE_DECIMAL( /*            */ 50, "make_decimal"),
+    MAKE_TIMESTAMP( /*          */ 51, "make_timestamp"),
+    MAKE_BLOB( /*               */ 52, "make_blob"),
+    MAKE_LIST( /*               */ 53, "make_list"),
+    MAKE_SEXP( /*               */ 54, "make_sexp"),
+    MAKE_FIELD( /*              */ 55, "make_field"),
+    MAKE_STRUCT( /*             */ 56, "make_struct"),
+    PARSE_ION( /*               */ 57, "parse_ion"),
+    SET_SYMBOLS( /*             */ 58, "set_symbols"),
+    ADD_SYMBOLS( /*             */ 59, "add_symbols"),
+    SET_MACROS( /*              */ 60, "set_macros"),
+    ADD_MACROS( /*              */ 61, "add_macros"),
+    USE( /*                     */ 62, "use"),
     ;
 
     val utf8Bytes = text.encodeToByteArray()
@@ -95,20 +94,24 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
         }
 
         @JvmStatic
-        private val BY_NAME: HashMap<String, SystemSymbols_1_1> = ALL_VALUES.fold(HashMap(ALL_VALUES.size)) { map, s ->
-            check(map.put(s.text, s) == null) { "Duplicate system symbol text: ${s.id}=${s.text}" }
-            map
-        }
+        private val BY_NAME: Map<String, SystemSymbols_1_1> = Collections.unmodifiableMap(ALL_VALUES.associateBy { it.text })
 
         @JvmStatic
         fun size() = ALL_VALUES.size
 
         // Private to avoid potential clashes with enum member names.
         @JvmStatic
-        private val ALL_SYMBOL_TEXTS = ALL_VALUES.map { it.text }
+        private val ALL_SYMBOL_TEXTS = Collections.unmodifiableList(ALL_VALUES.map { it.text })
+
+        // Private to avoid potential clashes with enum member names.
+        @JvmStatic
+        private val SYMBOL_IDS_BY_NAME = Collections.unmodifiableMap(ALL_VALUES.associate { it.text to it.id })
 
         @JvmStatic
         fun allSymbolTexts() = ALL_SYMBOL_TEXTS
+
+        @JvmStatic
+        fun symbolIdsByName() = SYMBOL_IDS_BY_NAME
 
         /** Returns true if the [id] is a valid system symbol ID. */
         @JvmStatic
@@ -124,7 +127,8 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
 
         /**
          * Returns the system symbol corresponding to the given system symbol ID,
-         * or `null` if not a valid system symbol ID.*/
+         * or `null` if not a valid system symbol ID.
+         */
         @JvmStatic
         operator fun get(id: Int): SystemSymbols_1_1? {
             return if (contains(id)) { SystemSymbols_1_1.ALL_VALUES[id - 1] } else { null }
@@ -132,7 +136,8 @@ enum class SystemSymbols_1_1(val id: Int, val text: String) {
 
         /**
          * Returns the system symbol corresponding to the given system symbol text,
-         * or `null` if not a valid system symbol text.*/
+         * or `null` if not a valid system symbol text.
+         */
         @JvmStatic
         operator fun get(text: String): SystemSymbols_1_1? {
             return BY_NAME[text]
