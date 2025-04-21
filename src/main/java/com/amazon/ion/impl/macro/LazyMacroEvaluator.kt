@@ -958,6 +958,8 @@ class LazyMacroEvaluator : IonReader {
                             session.finishVariable()
                         }
                         currentExpander.close()
+                        // TODO removing the following line makes no functional difference; ensure removing it does
+                        //  not result in a memory leak, then remove.
                         session.environment.finishChildEnvironments(session.currentExpander!!.environmentContext)
                         // TODO reset field name and annotations here?
                         continue
@@ -988,12 +990,14 @@ class LazyMacroEvaluator : IonReader {
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
-        session.currentExpander = currentContainer.expansion.top() // TODO it seems like not enough of the child expansions are cleaned up before this, resulting in duplicate work before the next next()
+        session.currentExpander = currentContainer.expansion.top()
         if (session.currentExpander!!.expansionKind == ExpansionKind.Variable) {
             // The container being stepped out of was an argument to a variable.
             session.currentExpander!!.reachedEndOfExpression = true
         }
         popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer() // TODO what if this is a logical container?
+        // TODO removing the following line makes no functional difference; ensure removing it does
+        //  not result in a memory leak, then remove.
         popped.expansion.session.environment.finishChildEnvironments(popped.expansion.environmentContext)
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName
