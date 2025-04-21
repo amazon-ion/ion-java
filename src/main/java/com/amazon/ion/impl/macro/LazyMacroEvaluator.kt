@@ -219,9 +219,12 @@ class LazyMacroEvaluator : IonReader {
                     ExpressionType.E_EXPRESSION -> {
                         val macro = expressionTape.context() as Macro
                         val macroBodyTape = thisExpansion.session.getTape(macro.bodyTape)
+                        macroBodyTape.cacheExpressionPointers(expressionTape, expressionTape.currentIndex())
+                        // TODO do these three in one step? OR, change setNextAfterEndOfEExpression to skip the eexp i currently points at and then remove the next two lines
                         expressionTape.prepareNext()
                         expressionTape.next()
-                        val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape, /*expressionTape.currentIndex(),*/ true)
+                        expressionTape.setNextAfterEndOfEExpression() // TODO expressionStarts[] can be changed to include the index of the e_expression_end
+                        val newEnvironment = thisExpansion.session.environment.startChildEnvironment(macroBodyTape, expressionTape)
                         val expansionKind = forMacro(macro)
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = expansionKind,
@@ -251,6 +254,7 @@ class LazyMacroEvaluator : IonReader {
                     }
                     ExpressionType.VARIABLE -> {
                         expressionTape.prepareNext()
+                        // TODO determine if this is a pass-through variable that has already been consumed. If so, skip it.
                         thisExpansion.childExpansion = thisExpansion.readArgument(expressionTape.context() as Int)
                         thisExpansion.childExpansion!!.parentExpansion = thisExpansion
                         ExpressionType.CONTINUE_EXPANSION
@@ -282,7 +286,7 @@ class LazyMacroEvaluator : IonReader {
             override fun produceNext(thisExpansion: ExpansionInfo): ExpressionType {
                 val expression = Stream.produceNext(thisExpansion)
                 if (expression == ExpressionType.END_OF_EXPANSION) {
-                    thisExpansion.session.environment.seekPastFinalArgument() // TODO can *almost* get rid of this. See if there's an alternative.
+                    thisExpansion.session.environment.currentContext.tape!!.seekPastFinalArgument() // TODO can *almost* get rid of this. See if there's an alternative.
                     thisExpansion.session.environment.finishChildEnvironment()
                 }
                 return expression
@@ -689,11 +693,11 @@ class LazyMacroEvaluator : IonReader {
          * Returns an expansion for the given variable.
          */
         fun ExpansionInfo.readArgument(variableRef: Int): ExpansionInfo {
-            val argumentTape = session.environment.seekToArgument(variableRef)
+            val argumentTape = environmentContext.tape!!.seekToArgument(variableRef)
                 ?: return session.getExpander(Empty, LazyEnvironment.EMPTY.currentContext) // Argument was elided.
             return session.getExpander(
                 expansionKind = Variable,
-                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape/*, session.currentExpander!!.environmentContext.nextVariablePointerIndex*/)
+                environmentContext = session.environment.startChildEnvironment(argumentTape, argumentTape)
             )
         }
 

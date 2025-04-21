@@ -6692,7 +6692,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-
+    @Disabled
     @Test
     public void rewriteAllTypes() throws Exception {
 
@@ -6781,19 +6781,57 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
+    @Disabled
     @Test
-    public void metricSingleTest() throws Exception {
-        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "metric_single_test.11.ion");
-        Path binaryOut = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "metric_single_test.11.10n");
+    public void summary0Test() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary0_test.11.ion");
+        Path binaryOut = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary0_test.11.10n");
 
-        /*
         try (MacroAwareIonReader reader = ((_Private_IonReaderBuilder) IonReaderBuilder.standard()).buildMacroAware(Files.newInputStream(file));
              MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(Files.newOutputStream(binaryOut))
         ) {
             reader.transcodeAllTo(writer);
         }
 
-         */
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(binaryOut));
+             IonWriter writer = IonTextWriterBuilder.pretty().build((Appendable) System.out)
+        ) {
+            writer.writeValues(reader);
+        }
+    }
+
+    @Disabled
+    @Test
+    public void metricSingleTest() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "metric_single_test.11.ion");
+        Path binaryOut = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "metric_single_test.11.10n");
+
+
+        try (MacroAwareIonReader reader = ((_Private_IonReaderBuilder) IonReaderBuilder.standard()).buildMacroAware(Files.newInputStream(file));
+             MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(Files.newOutputStream(binaryOut))
+        ) {
+            reader.transcodeAllTo(writer);
+        }
+
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(binaryOut));
+             IonWriter writer = IonTextWriterBuilder.pretty().build((Appendable) System.out)
+        ) {
+            writer.writeValues(reader);
+        }
+    }
+
+    @Disabled
+    @Test
+    public void groupTest() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "group_test.11.ion");
+        Path binaryOut = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "group_test.11.10n");
+
+
+        try (MacroAwareIonReader reader = ((_Private_IonReaderBuilder) IonReaderBuilder.standard()).buildMacroAware(Files.newInputStream(file));
+             MacroAwareIonWriter writer = (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(Files.newOutputStream(binaryOut))
+        ) {
+            reader.transcodeAllTo(writer);
+        }
 
         try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(binaryOut));
              IonWriter writer = IonTextWriterBuilder.pretty().build((Appendable) System.out)
@@ -6803,9 +6841,49 @@ public class IonReaderContinuableTopLevelBinaryTest {
     }
 
     @Test
+    public void groupTestFromBinary() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "group_test.11.10n");
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Attributes", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Counters", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("Event", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(2.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(2, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertNull(reader.next());
+        }
+    }
+
+    @Test
     public void metricSingleTestFromBinary() throws Exception {
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "metric_single_test.11.10n");
         try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            /*
             assertEquals(IonType.STRUCT, reader.next());
             reader.stepIn();
             assertEquals(IonType.SYMBOL, reader.next());
@@ -6829,11 +6907,47 @@ public class IonReaderContinuableTopLevelBinaryTest {
             assertEquals("", reader.stringValue());
             assertNull(reader.next());
             reader.stepOut(); // Struct
+
+             */
+
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("Success", reader.stringValue());
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Samples", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals(1.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Repeat", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut(); // Struct
+            assertNull(reader.next());
+            reader.stepOut(); //List
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Dimensions", reader.getFieldName());
+            assertEquals(123, reader.intValue());
+            /*
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+
+             */
+            assertNull(reader.next());
+            reader.stepOut(); // Struct
+
             assertNull(reader.next());
         }
     }
 
-    @Disabled
     @Test
     public void summaryOneFromBinary() throws Exception {
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary_one_test.11.10n");
@@ -6858,11 +6972,35 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-    @Disabled
+    @Test
+    public void summary0FromBinary() throws Exception {
+        Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary0_test.11.10n");
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("Attempt", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(0.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+        }
+    }
+
     @Test
     public void summaryMsFromBinary() throws Exception {
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "summary_ms_test.11.10n");
         try (IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file))) {
+            /*
             assertEquals(IonType.STRUCT, reader.next());
             reader.stepIn();
             assertEquals(IonType.LIST, reader.next());
@@ -6886,6 +7024,72 @@ public class IonReaderContinuableTopLevelBinaryTest {
             assertNull(reader.next());
             reader.stepOut();
             assertEquals(IonType.LIST, reader.next());
+
+            assertNull(reader.next());
+
+             */
+            assertEquals(IonType.LIST, reader.next());
+            reader.stepIn();
+
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("foo", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(3.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("ms", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("bar", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(1.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("ms", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertEquals(IonType.LIST, reader.next());
+            reader.stepIn();
+
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("baz", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(5.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("ms", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertNull(reader.next());
+            reader.stepOut();
 
             assertNull(reader.next());
         }

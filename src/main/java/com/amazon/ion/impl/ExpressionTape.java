@@ -8,7 +8,6 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.macro.Expression;
-import com.amazon.ion.impl.macro.LazyEnvironment;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -20,14 +19,25 @@ public class ExpressionTape { // TODO make internal
 
     // TODO should be: ArgumentPointer
     public static class VariablePointer {
-        LazyEnvironment.NestedContext source = null;
+
+        private static final VariablePointer ELIDED = new VariablePointer();
+
+        ExpressionTape source = null;
         int index = -1;
 
-        public LazyEnvironment.NestedContext visit() {
-            ExpressionTape tape = source.getTape();
-            tape.i = index;
-            tape.iNext = index;
+        public ExpressionTape visit() {
+            source.i = index;
+            source.iNext = index;
             return source;
+        }
+
+        public ExpressionTape visitIfForward() {
+            if (index >= source.i) {
+                source.i = index;
+                source.iNext = index;
+                return source;
+            }
+            return null;
         }
     }
 
@@ -40,6 +50,8 @@ public class ExpressionTape { // TODO make internal
         private int[][] expressionStarts;
         private int size = 0;
         private int[] numberOfExpressions;
+        private int numberOfVariables = 0;
+        private int[] variableStarts;
 
         Core(int initialSize) {
             contexts = new Object[initialSize];
@@ -50,6 +62,7 @@ public class ExpressionTape { // TODO make internal
             expressionStarts = new int[1][];
             expressionStarts[0] = new int[16];
             numberOfExpressions = new int[1];
+            variableStarts = new int[8];
         }
 
         void grow() {
@@ -80,6 +93,13 @@ public class ExpressionTape { // TODO make internal
             }
             expressionStarts[eExpressionIndex][numberOfExpressionsInEExpression] = index;
         }
+
+        void setNextVariable(int index) {
+            if (variableStarts.length <= numberOfVariables) {
+                variableStarts = Arrays.copyOf(variableStarts, variableStarts.length * 2);
+            }
+            variableStarts[numberOfVariables++] = index;
+        }
     }
 
     private Core core;
@@ -90,6 +110,8 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
+    private final List<VariablePointer> variablePointers = new ArrayList<>(8);
+    private final List<VariablePointer> expressionPointers = new ArrayList<>(8);
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -107,6 +129,8 @@ public class ExpressionTape { // TODO make internal
 
     public void reset(Core core) {
         this.core = core;
+        variablePointers.clear();
+        expressionPointers.clear();
         rewindTo(0);
     }
 
@@ -120,7 +144,7 @@ public class ExpressionTape { // TODO make internal
 
     private void setExpressionStart(ExpressionType type) {
         if (type == ExpressionType.E_EXPRESSION) {
-            if (/*numberOfEExpressions > 0*/ eExpressionActiveAtDepth[depth] >= 0) {
+            if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             core.ends[i] = numberOfEExpressions++;
@@ -131,10 +155,15 @@ public class ExpressionTape { // TODO make internal
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             increaseDepth(false);
-        } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION || type == ExpressionType.VARIABLE) { // TODO what about field names and annotations?
+        } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION) { // TODO what about field names?
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
+        } else if (type == ExpressionType.VARIABLE) {
+            if (eExpressionActiveAtDepth[depth] >= 0) {
+                core.setNextExpression(eExpressionActiveAtDepth[depth], i);
+            }
+            core.setNextVariable(i);
         } else if (type.isEnd()) {
             depth--;
         }
@@ -216,8 +245,11 @@ public class ExpressionTape { // TODO make internal
         core.size = 0;
         Arrays.fill(core.numberOfExpressions, 0);
         Arrays.fill(eExpressionActiveAtDepth, -1);
+        core.numberOfVariables = 0;
         depth = 0;
         numberOfEExpressions = 0;
+        variablePointers.clear();
+        expressionPointers.clear();
     }
 
     public int findIndexAfterEndEExpression() {
@@ -234,13 +266,6 @@ public class ExpressionTape { // TODO make internal
             }
         }
         return i;
-    }
-
-    // TODO don't end up with both of the following two methods
-    private void setNextAtEndOfEExpression() {
-        int iCurrent = i;
-        iNext = findIndexAfterEndEExpression() - 1; // Ensure the evaluator sees the E_EXPRESSION_END so it can clean up any resources associated with it.
-        i = iCurrent;
     }
 
     public void setNextAfterEndOfEExpression() {
@@ -281,19 +306,6 @@ public class ExpressionTape { // TODO make internal
         }
         iNext = i;
     }
-
-    /*
-    public int highestVariableIndex() {
-        int highestVariableIndex = 0;
-        for (int tapeIndex = 0; tapeIndex < core.size; tapeIndex++) {
-            if (core.types[tapeIndex] == ExpressionType.VARIABLE) {
-                highestVariableIndex = Math.max(highestVariableIndex, (int) core.contexts[tapeIndex]);
-            }
-        }
-        return highestVariableIndex;
-    }
-
-     */
 
     void shiftIndicesLeft(int shiftAmount) {
         // TODO note: another way to handle this is to just store the shift amount and perform the subtraction on
@@ -724,86 +736,67 @@ public class ExpressionTape { // TODO make internal
         return tape.core;
     }
 
-    // TODO maybe the expression pointers should be held in the tape and not in the context?
+    public void cacheExpressionPointers(ExpressionTape arguments, int argumentsEExpressionStartIndex) {
 
-    public void cacheExpressionPointers(LazyEnvironment.NestedContext parentContext, LazyEnvironment.NestedContext context) {
-        int targetEExpressionIndex = core.ends[i - 1]; // TODO assumes i points to the e-expression start; check
-        int numberOfExpressions = core.numberOfExpressions[targetEExpressionIndex]; // TODO variables that fill a nested e-expression are not being resolved here. Later, when they are accessed, they are not resolving from the correct tape (they're resolving from the macro invocation in which their nested invocation is contained, not the outer invocation that actually supplies the arguments)
+        Core argumentCore = arguments.core;
+        int targetEExpressionIndex = argumentCore.ends[argumentsEExpressionStartIndex];
+        int numberOfExpressions = argumentCore.numberOfExpressions[targetEExpressionIndex];
         if (numberOfExpressions == 0) {
             return;
         }
         for (int i = 0; i < numberOfExpressions; i++) {
-            int expressionIndex = core.expressionStarts[targetEExpressionIndex][i];
-            ExpressionType targetType = core.types[expressionIndex];
-            VariablePointer pointer = new VariablePointer(); // TODO reuse the VariablePointer instances in the list
+            int expressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
+            ExpressionType targetType = argumentCore.types[expressionIndex];
+            VariablePointer pointer; // TODO reuse the VariablePointer instances in the list
             if (targetType == ExpressionType.VARIABLE) {
-                //throw new IonException("A top-level macro invocation may not contain variable references.");
-                // TODO get it from the parent
-                int localVariableIndex = (int) core.contexts[expressionIndex];
-                VariablePointer parentPointer = parentContext.getVariablePointers().get(/*parentContext.getVariablePointerStartIndex() + */localVariableIndex);
-                pointer.source = parentPointer.source;
-                pointer.index = parentPointer.index;
-            } else {
-                pointer.source = parentContext;
-                pointer.index = expressionIndex;
-            }
-            context.getVariablePointers().add(pointer);
-        }
-        setNextAfterEndOfEExpression(); // TODO expressionStarts[] can be changed to include the index of the e_expression_end
-        //setNextAtEndOfEExpression(); // TODO did not work compared to the previous line
-    }
-
-    public void resolveVariables(LazyEnvironment.NestedContext parentContext, /*ExpressionTape arguments,*/ List<VariablePointer> sink) {
-        // Either this resolution begins a macro invocation, or it's the body of an invocation.
-        // If it's a macro invocation, then its expressions are arguments to the invoked macro.
-        // If it's a macro body, then its variables should be mapped to the expressions from the parent that make up the arguments.
-        // If it's a macro body without any child invocations, then its expression locations do not need to be mapped because
-        // they won't be used as arguments. (Note: unless this provides a performance benefit)
-        // Otherwise, expression locations must be mapped.
-        for (int i = 0; i < core.size; i++) { // TODO could cache variable positions
-            ExpressionType targetType = core.types[i];
-            if (targetType == ExpressionType.VARIABLE) {
-                VariablePointer pointer = new VariablePointer();
-                /*
-                if (arguments == null) {
-                    throw new IonException("A top-level macro invocation may not contain variable references.");
-                }
-
-                 */
-                // TODO startIndex needs to refer to the first expressionIndex applicable to variables from this tape, which it currently does not
-                int localVariableIndex = (int) core.contexts[i];
-                VariablePointer parentPointer = parentContext.getVariablePointers().get(parentContext.getVariablePointerStartIndex() + localVariableIndex);
-                pointer.source = parentPointer.source;
-                pointer.index = parentPointer.index;
-                int sinkSize = sink.size();
-                if (localVariableIndex >= sinkSize) { // TODO using arrays avoids this. Or pooling where ArrayList.clear() isn't called.
-                    for (int j = 0; j <= localVariableIndex - sinkSize; j++) {
-                        sink.add(null);
+                int localVariableId = (int) argumentCore.contexts[expressionIndex];
+                if (localVariableId >= arguments.expressionPointers.size()) {
+                    // The variable was elided.
+                    pointer = VariablePointer.ELIDED;
+                } else {
+                    pointer = arguments.expressionPointers.get(localVariableId);
+                    arguments.expressionPointers.set(localVariableId, VariablePointer.ELIDED);
+                    if (pointer == VariablePointer.ELIDED) {
+                        // This localVariableId must have already been resolved, so it's somewhere in the list already.
+                        for (int j = 0; j < i; j++) {
+                            int previousExpressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
+                            ExpressionType previousTargetType = argumentCore.types[expressionIndex];
+                            if (previousTargetType == ExpressionType.VARIABLE && localVariableId == (int) argumentCore.contexts[previousExpressionIndex]) {
+                                pointer = expressionPointers.get(j);
+                                break;
+                            }
+                        }
                     }
                 }
-                sink.set(localVariableIndex, pointer);
+            } else {
+                pointer = new VariablePointer(); // TODO reuse the VariablePointer instances in the list
+                pointer.source = arguments;
+                pointer.index = expressionIndex;
             }
+            expressionPointers.add(pointer);
+        }
+
+        // TODO this, and variablePointers altogether, should be removable
+        for (int variableIndex = 0; variableIndex < core.numberOfVariables; variableIndex++) {
+            int expressionIndex = core.variableStarts[variableIndex];
+            int localVariableId = (int) core.contexts[expressionIndex];
+            if (localVariableId >= expressionPointers.size()) {
+                // The variable was elided.
+                variablePointers.add(VariablePointer.ELIDED);
+                continue;
+            }
+            VariablePointer pointer = new VariablePointer(); // TODO reuse the VariablePointer instances in the list
+            VariablePointer parentPointer = expressionPointers.get(localVariableId);
+            if (parentPointer == VariablePointer.ELIDED) {
+                variablePointers.add(VariablePointer.ELIDED);
+                continue;
+            }
+            pointer.source = parentPointer.source;
+            pointer.index = parentPointer.index;
+            variablePointers.add(pointer);
         }
     }
 
-    /*
-    public ExpressionType seekToArgument(int startIndex, int indexRelativeToStart) {
-        int targetEExpressionIndex = core.ends[startIndex - 1];
-        // Note: core.types[startIndex - 1] should always be E_EXPRESSION // TODO make firstArgumentStartIndex just point to the E-Expression
-        if (indexRelativeToStart >= core.numberOfExpressions[targetEExpressionIndex]) {
-            return ExpressionType.END_OF_EXPANSION;
-        }
-        i = core.expressionStarts[targetEExpressionIndex][indexRelativeToStart];
-        ExpressionType targetType = core.types[i];
-        if (targetType == ExpressionType.VARIABLE) {
-            // The desired argument is a variable, so the parent tape must be consulted.
-            return ExpressionType.VARIABLE;
-        }
-        iNext = i;
-        return targetType;
-    }
-
-     */
 
     public void seekPastExpression() {
         // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
@@ -846,5 +839,26 @@ public class ExpressionTape { // TODO make internal
         }
         i++; // This positions the tape *after* the end of the expression that was located above.
         iNext = i;
+    }
+
+    public ExpressionTape seekToArgument(int indexRelativeToStart) {
+        VariablePointer pointer = expressionPointers.get(indexRelativeToStart);
+        if (pointer == VariablePointer.ELIDED) { // TODO performance this might be able to be short-circuited more effectively. Right now we still create a child expander for elided variables, which should not be necessary.
+            return null;
+        }
+        return pointer.visit();
+    }
+
+    public void seekPastFinalArgument() {
+        for (VariablePointer variablePointer : variablePointers) { // TODO expressionPointers?
+            if (variablePointer == VariablePointer.ELIDED) {
+                continue;
+            }
+            // TODO we should be able to use expressionPointers and completely delete variablePointers
+            ExpressionTape sourceTape = variablePointer.visitIfForward();
+            if (sourceTape != null) {
+                sourceTape.seekPastExpression();
+            }
+        }
     }
 }
