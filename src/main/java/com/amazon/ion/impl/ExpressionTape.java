@@ -110,7 +110,6 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
-    private final List<VariablePointer> variablePointers = new ArrayList<>(8);
     private final List<VariablePointer> expressionPointers = new ArrayList<>(8);
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
@@ -129,7 +128,6 @@ public class ExpressionTape { // TODO make internal
 
     public void reset(Core core) {
         this.core = core;
-        variablePointers.clear();
         expressionPointers.clear();
         rewindTo(0);
     }
@@ -248,7 +246,6 @@ public class ExpressionTape { // TODO make internal
         core.numberOfVariables = 0;
         depth = 0;
         numberOfEExpressions = 0;
-        variablePointers.clear();
         expressionPointers.clear();
     }
 
@@ -755,8 +752,11 @@ public class ExpressionTape { // TODO make internal
                     pointer = VariablePointer.ELIDED;
                 } else {
                     pointer = arguments.expressionPointers.get(localVariableId);
-                    arguments.expressionPointers.set(localVariableId, VariablePointer.ELIDED);
-                    if (pointer == VariablePointer.ELIDED) {
+                    //arguments.expressionPointers.set(localVariableId, VariablePointer.ELIDED);
+                    VariablePointer passthroughPointer = new VariablePointer();
+                    passthroughPointer.source = pointer.source;
+                    arguments.expressionPointers.set(localVariableId, passthroughPointer);
+                    if (pointer.index < 0) {
                         // This localVariableId must have already been resolved, so it's somewhere in the list already.
                         for (int j = 0; j < i; j++) {
                             int previousExpressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
@@ -774,26 +774,6 @@ public class ExpressionTape { // TODO make internal
                 pointer.index = expressionIndex;
             }
             expressionPointers.add(pointer);
-        }
-
-        // TODO this, and variablePointers altogether, should be removable
-        for (int variableIndex = 0; variableIndex < core.numberOfVariables; variableIndex++) {
-            int expressionIndex = core.variableStarts[variableIndex];
-            int localVariableId = (int) core.contexts[expressionIndex];
-            if (localVariableId >= expressionPointers.size()) {
-                // The variable was elided.
-                variablePointers.add(VariablePointer.ELIDED);
-                continue;
-            }
-            VariablePointer pointer = new VariablePointer(); // TODO reuse the VariablePointer instances in the list
-            VariablePointer parentPointer = expressionPointers.get(localVariableId);
-            if (parentPointer == VariablePointer.ELIDED) {
-                variablePointers.add(VariablePointer.ELIDED);
-                continue;
-            }
-            pointer.source = parentPointer.source;
-            pointer.index = parentPointer.index;
-            variablePointers.add(pointer);
         }
     }
 
@@ -843,18 +823,23 @@ public class ExpressionTape { // TODO make internal
 
     public ExpressionTape seekToArgument(int indexRelativeToStart) {
         VariablePointer pointer = expressionPointers.get(indexRelativeToStart);
-        if (pointer == VariablePointer.ELIDED) { // TODO performance this might be able to be short-circuited more effectively. Right now we still create a child expander for elided variables, which should not be necessary.
+        if (pointer.index < 0) { // TODO performance this might be able to be short-circuited more effectively. Right now we still create a child expander for elided variables, which should not be necessary.
             return null;
         }
         return pointer.visit();
     }
 
     public void seekPastFinalArgument() {
-        for (VariablePointer variablePointer : variablePointers) { // TODO expressionPointers?
+        for (VariablePointer variablePointer : expressionPointers) {
             if (variablePointer == VariablePointer.ELIDED) {
                 continue;
+            } else if (variablePointer.index < 0) {
+                if (variablePointer.source != null) {
+                    // This is a pass-through variable; step over it if that hasn't been done already.
+                    variablePointer.source.iNext = Math.max(variablePointer.source.i + 1, variablePointer.source.iNext);
+                }
+                continue;
             }
-            // TODO we should be able to use expressionPointers and completely delete variablePointers
             ExpressionTape sourceTape = variablePointer.visitIfForward();
             if (sourceTape != null) {
                 sourceTape.seekPastExpression();
