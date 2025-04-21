@@ -35,9 +35,6 @@ class LazyEnvironment {
         this.arguments = arguments
         nestedContextIndex = 0
         currentContext = nestedContexts[0]!!
-        arguments.rewindTo(0)
-        val argumentsEExpressionStartIndex = if (arguments.type() == ExpressionType.FIELD_NAME) 1 else 0
-        arguments.cacheExpressionPointers(arguments, argumentsEExpressionStartIndex) // TODO ensure this is not redundant
         currentContext.tape = arguments
         currentContext.arguments = null
     }
