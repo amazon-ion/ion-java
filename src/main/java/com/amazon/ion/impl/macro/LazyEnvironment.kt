@@ -20,7 +20,7 @@ import java.util.*
  * The [parentEnvironment] is an environment to use if any of the expressions in this environment
  * contains a variable that references something from an outer macro invocation.
  */
-class LazyEnvironment {
+class LazyEnvironment { // TODO can this be replaced entirely by giving ExpressionTape a reference to a parent tape? Or is even that unnecessary given that ExpressionPointers are pushed down?
 
     var arguments: ExpressionTape? = null
     val sideEffects: ExpressionTape = ExpressionTape(null, 4)

@@ -18,11 +18,9 @@ import java.util.List;
 public class ExpressionTape { // TODO make internal
 
     public static class ExpressionPointer {
-
-        private static final ExpressionPointer ELIDED = new ExpressionPointer();
-
         ExpressionTape source = null;
         int index = -1;
+        boolean isElided = false;
 
         public ExpressionTape visit() {
             source.i = index;
@@ -109,7 +107,8 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
-    private final List<ExpressionPointer> expressionPointers = new ArrayList<>(8);
+    private ExpressionPointer[] expressionPointers = new ExpressionPointer[8];
+    private int expressionPointersSize = 0;
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -127,7 +126,7 @@ public class ExpressionTape { // TODO make internal
 
     public void reset(Core core) {
         this.core = core;
-        expressionPointers.clear();
+        expressionPointersSize = 0;
         rewindTo(0);
     }
 
@@ -245,7 +244,7 @@ public class ExpressionTape { // TODO make internal
         core.numberOfVariables = 0;
         depth = 0;
         numberOfEExpressions = 0;
-        expressionPointers.clear();
+        expressionPointersSize = 0;
     }
 
     public int findIndexAfterEndEExpression() {
@@ -732,6 +731,32 @@ public class ExpressionTape { // TODO make internal
         return tape.core;
     }
 
+    private ExpressionPointer addExpressionPointer() {
+        if (expressionPointersSize <= expressionPointers.length) {
+            expressionPointers = Arrays.copyOf(expressionPointers, expressionPointers.length * 2);
+        }
+        ExpressionPointer pointer = expressionPointers[expressionPointersSize++];
+        if (pointer == null) {
+            pointer = new ExpressionPointer();
+            expressionPointers[expressionPointersSize - 1] = pointer;
+        }
+        return pointer;
+    }
+
+    private void addExpressionPointer(ExpressionTape source, int index) {
+        ExpressionPointer pointer = addExpressionPointer();
+        pointer.source = source;
+        pointer.index = index;
+        pointer.isElided = false;
+    }
+
+    private void addElidedExpressionPointer() {
+        ExpressionPointer pointer = addExpressionPointer();
+        pointer.source = null;
+        pointer.index = -1;
+        pointer.isElided = true;
+    }
+
     public void cacheExpressionPointers(ExpressionTape arguments, int argumentsEExpressionStartIndex) {
 
         Core argumentCore = arguments.core;
@@ -743,36 +768,34 @@ public class ExpressionTape { // TODO make internal
         for (int i = 0; i < numberOfExpressions; i++) {
             int expressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
             ExpressionType targetType = argumentCore.types[expressionIndex];
-            ExpressionPointer pointer; // TODO reuse the VariablePointer instances in the list
             if (targetType == ExpressionType.VARIABLE) {
                 int localVariableId = (int) argumentCore.contexts[expressionIndex];
-                if (localVariableId >= arguments.expressionPointers.size()) {
+                if (localVariableId >= arguments.expressionPointersSize) {
                     // The variable was elided.
-                    pointer = ExpressionPointer.ELIDED;
+                    addElidedExpressionPointer();
                 } else {
-                    pointer = arguments.expressionPointers.get(localVariableId);
-                    //arguments.expressionPointers.set(localVariableId, VariablePointer.ELIDED);
-                    ExpressionPointer passthroughPointer = new ExpressionPointer();
-                    passthroughPointer.source = pointer.source;
-                    arguments.expressionPointers.set(localVariableId, passthroughPointer);
-                    if (pointer.index < 0) {
+                    ExpressionPointer pointer = arguments.expressionPointers[localVariableId];
+                    int pointerIndex = pointer.index;
+                    ExpressionTape pointerSource = pointer.source;
+                    pointer.index = -1; // Mark this as a pass-through variable
+                    if (pointerIndex < 0) {
                         // This localVariableId must have already been resolved, so it's somewhere in the list already.
                         for (int j = 0; j < i; j++) {
                             int previousExpressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
                             ExpressionType previousTargetType = argumentCore.types[expressionIndex];
                             if (previousTargetType == ExpressionType.VARIABLE && localVariableId == (int) argumentCore.contexts[previousExpressionIndex]) {
-                                pointer = expressionPointers.get(j);
+                                pointer = expressionPointers[j];
+                                pointerSource = pointer.source;
+                                pointerIndex = pointer.index;
                                 break;
                             }
                         }
                     }
+                    addExpressionPointer(pointerSource, pointerIndex);
                 }
             } else {
-                pointer = new ExpressionPointer(); // TODO reuse the VariablePointer instances in the list
-                pointer.source = arguments;
-                pointer.index = expressionIndex;
+                addExpressionPointer(arguments, expressionIndex);
             }
-            expressionPointers.add(pointer);
         }
     }
 
@@ -821,7 +844,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public ExpressionTape seekToArgument(int indexRelativeToStart) {
-        ExpressionPointer pointer = expressionPointers.get(indexRelativeToStart);
+        ExpressionPointer pointer = expressionPointers[indexRelativeToStart];
         if (pointer.index < 0) { // TODO performance this might be able to be short-circuited more effectively. Right now we still create a child expander for elided variables, which should not be necessary.
             return null;
         }
@@ -829,8 +852,9 @@ public class ExpressionTape { // TODO make internal
     }
 
     public void seekPastFinalArgument() {
-        for (ExpressionPointer variablePointer : expressionPointers) {
-            if (variablePointer == ExpressionPointer.ELIDED) {
+        for (int i = 0; i < expressionPointersSize; i++) {
+            ExpressionPointer variablePointer = expressionPointers[i];
+            if (variablePointer.isElided) {
                 continue;
             } else if (variablePointer.index < 0) {
                 if (variablePointer.source != null) {
