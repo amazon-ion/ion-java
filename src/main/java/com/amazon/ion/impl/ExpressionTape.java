@@ -732,7 +732,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     private ExpressionPointer addExpressionPointer() {
-        if (expressionPointersSize <= expressionPointers.length) {
+        if (expressionPointersSize >= expressionPointers.length) {
             expressionPointers = Arrays.copyOf(expressionPointers, expressionPointers.length * 2);
         }
         ExpressionPointer pointer = expressionPointers[expressionPointersSize++];
