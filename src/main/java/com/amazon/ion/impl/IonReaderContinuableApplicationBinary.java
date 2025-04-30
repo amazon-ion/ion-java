@@ -622,7 +622,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private boolean valueUnavailable() {
-            Event event = fillValue();
+            byte event = fillValue();
             return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
         }
 
@@ -811,7 +811,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         void readSymbolTable() {
-            Event event;
+            byte event;
             while (true) {
                 switch (state) {
                     case ON_SYMBOL_TABLE_STRUCT:
@@ -944,8 +944,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private State state = State.READING_VALUE;
 
     @Override
-    public Event nextValue() {
-        Event event;
+    public byte nextValue() {
+        byte event;
         if (parent == null || state != State.READING_VALUE) {
             while (true) {
                 if (state != State.READING_VALUE) {

@@ -117,7 +117,7 @@ public class IonCursorBinaryTest {
      * Provides Expectations that verify that advancing the cursor to the next value results in the given event, and
      * filling that value results in a Marker with the given start and end indices.
      */
-    private static ExpectationProvider<IonCursorBinary> fill(IonCursor.Event expectedEvent, int expectedStart, int expectedEnd) {
+    private static ExpectationProvider<IonCursorBinary> fill(byte expectedEvent, int expectedStart, int expectedEnd) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill(%s, %d, %d)", expectedEvent, expectedStart, expectedEnd),
             cursor -> {
@@ -135,7 +135,7 @@ public class IonCursorBinaryTest {
      * attempting to fill that value results in NEEDS_INSTRUCTION, indicating that the value could not be filled due
      * to being oversize.
      */
-    private static ExpectationProvider<IonCursorBinary> fillIsOversize(IonCursor.Event expectedEvent, Supplier<Integer> oversizeCounter) {
+    private static ExpectationProvider<IonCursorBinary> fillIsOversize(byte expectedEvent, Supplier<Integer> oversizeCounter) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fillOversized(%s)", expectedEvent),
             cursor -> {
@@ -914,7 +914,7 @@ public class IonCursorBinaryTest {
     /**
      * Provides Expectations that verify that the cursor's current event matches the expected event.
      */
-    private static ExpectationProvider<IonCursorBinary> event(IonCursor.Event expectedEvent) {
+    private static ExpectationProvider<IonCursorBinary> event(byte expectedEvent) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("%s", expectedEvent),
             cursor -> {
@@ -1217,10 +1217,10 @@ public class IonCursorBinaryTest {
      * A request to be applied to an IonCursorBinary, and the expected response.
      */
     private static class Instruction {
-        final Function<IonCursorBinary, IonCursor.Event> request;
+        final Function<IonCursorBinary, Byte> request;
         final ExpectationProvider<IonCursorBinary> response;
 
-        private Instruction(Function<IonCursorBinary, IonCursor.Event> request, ExpectationProvider<IonCursorBinary> response) {
+        private Instruction(Function<IonCursorBinary, Byte> request, ExpectationProvider<IonCursorBinary> response) {
             this.request = request;
             this.response = response;
         }
@@ -1243,7 +1243,7 @@ public class IonCursorBinaryTest {
      * Creates a new Instruction.
      */
     private static Instruction instruction(
-        Function<IonCursorBinary, IonCursor.Event> request,
+        Function<IonCursorBinary, Byte> request,
         ExpectationProvider<IonCursorBinary> response
     ) {
         return new Instruction(request, response);

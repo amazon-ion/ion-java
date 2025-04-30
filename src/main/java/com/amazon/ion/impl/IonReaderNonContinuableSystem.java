@@ -159,7 +159,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
      * Prepares a scalar value to be parsed by ensuring it is present in the buffer.
      */
     private void prepareScalar() {
-        IonCursor.Event event = reader.getCurrentEvent();
+        byte event = reader.getCurrentEvent();
         if (event == IonCursor.Event.VALUE_READY) {
             return;
         }

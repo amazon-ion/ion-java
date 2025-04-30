@@ -64,23 +64,23 @@ class IonCursorBinary implements IonCursor {
     /**
      * The kind of location at which `checkpoint` points.
      */
-    private enum CheckpointLocation {
-        BEFORE_UNANNOTATED_TYPE_ID,
-        BEFORE_ANNOTATED_TYPE_ID,
-        AFTER_SCALAR_HEADER,
-        AFTER_CONTAINER_HEADER
+    private static class CheckpointLocation {
+        public static final byte BEFORE_UNANNOTATED_TYPE_ID = 0;
+        public static final byte BEFORE_ANNOTATED_TYPE_ID = 1;
+        public static final byte AFTER_SCALAR_HEADER = 2;
+        public static final byte AFTER_CONTAINER_HEADER = 3;
     }
 
     /**
      * The state representing where the cursor left off after the previous operation.
      */
-    private enum State {
-        FILL,
-        FILL_DELIMITED,
-        SEEK,
-        SEEK_DELIMITED,
-        READY,
-        TERMINATED
+    private static class State {
+        public static final byte FILL = 0;
+        public static final byte FILL_DELIMITED = 1;
+        public static final byte SEEK = 2;
+        public static final byte SEEK_DELIMITED = 3;
+        public static final byte READY = 4;
+        public static final byte TERMINATED = 5;
     }
 
     /**
@@ -110,7 +110,7 @@ class IonCursorBinary implements IonCursor {
          * READY state). This enables the reader to complete the previous IonCursor API invocation if it returned a
          * NEEDS_DATA event.
          */
-        State state;
+        byte state;
 
         /**
          * The number of bytes that still need to be consumed from the input during a fill or seek operation.
@@ -175,7 +175,7 @@ class IonCursorBinary implements IonCursor {
          */
         private boolean skipAnnotations = false;
 
-        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
+        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, byte initialState) {
             this.inputStream = inputStream;
             this.capacity = capacity;
             this.maximumBufferSize = maximumBufferSize;
@@ -299,7 +299,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The event that occurred as a result of the last call to any of the cursor's IonCursor methods.
      */
-    IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
+    byte event = IonCursor.Event.NEEDS_DATA;
 
     /**
      * The buffer in which the cursor stores slices of the Ion stream.
@@ -346,7 +346,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Describes the byte at the `checkpoint` index.
      */
-    private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+    private byte checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
 
     /**
      * Indicates whether the cursor is in slow mode. Slow mode must be used when the input source is refillable (i.e.
@@ -2122,7 +2122,7 @@ class IonCursorBinary implements IonCursor {
         IonTypeID savedAnnotationTid = annotationSequenceMarker.typeId;
         long savedAnnotationStartIndex = annotationSequenceMarker.startIndex;
         long savedAnnotationsEndIndex = annotationSequenceMarker.endIndex;
-        CheckpointLocation savedCheckpointLocation = checkpointLocation;
+        byte savedCheckpointLocation = checkpointLocation;
         long savedCheckpoint = checkpoint;
         int savedContainerIndex = containerIndex;
         Marker savedParent = parent;
@@ -2222,20 +2222,20 @@ class IonCursorBinary implements IonCursor {
     private boolean slowMakeBufferReady() {
         boolean isReady;
         switch (refillableState.state) {
-            case SEEK:
+            case State.SEEK:
                 isReady = !slowSeek(refillableState.bytesRequested);
                 break;
-            case FILL:
+            case State.FILL:
                 isReady = fillAt(offset, refillableState.bytesRequested);
                 break;
-            case FILL_DELIMITED:
+            case State.FILL_DELIMITED:
                 refillableState.state = State.READY;
                 isReady = slowFindDelimitedEnd_1_1();
                 break;
-            case SEEK_DELIMITED:
+            case State.SEEK_DELIMITED:
                 isReady = slowSeekToDelimitedEnd_1_1();
                 break;
-            case TERMINATED:
+            case State.TERMINATED:
                 isReady = false;
                 break;
             default:
@@ -2251,7 +2251,7 @@ class IonCursorBinary implements IonCursor {
      * Sets `checkpoint` to the current `peekIndex`, which is at the given type of location.
      * @param location the type of checkpoint location. Must not be BEFORE_UNANNOTATED_TYPE_ID.
      */
-    private void setCheckpoint(CheckpointLocation location) {
+    private void setCheckpoint(byte location) {
         checkpointLocation = location;
         checkpoint = peekIndex;
     }
@@ -2831,7 +2831,7 @@ class IonCursorBinary implements IonCursor {
      * Steps into the container on which the cursor is currently positioned, ensuring that the buffer is ready.
      * @return `event`, which conveys the result.
      */
-    private Event slowStepIntoContainer() {
+    private byte slowStepIntoContainer() {
         if (refillableState.state != State.READY && !slowMakeBufferReady()) {
             return event;
         }
@@ -2874,7 +2874,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event stepIntoContainer() {
+    public byte stepIntoContainer() {
         if (isSlowMode && checkAndSetContainerMode()) {
             return slowStepIntoContainer();
         }
@@ -2886,7 +2886,7 @@ class IonCursorBinary implements IonCursor {
      * Steps into an e-expression, treating it as a logical container.
      * @return `event`, which conveys the result.
      */
-    Event stepIntoEExpression() {
+    byte stepIntoEExpression() {
         if (valueMarker.typeId == null || !valueMarker.typeId.isMacroInvocation) {
             throw new IonException("Must be positioned on an e-expression.");
         }
@@ -2969,7 +2969,7 @@ class IonCursorBinary implements IonCursor {
      * @return NEEDS_INSTRUCTION if successful, or  NEEDS_DATA if more data is required to skip past the value on which
      *  the cursor is positioned (if any).
      */
-    Event stepOutOfEExpression() {
+    byte stepOutOfEExpression() {
         if (parent == null) {
             throw new IonException("Cannot step out at the top level.");
         }
@@ -3018,7 +3018,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event stepOutOfContainer() {
+    public byte stepOutOfContainer() {
         if (isSlowMode) {
             return slowStepOutOfContainer();
         }
@@ -3062,7 +3062,7 @@ class IonCursorBinary implements IonCursor {
      * that enough bytes are available in the stream.
      * @return `event`, which conveys the result.
      */
-    private Event slowStepOutOfContainer() {
+    private byte slowStepOutOfContainer() {
         if (parent == null) {
             // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
             // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
@@ -3200,7 +3200,7 @@ class IonCursorBinary implements IonCursor {
             }
             int b;
             switch (checkpointLocation) {
-                case BEFORE_UNANNOTATED_TYPE_ID:
+                case CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID:
                     if (dataHandler != null) {
                         reportConsumedData();
                     }
@@ -3227,7 +3227,7 @@ class IonCursorBinary implements IonCursor {
                     }
                     // Either a NOP has been skipped, or an annotation wrapper has been consumed.
                     continue;
-                case BEFORE_ANNOTATED_TYPE_ID:
+                case CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID:
                     valueMarker.typeId = null;
                     b = slowReadByte();
                     if (b < 0) {
@@ -3237,8 +3237,8 @@ class IonCursorBinary implements IonCursor {
                     // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the cursor
                     // must be positioned after the header for the wrapped value.
                     return;
-                case AFTER_SCALAR_HEADER:
-                case AFTER_CONTAINER_HEADER:
+                case CheckpointLocation.AFTER_SCALAR_HEADER:
+                case CheckpointLocation.AFTER_CONTAINER_HEADER:
                     if (slowSkipRemainingValueBytes()) {
                         return;
                     }
@@ -3286,7 +3286,7 @@ class IonCursorBinary implements IonCursor {
      * If an oversized value is encountered, attempts to skip past it.
      * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
      */
-    private Event slowOverflowableNextToken() {
+    private byte slowOverflowableNextToken() {
         while (true) {
             slowNextToken();
             if (refillableState.isSkippingCurrentValue) {
@@ -3326,7 +3326,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event nextValue() {
+    public byte nextValue() {
         if (isSlowMode) {
             return slowNextValue();
         }
@@ -3340,7 +3340,7 @@ class IonCursorBinary implements IonCursor {
      * the stream.
      * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
      */
-    private Event slowNextValue() {
+    private byte slowNextValue() {
         if (refillableState.fillDepth > containerIndex) {
             // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
             // next value was filled immediately upon encountering it.
@@ -3453,9 +3453,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
      * </ul>
      * @param taglessEncoding the {@link TaglessEncoding} of the tagless value on which to position the cursor.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event nextTaglessValue(TaglessEncoding taglessEncoding) {
+    public byte nextTaglessValue(TaglessEncoding taglessEncoding) {
         event = Event.NEEDS_DATA;
         if (isSlowMode) {
             if (slowSkipToNextToken()) {
@@ -3498,9 +3498,9 @@ class IonCursorBinary implements IonCursor {
      * </ul>
      * After return, `valueMarker` is set with the start and end indices of the AEB.
      * @param numberOfBytes the byte width of the AEB.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event fillArgumentEncodingBitmap(int numberOfBytes) {
+    public byte fillArgumentEncodingBitmap(int numberOfBytes) {
         event = Event.NEEDS_DATA;
         valueMarker.typeId = null;
         valueMarker.startIndex = peekIndex;
@@ -3540,9 +3540,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor successfully entered the argument group. Subsequently, the user must
      *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event enterTaggedArgumentGroup() {
+    public byte enterTaggedArgumentGroup() {
         if (skipToNextToken()) {
             return event;
         }
@@ -3573,9 +3573,9 @@ class IonCursorBinary implements IonCursor {
      *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
      * </ul>
      * @param taglessEncoding the primitive type of the values in the group.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event enterTaglessArgumentGroup(TaglessEncoding taglessEncoding) {
+    public byte enterTaglessArgumentGroup(TaglessEncoding taglessEncoding) {
         if (skipToNextToken()) {
             return event;
         }
@@ -3625,17 +3625,17 @@ class IonCursorBinary implements IonCursor {
      */
     private void setCheckpointAfterValueHeader() {
         switch (event) {
-            case START_SCALAR:
+            case Event.START_SCALAR:
                 setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
                 break;
-            case START_CONTAINER:
+            case Event.START_CONTAINER:
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 break;
-            case NEEDS_INSTRUCTION:
+            case Event.NEEDS_INSTRUCTION:
                 // A macro invocation header has just been read.
                 // Note: e-expression checkpoints are currently treated the same as container literal checkpoints.
                 // this could be changed in the future, if necessary, by adding a distinct CheckpointLocation for
-                // AFTER_E_EXPRESSION_HEADER, and potentially a distinct Event type for START_E_EXPRESSION. We will
+                // AFTER_E_EXPRESSION_HEADER, and potentially a distinct byte type for START_E_EXPRESSION. We will
                 // defer this work until we find it's necessary.
                 setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
                 break;
@@ -3648,9 +3648,9 @@ class IonCursorBinary implements IonCursor {
      * Positions the cursor on the next value in the tagged group. Upon return, the value will be filled and
      * `valueMarker` set to the value's start and end indices.
      * @param group the group to which the value belongs.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    private Event nextGroupedTaggedValue(ArgumentGroupMarker group) {
+    private byte nextGroupedTaggedValue(ArgumentGroupMarker group) {
         boolean isUserValue; // if false, the header represents no-op padding
         if (group.pageEndIndex < 0) {
             // Delimited.
@@ -3700,9 +3700,9 @@ class IonCursorBinary implements IonCursor {
      * Positions the cursor on the next value in the tagless group. Upon return, the value will be filled and
      * `valueMarker` set to the value's start and end indices.
      * @param group the group to which the value belongs.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    private Event nextGroupedTaglessValue(ArgumentGroupMarker group) {
+    private byte nextGroupedTaglessValue(ArgumentGroupMarker group) {
         if (peekIndex == group.pageEndIndex) {
             // End of the page.
             long continuation = readGroupContinuation();
@@ -3731,9 +3731,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor reached the end of the argument group. Subsequently, the caller must
      *     call {@link #exitArgumentGroup()}.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event nextGroupedValue() {
+    public byte nextGroupedValue() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
         if (peekIndex < valueMarker.endIndex) {
             peekIndex = valueMarker.endIndex;
@@ -3790,9 +3790,9 @@ class IonCursorBinary implements IonCursor {
     /**
      * Exits the cursor's current tagged argument group.
      * @param group the group to exit.
-     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     * @return a byte conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
      */
-    private Event exitTaggedArgumentGroup(ArgumentGroupMarker group) {
+    private byte exitTaggedArgumentGroup(ArgumentGroupMarker group) {
         if (group.pageEndIndex < 0) {
             if (seekToEndOfDelimitedArgumentGroup()) {
                 return event;
@@ -3807,9 +3807,9 @@ class IonCursorBinary implements IonCursor {
     /**
      * Exits the cursor's current tagless argument group.
      * @param group the group to exit.
-     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     * @return a byte conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
      */
-    private Event exitTaglessArgumentGroup(ArgumentGroupMarker group) {
+    private byte exitTaglessArgumentGroup(ArgumentGroupMarker group) {
         long continuation = -1;
         while (continuation != 0) {
             if (seekToEndOfArgumentGroupPage(group)) {
@@ -3832,9 +3832,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor successfully exited the argument group. Subsequently, the user must
      *     invoke a method on the cursor to position it on the next value.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event exitArgumentGroup() {
+    public byte exitArgumentGroup() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
         event = Event.NEEDS_DATA;
         if (group.taglessEncoding == null) {
@@ -3844,7 +3844,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event fillValue() {
+    public byte fillValue() {
         event = Event.VALUE_READY;
         if (isSlowMode && refillableState.fillDepth <= containerIndex) {
             slowFillValue();
@@ -3860,7 +3860,7 @@ class IonCursorBinary implements IonCursor {
      * enough bytes are available in the stream.
      * @return `event`, which conveys the result.
      */
-    private Event slowFillValue() {
+    private byte slowFillValue() {
         if (refillableState.state != State.READY && !slowMakeBufferReady()) {
             return event;
         }
@@ -3891,7 +3891,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event getCurrentEvent() {
+    public byte getCurrentEvent() {
         return event;
     }
 
@@ -3969,7 +3969,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event endStream() {
+    public byte endStream() {
         if (isValueIncomplete || isAwaitingMoreData()) {
             throw new IonException("Unexpected EOF.");
         }

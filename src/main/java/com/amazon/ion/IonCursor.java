@@ -13,41 +13,41 @@ public interface IonCursor extends Closeable {
     /**
      * Conveys the type of event that occurred as a result of operating on the cursor.
      */
-    enum Event {
+    class Event {
 
         /**
          * There is not enough data in the stream to complete the requested operation. The operation should be retried
          * when more data is available. Note that there is no way to "cancel" a previously requested operation;
          * requesting a different operation after a `NEEDS_DATA` event has undefined behavior.
          */
-        NEEDS_DATA,
+        public static final byte NEEDS_DATA = 0;
 
         /**
          * The cursor has completed an operation (e.g. `stepIntoContainer()`) and requires another instruction in order
          * to position itself on the next value.
          */
-        NEEDS_INSTRUCTION,
+        public static final byte NEEDS_INSTRUCTION = 1;
 
         /**
          * The cursor is positioned on a scalar value.
          */
-        START_SCALAR,
+        public static final byte START_SCALAR = 2;
 
         /**
          * The cursor has successfully buffered the entirety of the value on which it is currently positioned, as
          * requested by an invocation of `fillValue()`.
          */
-        VALUE_READY,
+        public static final byte VALUE_READY = 3;
 
         /**
          * The cursor is positioned on a container value.
          */
-        START_CONTAINER,
+        public static final byte START_CONTAINER = 4;
 
         /**
          * The cursor has reached the end of the current container, and requires an instruction to proceed.
          */
-        END_CONTAINER
+        public static final byte END_CONTAINER = 5;
     }
 
     /**
@@ -61,7 +61,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event nextValue();
+    byte nextValue();
 
     /**
      * Steps the cursor into the container value on which the cursor is currently positioned. This method may return:
@@ -73,7 +73,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event stepIntoContainer();
+    byte stepIntoContainer();
 
     /**
      * Steps the cursor out of the current container, skipping any values in the container that may follow. This method
@@ -86,7 +86,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event stepOutOfContainer();
+    byte stepOutOfContainer();
 
     /**
      * Buffers the entirety of the value on which the cursor is currently positioned. This method may return:
@@ -97,13 +97,13 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event fillValue();
+    byte fillValue();
 
     /**
      * Conveys the result of the previous operation.
      * @return an Event conveying the result of the previous operation.
      */
-    Event getCurrentEvent();
+    byte getCurrentEvent();
 
     /**
      * Causes the cursor to force completion of the value on which it is currently positioned, if any. This method may
@@ -122,5 +122,5 @@ public interface IonCursor extends Closeable {
      * @throws IonException if this method is called below the top level or when the cursor is positioned on an
      * incomplete value.
      */
-    Event endStream();
+    byte endStream();
 }
