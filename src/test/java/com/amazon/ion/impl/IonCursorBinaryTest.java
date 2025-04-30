@@ -1904,7 +1904,7 @@ public class IonCursorBinaryTest {
             cursor.nextTaglessValue(TaglessEncoding.FLEX_SYM);
             cursor.stepOutOfEExpression();
             assertEquals(START_SCALAR, cursor.nextValue());
-            assertEquals(IonType.INT, cursor.valueTid.type);
+            assertEquals(IonType.INT, cursor.valueMarker.typeId.type);
         }
     }
 
@@ -1922,7 +1922,7 @@ public class IonCursorBinaryTest {
             assertEquals(START_CONTAINER, cursor.nextValue());
             cursor.stepOutOfEExpression();
             assertEquals(START_SCALAR, cursor.nextValue());
-            assertEquals(IonType.STRING, cursor.valueTid.type);
+            assertEquals(IonType.STRING, cursor.valueMarker.typeId.type);
         }
     }
 

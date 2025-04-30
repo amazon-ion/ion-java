@@ -414,7 +414,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private long readLong_1_0() {
         long value = readUInt(valueMarker.startIndex, valueMarker.endIndex);
-        if (valueTid.isNegativeInt) {
+        if (valueMarker.typeId.isNegativeInt) {
             if (value == 0) {
                 throw new IonException("Int zero may not be negative.");
             }
@@ -429,8 +429,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private BigInteger readBigInteger_1_0() {
-        BigInteger value = readUIntAsBigInteger(valueTid.isNegativeInt);
-        if (valueTid.isNegativeInt && value.signum() == 0) {
+        BigInteger value = readUIntAsBigInteger(valueMarker.typeId.isNegativeInt);
+        if (valueMarker.typeId.isNegativeInt && value.signum() == 0) {
             throw new IonException("Int zero may not be negative.");
         }
         return value;
@@ -499,7 +499,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private boolean readBoolean_1_0() {
-        return valueTid.lowerNibble == 1;
+        return valueMarker.typeId.lowerNibble == 1;
     }
 
     /**
@@ -510,7 +510,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      *  requires the next larger size.
      */
     private boolean classifyInteger_1_0() {
-        if (valueTid.isNegativeInt) {
+        if (valueMarker.typeId.isNegativeInt) {
             int firstByte = buffer[(int)(valueMarker.startIndex)] & SINGLE_BYTE_MASK;
             if (firstByte < MOST_SIGNIFICANT_BYTE_OF_MIN_INTEGER) {
                 return true;
@@ -745,7 +745,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private BigInteger readTaglessIntAsBigInteger_1_1() {
         BigInteger value;
         int length = (int) (valueMarker.endIndex - peekIndex);
-        if (valueTid.variableLength) {
+        if (valueMarker.typeId.variableLength) {
             value = readLargeFlexIntOrFlexUIntAsBigInteger(length);
         } else if (length < LONG_SIZE_IN_BYTES || !taglessType.isUnsigned) {
             // Note: all fixed-width tagless signed ints fit in a Java long.
@@ -959,10 +959,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     @SuppressFBWarnings("SF_SWITCH_FALLTHROUGH")
     private Timestamp readTimestamp_1_1() {
-        if (valueTid.variableLength) {
+        if (valueMarker.typeId.variableLength) {
             return readTimestampLongForm_1_1();
         }
-        Timestamp.Precision precision = S_TIMESTAMP_PRECISION_FOR_TYPE_ID_OFFSET[valueTid.lowerNibble];
+        Timestamp.Precision precision = S_TIMESTAMP_PRECISION_FOR_TYPE_ID_OFFSET[valueMarker.typeId.lowerNibble];
         int year = 0;
         int month = 1;
         int day = 1;
@@ -981,7 +981,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 int unscaledValue = -1;
                 int scale = -1;
                 int bound = -1;
-                switch (valueTid.lowerNibble) {
+                switch (valueMarker.typeId.lowerNibble) {
                     case S_O_TIMESTAMP_NANOSECOND_LOWER_NIBBLE:
                         // The least-significant 24 bits of the nanoseconds field are contained in the long.
                         unscaledValue = (int) ((bits & S_O_TIMESTAMP_NANOSECOND_EIGHTH_BYTE_MASK) >>> S_O_TIMESTAMP_FRACTION_BIT_OFFSET);
@@ -1025,13 +1025,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                     }
                     fractionalSecond = BigDecimal.valueOf(unscaledValue, scale);
                 }
-                if (valueTid.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
+                if (valueMarker.typeId.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
                     second = (int) ((bits & S_O_TIMESTAMP_SECOND_MASK) >>> S_O_TIMESTAMP_SECOND_BIT_OFFSET);
                 } else {
                     second = (int) ((bits & S_U_TIMESTAMP_SECOND_MASK) >>> S_U_TIMESTAMP_SECOND_BIT_OFFSET);
                 }
             case MINUTE:
-                if (valueTid.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
+                if (valueMarker.typeId.lowerNibble >= S_O_TIMESTAMP_MINUTE_LOWER_NIBBLE) {
                     offset = (int) (((bits & S_O_TIMESTAMP_OFFSET_MASK) >>> S_O_TIMESTAMP_OFFSET_BIT_OFFSET) - S_O_TIMESTAMP_OFFSET_BIAS) * S_O_TIMESTAMP_OFFSET_INCREMENT;
                 } else {
                     offset = (bits & S_U_TIMESTAMP_UTC_FLAG) == 0 ? null : 0;
@@ -1069,7 +1069,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      */
     private boolean readBoolean_1_1() {
         // Boolean 'true' is 0x6E; 'false' is 0x6F.
-        return valueTid.lowerNibble == 0xE;
+        return valueMarker.typeId.lowerNibble == 0xE;
     }
 
     /**
@@ -1143,7 +1143,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     private boolean isPositionedOnEncodingDirective() {
         return event == Event.START_CONTAINER
             && hasAnnotations
-            && valueTid.type == IonType.SEXP
+            && valueMarker.typeId.type == IonType.SEXP
             && parent == null
             && startsWithIonAnnotation();
     }
@@ -1732,7 +1732,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
         @Override
         protected boolean isMacroInvocation() {
-            return valueTid != null && valueTid.isMacroInvocation;
+            return valueMarker.typeId != null && valueMarker.typeId.isMacroInvocation;
         }
 
         @Override
@@ -1901,7 +1901,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             } else {
                 event = super.nextValue();
             }
-            if (valueTid != null && valueTid.isMacroInvocation) {
+            if (valueMarker.typeId != null && valueMarker.typeId.isMacroInvocation) {
                 expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
                 macroEvaluatorIonReader.transcodeArgumentsTo(macroAwareTranscoder);
                 isEvaluatingEExpression = true;
@@ -2001,7 +2001,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             } else {
                 event = super.nextValue();
             }
-            if (valueTid != null && valueTid.isMacroInvocation) {
+            if (valueMarker.typeId != null && valueMarker.typeId.isMacroInvocation) {
                 if (evaluateUserMacroInvocations() || isSystemInvocation()) {
                     expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluator);
                     isEvaluatingEExpression = true;
@@ -2105,7 +2105,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.isNullValue();
         }
-        return valueTid != null && valueTid.isNull;
+        return valueMarker.typeId != null && valueMarker.typeId.isNull;
     }
 
     /**
@@ -2227,19 +2227,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getIntegerSize();
         }
-        if (valueTid == null || valueTid.type != IonType.INT || valueTid.isNull) {
+        if (valueMarker.typeId == null || valueMarker.typeId.type != IonType.INT || valueMarker.typeId.isNull) {
             return null;
         }
         prepareScalar();
         int length;
-        if (valueTid.variableLength) {
+        if (valueMarker.typeId.variableLength) {
             length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (taglessType != null) {
                 // FlexUInt or FlexInt
                 return classifyVariableWidthTaglessInteger_1_1(length);
             }
         } else {
-            length = valueTid.length;
+            length = valueMarker.typeId.length;
         }
         if (length < 0) {
             return IntegerSize.BIG_INTEGER;
@@ -2257,7 +2257,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
 
     private void throwDueToInvalidType(IonType type) {
         throw new IllegalStateException(
-            String.format("Invalid type. Required %s but found %s.", type, valueTid == null ? null : valueTid.type)
+            String.format("Invalid type. Required %s but found %s.", type, valueMarker.typeId == null ? null : valueMarker.typeId.type)
         );
     }
 
@@ -2266,7 +2266,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.byteSize();
         }
-        if (valueTid == null || !IonType.isLob(valueTid.type) || valueTid.isNull) {
+        if (valueMarker.typeId == null || !IonType.isLob(valueMarker.typeId.type) || valueMarker.typeId.isNull) {
             throw new IonException("Reader must be positioned on a blob or clob.");
         }
         prepareScalar();
@@ -2328,8 +2328,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.bigDecimalValue();
         }
         BigDecimal value = null;
-        if (valueTid.type == IonType.DECIMAL) {
-            if (valueTid.isNull) {
+        if (valueMarker.typeId.type == IonType.DECIMAL) {
+            if (valueMarker.typeId.isNull) {
                 return null;
             }
             prepareScalar();
@@ -2339,15 +2339,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             } else {
                 value = minorVersion == 0 ? readBigDecimal_1_0() : readBigDecimal_1_1();
             }
-        } else if (valueTid.type == IonType.INT) {
-            if (valueTid.isNull) {
+        } else if (valueMarker.typeId.type == IonType.INT) {
+            if (valueMarker.typeId.isNull) {
                 return null;
             }
             prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getBigDecimal();
             scalarConverter.clear();
-        } else if (valueTid.type == IonType.FLOAT) {
+        } else if (valueMarker.typeId.type == IonType.FLOAT) {
             scalarConverter.addValue(doubleValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
@@ -2365,8 +2365,8 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.decimalValue();
         }
         Decimal value = null;
-        if (valueTid.type == IonType.DECIMAL) {
-            if (valueTid.isNull) {
+        if (valueMarker.typeId.type == IonType.DECIMAL) {
+            if (valueMarker.typeId.isNull) {
                 return null;
             }
             prepareScalar();
@@ -2376,15 +2376,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             } else {
                 value = minorVersion == 0 ? readDecimal_1_0() : readDecimal_1_1();
             }
-        } else if (valueTid.type == IonType.INT) {
-            if (valueTid.isNull) {
+        } else if (valueMarker.typeId.type == IonType.INT) {
+            if (valueMarker.typeId.isNull) {
                 return null;
             }
             prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
             value = scalarConverter.getDecimal();
             scalarConverter.clear();
-        } else if (valueTid.type == IonType.FLOAT) {
+        } else if (valueMarker.typeId.type == IonType.FLOAT) {
             scalarConverter.addValue(doubleValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.decimal_value));
@@ -2402,22 +2402,22 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.longValue();
         }
         long value;
-        if (valueTid.isNull) {
+        if (valueMarker.typeId.isNull) {
             throwDueToInvalidType(IonType.INT);
         }
-        if (valueTid.type == IonType.INT) {
-            if (valueTid.length == 0) {
+        if (valueMarker.typeId.type == IonType.INT) {
+            if (valueMarker.typeId.length == 0) {
                 return 0;
             }
             prepareScalar();
             value = minorVersion == 0 ? readLong_1_0() : readLong_1_1();
-        } else if (valueTid.type == IonType.FLOAT) {
+        } else if (valueMarker.typeId.type == IonType.FLOAT) {
             scalarConverter.addValue(doubleValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.double_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));
             value = scalarConverter.getLong();
             scalarConverter.clear();
-        } else if (valueTid.type == IonType.DECIMAL) {
+        } else if (valueMarker.typeId.type == IonType.DECIMAL) {
             scalarConverter.addValue(decimalValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.long_value));
@@ -2435,19 +2435,19 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.bigIntegerValue();
         }
         BigInteger value;
-        if (valueTid.type == IonType.INT) {
-            if (valueTid.isNull) {
+        if (valueMarker.typeId.type == IonType.INT) {
+            if (valueMarker.typeId.isNull) {
                 // NOTE: this mimics existing behavior, but should probably be undefined (as, e.g., longValue() is in this
                 //  case).
                 return null;
             }
-            if (valueTid.length == 0) {
+            if (valueMarker.typeId.length == 0) {
                 return BigInteger.ZERO;
             }
             prepareScalar();
             value = minorVersion == 0 ? readBigInteger_1_0() : readBigInteger_1_1();
-        } else if (valueTid.type == IonType.FLOAT) {
-            if (valueTid.isNull) {
+        } else if (valueMarker.typeId.type == IonType.FLOAT) {
+            if (valueMarker.typeId.isNull) {
                 value = null;
             } else {
                 scalarConverter.addValue(doubleValue());
@@ -2516,10 +2516,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return macroEvaluatorIonReader.doubleValue();
         }
         double value;
-        if (valueTid.isNull) {
+        if (valueMarker.typeId.isNull) {
             throwDueToInvalidType(IonType.FLOAT);
         }
-        if (valueTid.type == IonType.FLOAT) {
+        if (valueMarker.typeId.type == IonType.FLOAT) {
             prepareScalar();
             int length = (int) (valueMarker.endIndex - valueMarker.startIndex);
             if (length == 0) {
@@ -2537,13 +2537,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 // Note: there is no need to check for other lengths here; the type ID byte is validated during next().
                 value = bytes.getDouble();
             }
-        } else if (valueTid.type == IonType.DECIMAL) {
+        } else if (valueMarker.typeId.type == IonType.DECIMAL) {
             scalarConverter.addValue(decimalValue());
             scalarConverter.setAuthoritativeType(_Private_ScalarConversions.AS_TYPE.decimal_value);
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));
             value = scalarConverter.getDouble();
             scalarConverter.clear();
-        } else if (valueTid.type == IonType.INT) {
+        } else if (valueMarker.typeId.type == IonType.INT) {
             prepareToConvertIntValue();
             scalarConverter.cast(scalarConverter.get_conversion_fnid(_Private_ScalarConversions.AS_TYPE.double_value));
             value = scalarConverter.getDouble();
@@ -2559,10 +2559,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.timestampValue();
         }
-        if (valueTid == null || IonType.TIMESTAMP != valueTid.type) {
+        if (valueMarker.typeId == null || IonType.TIMESTAMP != valueMarker.typeId.type) {
             throwDueToInvalidType(IonType.TIMESTAMP);
         }
-        if (valueTid.isNull) {
+        if (valueMarker.typeId.isNull) {
             return null;
         }
         prepareScalar();
@@ -2587,7 +2587,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.booleanValue();
         }
-        if (valueTid == null || IonType.BOOL != valueTid.type || valueTid.isNull) {
+        if (valueMarker.typeId == null || IonType.BOOL != valueMarker.typeId.type || valueMarker.typeId.isNull) {
             throwDueToInvalidType(IonType.BOOL);
         }
         prepareScalar();
@@ -2602,7 +2602,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.stringValue();
         }
-        if (valueTid.isNull) {
+        if (valueMarker.typeId.isNull) {
             return null;
         }
         prepareScalar();
@@ -2617,9 +2617,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (type == IonType.STRING || isEvaluatingEExpression) {
             value = readString();
         } else if (type == IonType.SYMBOL) {
-            if (valueTid.isInlineable) {
+            if (valueMarker.typeId.isInlineable) {
                 value = readString();
-            } else if (valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            } else if (valueMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
                 value = getSymbolText();
             } else {
                 int sid = symbolValueId();
@@ -2643,10 +2643,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getType() == IonType.SYMBOL && !macroEvaluatorIonReader.isNullValue();
         }
-        if (valueTid == null || IonType.SYMBOL != valueTid.type) {
+        if (valueMarker.typeId == null || IonType.SYMBOL != valueMarker.typeId.type) {
             return false;
         }
-        return valueTid.isInlineable || valueTid == IonTypeID.SYSTEM_SYMBOL_VALUE;
+        return valueMarker.typeId.isInlineable || valueMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE;
     }
 
     @Override
@@ -2668,10 +2668,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             return macroEvaluatorIonReader.symbolValue().getSid();
         }
-        if (valueTid == null || IonType.SYMBOL != valueTid.type) {
+        if (valueMarker.typeId == null || IonType.SYMBOL != valueMarker.typeId.type) {
             throwDueToInvalidType(IonType.SYMBOL);
         }
-        if (valueTid.isNull) {
+        if (valueMarker.typeId.isNull) {
             return -1;
         }
         prepareScalar();
@@ -2684,15 +2684,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 peekIndex = valueMarker.startIndex;
                 return (int) readFlexInt_1_1();
             }
-            if (valueTid.length == 1){
+            if (valueMarker.typeId.length == 1){
                 return (int) readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex);
-            } else if (valueTid.length == 2){
+            } else if (valueMarker.typeId.length == 2){
                 return (int) readFixedUInt_1_1(valueMarker.startIndex, valueMarker.endIndex) + 256;
-            } else if (valueTid.length == -1) {
+            } else if (valueMarker.typeId.length == -1) {
                 peekIndex = valueMarker.startIndex;
                 return (int) readFlexUInt_1_1() + 65792;
             } else {
-                throw new IllegalStateException("Illegal length " + valueTid.length + " for " + valueMarker);
+                throw new IllegalStateException("Illegal length " + valueMarker.typeId.length + " for " + valueMarker);
             }
         }
     }
@@ -2859,10 +2859,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.symbolValue();
         }
-        if (valueTid == SYSTEM_SYMBOL_VALUE) {
+        if (valueMarker.typeId == SYSTEM_SYMBOL_VALUE) {
             return getSystemSymbolToken(valueMarker);
         }
-        if (valueTid.isInlineable) {
+        if (valueMarker.typeId.isInlineable) {
             return new SymbolTokenImpl(getSymbolText(), SymbolTable.UNKNOWN_SYMBOL_ID);
         }
 
@@ -2887,7 +2887,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getType();
         }
-        return valueTid == null ? null : valueTid.type;
+        return valueMarker.typeId == null ? null : valueMarker.typeId.type;
     }
 
     @Override
@@ -2895,7 +2895,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         if (isEvaluatingEExpression) {
             return macroEvaluatorIonReader.getType();
         }
-        return valueTid == null ? null : valueTid.type;
+        return valueMarker.typeId == null ? null : valueMarker.typeId.type;
     }
 
     @Override
