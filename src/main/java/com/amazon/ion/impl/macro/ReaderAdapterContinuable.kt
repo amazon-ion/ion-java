@@ -22,7 +22,7 @@ internal class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : 
 
     override fun nextValue(): Boolean {
         val event = reader.nextValue()
-        return event != IonCursor.Event.NEEDS_DATA && event != IonCursor.Event.END_CONTAINER
+        return event != IonCursor.Event.NEEDS_DATA_ORDINAL && event != IonCursor.Event.END_CONTAINER_ORDINAL
     }
 
     override fun getDepth(): Int = reader.depth
@@ -33,7 +33,7 @@ internal class ReaderAdapterContinuable(val reader: IonReaderContinuableCore) : 
     private fun prepareValue() {
         // TODO performance: fill entire expression groups up-front so that the reader will usually not be in slow
         //  mode when this is called.
-        if (reader.fillValue() != IonCursor.Event.VALUE_READY) {
+        if (reader.fillValue() != IonCursor.Event.VALUE_READY_ORDINAL) {
             throw IonException("TODO: support continuable reading and oversize value handling via this adapter.")
         }
     }

@@ -12,42 +12,52 @@ public interface IonCursor extends Closeable {
 
     /**
      * Conveys the type of event that occurred as a result of operating on the cursor.
+     *
+     * Using byte constants instead of enum values seems to be significantly faster, and it also reduces the memory
+     * footprint of any class that stores them. See https://github.com/amazon-ion/ion-java/pull/1072.
      */
-    class Event {
-
+    enum Event {
         /**
          * There is not enough data in the stream to complete the requested operation. The operation should be retried
          * when more data is available. Note that there is no way to "cancel" a previously requested operation;
          * requesting a different operation after a `NEEDS_DATA` event has undefined behavior.
          */
-        public static final byte NEEDS_DATA = 0;
+        NEEDS_DATA,
 
         /**
          * The cursor has completed an operation (e.g. `stepIntoContainer()`) and requires another instruction in order
          * to position itself on the next value.
          */
-        public static final byte NEEDS_INSTRUCTION = 1;
+        NEEDS_INSTRUCTION,
 
         /**
          * The cursor is positioned on a scalar value.
          */
-        public static final byte START_SCALAR = 2;
+        START_SCALAR,
 
         /**
          * The cursor has successfully buffered the entirety of the value on which it is currently positioned, as
          * requested by an invocation of `fillValue()`.
          */
-        public static final byte VALUE_READY = 3;
+        VALUE_READY,
 
         /**
          * The cursor is positioned on a container value.
          */
-        public static final byte START_CONTAINER = 4;
+        START_CONTAINER,
 
         /**
          * The cursor has reached the end of the current container, and requires an instruction to proceed.
          */
-        public static final byte END_CONTAINER = 5;
+        END_CONTAINER,
+        ;
+
+        public static final byte NEEDS_DATA_ORDINAL = 0;
+        public static final byte NEEDS_INSTRUCTION_ORDINAL = 1;
+        public static final byte START_SCALAR_ORDINAL = 2;
+        public static final byte VALUE_READY_ORDINAL = 3;
+        public static final byte START_CONTAINER_ORDINAL = 4;
+        public static final byte END_CONTAINER_ORDINAL = 5;
     }
 
     /**

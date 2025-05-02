@@ -87,7 +87,7 @@ final class IonLoaderLite
         writer.writeValues(reader);
         if (_readerBuilder.isIncrementalReadingEnabled() && reader instanceof IonCursor) {
             // Force incremental readers to either disambiguate an incomplete value or raise an error.
-            if (((IonCursor) reader).endStream() != IonCursor.Event.NEEDS_DATA) {
+            if (((IonCursor) reader).endStream() != IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 // Only text readers can reach this case, because it indicates that completion of an ambiguous token
                 // was forced. Add the resulting value to the datagram.
                 writer.writeValue(reader);

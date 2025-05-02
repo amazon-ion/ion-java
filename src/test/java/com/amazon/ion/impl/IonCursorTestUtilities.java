@@ -13,12 +13,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.amazon.ion.IonCursor.Event.END_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
-import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
-import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.START_SCALAR;
-import static com.amazon.ion.IonCursor.Event.VALUE_READY;
+import static com.amazon.ion.IonCursor.Event.END_CONTAINER_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.START_CONTAINER_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY_ORDINAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,22 +53,22 @@ public class IonCursorTestUtilities {
     }
 
     static final Expectation<? extends IonCursorBinary> SCALAR = new Expectation<>("scalar", cursor -> {
-        assertEquals(START_SCALAR, cursor.nextValue());
+        assertEquals(START_SCALAR_ORDINAL, cursor.nextValue());
     });
     static final Expectation<? extends IonCursorBinary> CONTAINER_START = new Expectation<>("container_start", cursor -> {
-        assertEquals(START_CONTAINER, cursor.nextValue());
+        assertEquals(START_CONTAINER_ORDINAL, cursor.nextValue());
     });
     static final Expectation<? extends IonCursorBinary> STEP_IN = new Expectation<>("step_in", cursor -> {
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
+        assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.stepIntoContainer());
     });
     static final Expectation<? extends IonCursorBinary> STEP_OUT = new Expectation<>("step_out", cursor -> {
-        assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer());
+        assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.stepOutOfContainer());
     });
     static final Expectation<? extends IonCursorBinary> CONTAINER_END = new Expectation<>("container_end", cursor -> {
-        assertEquals(END_CONTAINER, cursor.nextValue());
+        assertEquals(END_CONTAINER_ORDINAL, cursor.nextValue());
     });
     static final Expectation<? extends IonCursorBinary> STREAM_END = new Expectation<>("stream_end", cursor -> {
-        assertEquals(NEEDS_DATA, cursor.nextValue());
+        assertEquals(NEEDS_DATA_ORDINAL, cursor.nextValue());
     });
     static final Expectation<? extends IonCursorBinary> NO_EXPECTATION = new Expectation<>("no_op", cursor -> {});
 
@@ -176,7 +176,7 @@ public class IonCursorTestUtilities {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("int(%d)", expectedValue),
             reader -> {
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(expectedValue, reader.intValue());
             }
@@ -191,7 +191,7 @@ public class IonCursorTestUtilities {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("string(%s)", expectedValue),
             reader -> {
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.STRING, reader.getType());
                 assertEquals(expectedValue, reader.stringValue());
             }
@@ -206,7 +206,7 @@ public class IonCursorTestUtilities {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("symbol(%s)", expectedValue),
             reader -> {
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.SYMBOL, reader.getType());
                 assertEquals(expectedValue, reader.stringValue());
             }
@@ -221,7 +221,7 @@ public class IonCursorTestUtilities {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("symbol($%s)", expectedValue),
             reader -> {
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.SYMBOL, reader.getType());
                 assertEquals(expectedValue, reader.symbolValueId());
             }
@@ -300,8 +300,8 @@ public class IonCursorTestUtilities {
             consumer.accept(new Expectation<>(
                 String.format("fill(%s)", expectedType),
                 cursor -> {
-                    assertEquals(START_CONTAINER, cursor.nextValue());
-                    assertEquals(VALUE_READY, cursor.fillValue());
+                    assertEquals(START_CONTAINER_ORDINAL, cursor.nextValue());
+                    assertEquals(VALUE_READY_ORDINAL, cursor.fillValue());
                     assertEquals(expectedType, cursor.getType());
                 }
             ));

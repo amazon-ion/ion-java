@@ -114,15 +114,15 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
      */
     private void nextAndFill() {
         while (true) {
-            if (!isFillingValue && nextValue() == IonCursor.Event.NEEDS_DATA) {
+            if (!isFillingValue && nextValue() == IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 return;
             }
             isFillingValue = true;
-            if (fillValue() == IonCursor.Event.NEEDS_DATA) {
+            if (fillValue() == IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 return;
             }
             isFillingValue = false;
-            if (event != IonCursor.Event.NEEDS_INSTRUCTION) {
+            if (event != IonCursor.Event.NEEDS_INSTRUCTION_ORDINAL) {
                 type = super.getType();
                 return;
             }
@@ -134,7 +134,7 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
      * Handles the case where the current value extends beyond the end of the reader's internal buffer.
      */
     private void handleIncompleteValue() {
-        if (event == Event.NEEDS_DATA) {
+        if (event == Event.NEEDS_DATA_ORDINAL) {
             // The reader has already consumed all bytes from the buffer. If non-continuable, this is the end of the
             // stream. If continuable, continue to return null from next().
             if (isNonContinuable) {
@@ -146,7 +146,7 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             // Each value contains its own length prefix, so it is safe to reset the incomplete flag before attempting
             // to read the value.
             isValueIncomplete = false;
-            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
+            if (nextValue() == IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 // Attempting to read the partial value required consuming the remaining bytes in the stream, which
                 // is now at its end.
                 isValueIncomplete = true;
@@ -164,7 +164,7 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         if (isValueIncomplete) {
             handleIncompleteValue();
         } else if (!isSlowMode || isNonContinuable || parent != null) {
-            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
+            if (nextValue() == IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 if (isNonContinuable) {
                     endStream();
                 }
@@ -172,7 +172,7 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
                 // The value is incomplete and the reader is continuable, so the reader must return null from next().
                 // Setting the event to NEEDS_DATA ensures that if the user attempts to skip past the incomplete
                 // value, null will continue to be returned.
-                event = Event.NEEDS_DATA;
+                event = Event.NEEDS_DATA_ORDINAL;
             } else {
                 isFillingValue = false;
                 type = super.getType();
@@ -206,16 +206,16 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
     @Override
     void prepareScalar() {
         if (!isValueIncomplete) {
-            if (!isSlowMode || event == IonCursor.Event.VALUE_READY) {
+            if (!isSlowMode || event == IonCursor.Event.VALUE_READY_ORDINAL) {
                 super.prepareScalar();
                 return;
             }
             if (isFillRequired) {
-                if (fillValue() == Event.VALUE_READY) {
+                if (fillValue() == Event.VALUE_READY_ORDINAL) {
                     super.prepareScalar();
                     return;
                 }
-                if (event == Event.NEEDS_INSTRUCTION) {
+                if (event == Event.NEEDS_INSTRUCTION_ORDINAL) {
                     throw new OversizedValueException();
                 }
             } else {

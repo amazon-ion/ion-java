@@ -23,8 +23,8 @@ import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonCursor.Event.START_SCALAR;
-import static com.amazon.ion.IonCursor.Event.VALUE_READY;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY_ORDINAL;
 import static com.amazon.ion.TestUtils.withIvm;
 import static com.amazon.ion.impl.IonCursorTestUtilities.annotations;
 import static com.amazon.ion.impl.IonCursorTestUtilities.fieldName;
@@ -699,7 +699,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x9A  // Field SID 26
             // The struct ends unexpectedly
         );
-        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonCursor.Event.START_CONTAINER_ORDINAL, reader.nextValue());
         assertEquals(IonType.STRUCT, reader.getType());
         reader.stepIntoContainer();
         // This is an unexpected EOF, so the reader should fail cleanly.
@@ -717,7 +717,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x9A  // Field SID 26
             // The struct ends unexpectedly
         );
-        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonCursor.Event.START_CONTAINER_ORDINAL, reader.nextValue());
         assertEquals(IonType.STRUCT, reader.getType());
         reader.stepIntoContainer();
         // This is an unexpected EOF, so the reader should fail cleanly.
@@ -737,7 +737,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x00, 0x84  // VarUInt SID 4 (overpadded by 1 byte)
             // The value ends unexpectedly
         );
-        assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+        assertEquals(IonCursor.Event.START_CONTAINER_ORDINAL, reader.nextValue());
         assertEquals(IonType.STRUCT, reader.getType());
         reader.stepIntoContainer();
         // This is an unexpected EOF, so the reader should fail cleanly.
@@ -771,7 +771,7 @@ public class IonReaderContinuableCoreBinaryTest {
                 0x80  // VarUInt 0 at stream end. This is an error because there is no length 0 timestamp.
             )
         ) {
-            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, reader.nextValue());
             assertThrows(IonException.class, reader::timestampValue);
         }
     }
@@ -788,7 +788,7 @@ public class IonReaderContinuableCoreBinaryTest {
                 0x20   // Value byte to pad the input. A refillable reader expects at least this many bytes to compose a valid timestamp.
             )
         ) {
-            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, reader.nextValue());
             assertThrows(IonException.class, reader::timestampValue);
         }
     }
@@ -801,8 +801,8 @@ public class IonReaderContinuableCoreBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(START_SCALAR_ORDINAL, reader.nextTaglessValue(taglessEncoding));
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(expectedType, reader.getType());
             }
         ));
@@ -816,8 +816,8 @@ public class IonReaderContinuableCoreBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless int from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(START_SCALAR_ORDINAL, reader.nextTaglessValue(taglessEncoding));
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.INT, reader.getIntegerSize());
                 assertEquals(expectedValue, reader.intValue());
@@ -833,8 +833,8 @@ public class IonReaderContinuableCoreBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless long from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(START_SCALAR_ORDINAL, reader.nextTaglessValue(taglessEncoding));
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.LONG, reader.getIntegerSize());
                 assertEquals(expectedValue, reader.longValue());
@@ -850,8 +850,8 @@ public class IonReaderContinuableCoreBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless BigInteger from %s", taglessEncoding.name()),
             reader -> {
-                assertEquals(START_SCALAR, reader.nextTaglessValue(taglessEncoding));
-                assertEquals(VALUE_READY, reader.fillValue());
+                assertEquals(START_SCALAR_ORDINAL, reader.nextTaglessValue(taglessEncoding));
+                assertEquals(VALUE_READY_ORDINAL, reader.fillValue());
                 assertEquals(IonType.INT, reader.getType());
                 assertEquals(IntegerSize.BIG_INTEGER, reader.getIntegerSize());
                 assertEquals(expectedValue, reader.bigIntegerValue());
@@ -1099,7 +1099,7 @@ public class IonReaderContinuableCoreBinaryTest {
             0x42  // SID $66
         ));
         try (IonReaderContinuableCoreBinary reader = initializeReader(constructFromBytes, data)) {
-            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, reader.nextValue());
             assertEquals(66, reader.symbolValueId());
         }
     }
