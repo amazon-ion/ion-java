@@ -14,6 +14,7 @@ permissions:
 env:
   data_size: '50000'
   test_data_id: 'generated-test-data'
+  benchmark_config: '--mode AverageTime --forks 5 --warmups 2 --iterations 3 --io-type buffer'
 
 jobs:
   generate-test-data:
@@ -73,7 +74,13 @@ jobs:
     strategy:
       matrix:
         test-data: ['nestedStruct', 'nestedList', 'sexp', 'realWorldDataSchema01', 'realWorldDataSchema02', 'realWorldDataSchema03']
-        usage-patterns: [' read --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api streaming ',' read --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api dom ', ' write --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api streaming --io-type buffer --ion-length-preallocation 1 ', ' write --mode AverageTime --forks 3 --warmups 2 --iterations 10 --api dom --io-type buffer --ion-length-preallocation 1 ']
+        usage-patterns: [
+          'read  --api streaming',
+          'write --api streaming --ion-length-preallocation 1',
+          'read  --api dom',
+          'write --api dom --ion-length-preallocation 1',
+        ]
+
       fail-fast: false
 
     steps:
@@ -122,7 +129,7 @@ jobs:
         run: |
           mvn clean install
           mkdir /home/runner/work/ion-java/ion-java/benchmarkresults
-          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n 
+          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} ${{env.benchmark_config}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n
 
       - name: Build ion-java from the new commit
         working-directory: new
@@ -133,7 +140,7 @@ jobs:
         working-directory: ion-java-benchmark-cli
         run: |
           mvn clean install
-          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n
+          java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar ${{matrix.usage-patterns}} ${{env.benchmark_config}} -r ion -o /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion /home/runner/work/ion-java/ion-java/testData/${{matrix.test-data}}.10n
 
       #Detect regression
       - name: Detect regression
