@@ -63,16 +63,28 @@ class IonCursorBinary implements IonCursor {
 
     /**
      * The kind of location at which `checkpoint` points.
+     *
+     * Using byte constants instead of enum values seems to be significantly faster, and it also reduces the memory
+     * footprint of any class that stores them. See https://github.com/amazon-ion/ion-java/pull/1072.
      */
     private enum CheckpointLocation {
         BEFORE_UNANNOTATED_TYPE_ID,
         BEFORE_ANNOTATED_TYPE_ID,
         AFTER_SCALAR_HEADER,
-        AFTER_CONTAINER_HEADER
+        AFTER_CONTAINER_HEADER,
+        ;
+
+        public static final byte BEFORE_UNANNOTATED_TYPE_ID_ORDINAL = 0;
+        public static final byte BEFORE_ANNOTATED_TYPE_ID_ORDINAL = 1;
+        public static final byte AFTER_SCALAR_HEADER_ORDINAL = 2;
+        public static final byte AFTER_CONTAINER_HEADER_ORDINAL = 3;
     }
 
     /**
      * The state representing where the cursor left off after the previous operation.
+     *
+     * Using byte constants instead of enum values seems to be significantly faster, and it also reduces the memory
+     * footprint of any class that stores them. See https://github.com/amazon-ion/ion-java/pull/1072.
      */
     private enum State {
         FILL,
@@ -80,7 +92,14 @@ class IonCursorBinary implements IonCursor {
         SEEK,
         SEEK_DELIMITED,
         READY,
-        TERMINATED
+        TERMINATED,
+        ;
+        public static final byte FILL_ORDINAL = 0;
+        public static final byte FILL_DELIMITED_ORDINAL = 1;
+        public static final byte SEEK_ORDINAL = 2;
+        public static final byte SEEK_DELIMITED_ORDINAL = 3;
+        public static final byte READY_ORDINAL = 4;
+        public static final byte TERMINATED_ORDINAL = 5;
     }
 
     /**
@@ -110,7 +129,7 @@ class IonCursorBinary implements IonCursor {
          * READY state). This enables the reader to complete the previous IonCursor API invocation if it returned a
          * NEEDS_DATA event.
          */
-        State state;
+        byte state;
 
         /**
          * The number of bytes that still need to be consumed from the input during a fill or seek operation.
@@ -175,7 +194,7 @@ class IonCursorBinary implements IonCursor {
          */
         private boolean skipAnnotations = false;
 
-        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, State initialState) {
+        RefillableState(InputStream inputStream, int capacity, int maximumBufferSize, byte initialState) {
             this.inputStream = inputStream;
             this.capacity = capacity;
             this.maximumBufferSize = maximumBufferSize;
@@ -213,7 +232,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Dummy state that indicates the cursor has been terminated and that additional API calls will have no effect.
      */
-    private static final RefillableState TERMINATED_STATE = new RefillableState(null, -1, -1, State.TERMINATED);
+    private static final RefillableState TERMINATED_STATE = new RefillableState(null, -1, -1, State.TERMINATED_ORDINAL);
 
     /**
      * Stack to hold container info. Stepping into a container results in a push; stepping out results in a pop.
@@ -299,7 +318,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * The event that occurred as a result of the last call to any of the cursor's IonCursor methods.
      */
-    IonCursor.Event event = IonCursor.Event.NEEDS_DATA;
+    byte event = IonCursor.Event.NEEDS_DATA_ORDINAL;
 
     /**
      * The buffer in which the cursor stores slices of the Ion stream.
@@ -346,7 +365,7 @@ class IonCursorBinary implements IonCursor {
     /**
      * Describes the byte at the `checkpoint` index.
      */
-    private CheckpointLocation checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+    private byte checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL;
 
     /**
      * Indicates whether the cursor is in slow mode. Slow mode must be used when the input source is refillable (i.e.
@@ -574,7 +593,7 @@ class IonCursorBinary implements IonCursor {
             inputStream,
             configuration.getInitialBufferSize(),
             configuration.getMaximumBufferSize(),
-            State.READY
+            State.READY_ORDINAL
         );
         registerOversizedValueHandler(configuration.getOversizedValueHandler());
     }
@@ -672,10 +691,10 @@ class IonCursorBinary implements IonCursor {
         }
         if (shortfall <= 0) {
             refillableState.bytesRequested = 0;
-            refillableState.state = State.READY;
+            refillableState.state = State.READY_ORDINAL;
             return true;
         }
-        refillableState.state = State.FILL;
+        refillableState.state = State.FILL_ORDINAL;
         return false;
     }
 
@@ -858,7 +877,7 @@ class IonCursorBinary implements IonCursor {
         if (unbufferedBytesToSkip <= 0) {
             offset += numberOfBytes;
             refillableState.bytesRequested = 0;
-            refillableState.state = State.READY;
+            refillableState.state = State.READY_ORDINAL;
             return false;
         }
         offset = limit;
@@ -883,11 +902,11 @@ class IonCursorBinary implements IonCursor {
             refillableState.bytesRequested = 0;
             // The value has been entirely skipped, so its endIndex is now the buffer's limit.
             valueMarker.endIndex = limit;
-            refillableState.state = State.READY;
+            refillableState.state = State.READY_ORDINAL;
             return false;
         }
         refillableState.bytesRequested = shortfall;
-        refillableState.state = State.SEEK;
+        refillableState.state = State.SEEK_ORDINAL;
         return true;
     }
 
@@ -1086,11 +1105,11 @@ class IonCursorBinary implements IonCursor {
             endIndex = valueTid.length + peekIndex;
         }
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
-            event = Event.START_CONTAINER;
+            event = Event.START_CONTAINER_ORDINAL;
         } else if (valueTid.isNopPad) {
             uncheckedSeekPastNopPad(endIndex, isAnnotated);
         } else {
-            event = Event.START_SCALAR;
+            event = Event.START_SCALAR_ORDINAL;
         }
         return endIndex;
     }
@@ -1416,7 +1435,7 @@ class IonCursorBinary implements IonCursor {
      */
     private long calculateEndIndex_1_1(IonTypeID valueTid, boolean isAnnotated) {
         if (valueTid.isDelimited) {
-            event = Event.START_CONTAINER;
+            event = Event.START_CONTAINER_ORDINAL;
             return DELIMITED_MARKER;
         }
         long length = valueTid.length;
@@ -1428,11 +1447,11 @@ class IonCursorBinary implements IonCursor {
         }
         long endIndex = peekIndex + length;
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
-            event = Event.START_CONTAINER;
+            event = Event.START_CONTAINER_ORDINAL;
         } else if (valueTid.isNopPad) {
             uncheckedSeekPastNopPad(endIndex, isAnnotated);
         } else {
-            event = Event.START_SCALAR;
+            event = Event.START_SCALAR_ORDINAL;
         }
         return endIndex;
     }
@@ -1802,7 +1821,7 @@ class IonCursorBinary implements IonCursor {
             // using FlexSyms.
             if (buffer[(int) peekIndex] == FlexInt.ZERO) {
                 peekIndex++;
-                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+                setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL);
                 parent.typeId = IonTypeID.STRUCT_WITH_FLEX_SYMS_ID;
                 return slowReadFieldNameFlexSym_1_1();
             } else {
@@ -1823,13 +1842,13 @@ class IonCursorBinary implements IonCursor {
             uncheckedReadFieldName_1_1();
             if (fieldSid < 0 && fieldTextMarker.typeId != null && fieldTextMarker.typeId.lowerNibble == OpCodes.DELIMITED_END_MARKER) {
                 parent.endIndex = peekIndex;
-                event = Event.END_CONTAINER;
+                event = Event.END_CONTAINER_ORDINAL;
                 return true;
             }
         } else if (buffer[(int) peekIndex] == OpCodes.DELIMITED_END_MARKER) {
             peekIndex++;
             parent.endIndex = peekIndex;
-            event = Event.END_CONTAINER;
+            event = Event.END_CONTAINER_ORDINAL;
             return true;
         }
         return false;
@@ -1860,7 +1879,7 @@ class IonCursorBinary implements IonCursor {
                 return true;
             }
             if (currentByte == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
-                event = Event.END_CONTAINER;
+                event = Event.END_CONTAINER_ORDINAL;
                 valueMarker.typeId = null;
                 fieldSid = -1;
                 return true;
@@ -1887,7 +1906,7 @@ class IonCursorBinary implements IonCursor {
             return true;
         } else if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
             parent.endIndex = peekIndex;
-            event = Event.END_CONTAINER;
+            event = Event.END_CONTAINER_ORDINAL;
             valueMarker.typeId = null;
             fieldSid = -1;
             return true;
@@ -1909,7 +1928,7 @@ class IonCursorBinary implements IonCursor {
         // Note: when there is no AEB, the following initializes the presence bitmap to "EXPRESSION" for each parameter.
         PresenceBitmap presenceBitmap = PresenceBitmap.create(signature);
         if (presenceBitmap.getByteSize() > 0) {
-            if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA) {
+            if (fillArgumentEncodingBitmap(presenceBitmap.getByteSize()) == IonCursor.Event.NEEDS_DATA_ORDINAL) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of AEBs.");
             }
             presenceBitmap.readFrom(buffer, (int) valueMarker.startIndex);
@@ -1970,10 +1989,10 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     boolean uncheckedSkipRemainingDelimitedContainerElements_1_1() {
-        while (event != Event.END_CONTAINER) {
-            event = Event.NEEDS_DATA;
+        while (event != Event.END_CONTAINER_ORDINAL) {
+            event = Event.NEEDS_DATA_ORDINAL;
             while (uncheckedNextToken());
-            if (event == Event.NEEDS_DATA) {
+            if (event == Event.NEEDS_DATA_ORDINAL) {
                 return true;
             }
         }
@@ -2010,7 +2029,7 @@ class IonCursorBinary implements IonCursor {
                 return FlexSymType.INCOMPLETE == slowSkipFlexSym_1_1(valueMarker);
             case Tagged:
                 slowNextToken();
-                return event == Event.NEEDS_DATA;
+                return event == Event.NEEDS_DATA_ORDINAL;
             default:
                 return false;
         }
@@ -2050,10 +2069,10 @@ class IonCursorBinary implements IonCursor {
                 } else {
                     enterTaglessArgumentGroup(encoding.taglessEncodingKind);
                 }
-                if (event == Event.NEEDS_DATA) {
+                if (event == Event.NEEDS_DATA_ORDINAL) {
                     return true;
                 }
-                if (exitArgumentGroup() == Event.NEEDS_DATA) {
+                if (exitArgumentGroup() == Event.NEEDS_DATA_ORDINAL) {
                     return true;
                 }
             } else {
@@ -2077,9 +2096,9 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the stream was reached before skipping past all remaining elements; otherwise, false.
      */
     private boolean slowSkipRemainingDelimitedContainerElements_1_1() {
-        while (event != Event.END_CONTAINER) {
+        while (event != Event.END_CONTAINER_ORDINAL) {
             slowNextToken();
-            if (event == Event.NEEDS_DATA) {
+            if (event == Event.NEEDS_DATA_ORDINAL) {
                 return true;
             }
         }
@@ -2122,7 +2141,7 @@ class IonCursorBinary implements IonCursor {
         IonTypeID savedAnnotationTid = annotationSequenceMarker.typeId;
         long savedAnnotationStartIndex = annotationSequenceMarker.startIndex;
         long savedAnnotationsEndIndex = annotationSequenceMarker.endIndex;
-        CheckpointLocation savedCheckpointLocation = checkpointLocation;
+        byte savedCheckpointLocation = checkpointLocation;
         long savedCheckpoint = checkpoint;
         int savedContainerIndex = containerIndex;
         Marker savedParent = parent;
@@ -2140,10 +2159,10 @@ class IonCursorBinary implements IonCursor {
         seekPastDelimitedContainer_1_1();
 
         refillableState.skipAnnotations = false;
-        boolean isReady = event != Event.NEEDS_DATA;
+        boolean isReady = event != Event.NEEDS_DATA_ORDINAL;
         if (refillableState.isSkippingCurrentValue) {
             // This delimited container is oversized. The cursor must seek past it.
-            refillableState.state = State.SEEK_DELIMITED;
+            refillableState.state = State.SEEK_DELIMITED_ORDINAL;
             refillableState.targetSeekDepth = savedContainerIndex;
             refillableState.pendingShift = 0;
             return isReady;
@@ -2171,13 +2190,13 @@ class IonCursorBinary implements IonCursor {
         if (isReady) {
             // Record the endIndex so that it does not need to be calculated repetitively.
             valueMarker.endIndex = peekIndex;
-            event = Event.START_CONTAINER;
-            refillableState.state = State.READY;
+            event = Event.START_CONTAINER_ORDINAL;
+            refillableState.state = State.READY_ORDINAL;
             refillableState.pinOffset = -1;
         } else {
             // The fill is not complete, but there is currently no more data. The cursor will have to resume the fill
             // before processing the next request.
-            refillableState.state = State.FILL_DELIMITED;
+            refillableState.state = State.FILL_DELIMITED_ORDINAL;
         }
 
         peekIndex = savedPeekIndex;
@@ -2189,12 +2208,12 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the container was reached; otherwise, false.
      */
     private boolean slowSeekToDelimitedEnd_1_1() {
-        refillableState.state = State.READY;
+        refillableState.state = State.READY_ORDINAL;
         refillableState.isSkippingCurrentValue = true;
         while (containerIndex > refillableState.targetSeekDepth) {
             stepOutOfContainer();
-            if (event == Event.NEEDS_DATA) {
-                refillableState.state = State.SEEK_DELIMITED;
+            if (event == Event.NEEDS_DATA_ORDINAL) {
+                refillableState.state = State.SEEK_DELIMITED_ORDINAL;
                 refillableState.isSkippingCurrentValue = false;
                 return false;
             }
@@ -2206,7 +2225,7 @@ class IonCursorBinary implements IonCursor {
         refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
         refillableState.individualBytesSkippedWithoutBuffering = 0;
         refillableState.isSkippingCurrentValue = false;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return true;
     }
 
@@ -2222,27 +2241,27 @@ class IonCursorBinary implements IonCursor {
     private boolean slowMakeBufferReady() {
         boolean isReady;
         switch (refillableState.state) {
-            case SEEK:
+            case State.SEEK_ORDINAL:
                 isReady = !slowSeek(refillableState.bytesRequested);
                 break;
-            case FILL:
+            case State.FILL_ORDINAL:
                 isReady = fillAt(offset, refillableState.bytesRequested);
                 break;
-            case FILL_DELIMITED:
-                refillableState.state = State.READY;
+            case State.FILL_DELIMITED_ORDINAL:
+                refillableState.state = State.READY_ORDINAL;
                 isReady = slowFindDelimitedEnd_1_1();
                 break;
-            case SEEK_DELIMITED:
+            case State.SEEK_DELIMITED_ORDINAL:
                 isReady = slowSeekToDelimitedEnd_1_1();
                 break;
-            case TERMINATED:
+            case State.TERMINATED_ORDINAL:
                 isReady = false;
                 break;
             default:
                 throw new IllegalStateException();
         }
         if (!isReady) {
-            event = Event.NEEDS_DATA;
+            event = Event.NEEDS_DATA_ORDINAL;
         }
         return isReady;
     }
@@ -2251,7 +2270,7 @@ class IonCursorBinary implements IonCursor {
      * Sets `checkpoint` to the current `peekIndex`, which is at the given type of location.
      * @param location the type of checkpoint location. Must not be BEFORE_UNANNOTATED_TYPE_ID.
      */
-    private void setCheckpoint(CheckpointLocation location) {
+    private void setCheckpoint(byte location) {
         checkpointLocation = location;
         checkpoint = peekIndex;
     }
@@ -2263,7 +2282,7 @@ class IonCursorBinary implements IonCursor {
     private void setCheckpointBeforeUnannotatedTypeId() {
         reset();
         offset = peekIndex;
-        checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID;
+        checkpointLocation = CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL;
         checkpoint = peekIndex;
     }
 
@@ -2294,12 +2313,12 @@ class IonCursorBinary implements IonCursor {
             // The end of the parent container hasn't been reached.
             parent.endIndex > peekIndex ||
             // A container was just encountered, but not yet stepped in.
-            checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER
+            checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL
         ) {
             return false;
         }
         if (parent.endIndex == peekIndex) {
-            event = Event.END_CONTAINER;
+            event = Event.END_CONTAINER_ORDINAL;
             valueMarker.typeId = null;
             fieldSid = -1;
             return true;
@@ -2395,7 +2414,7 @@ class IonCursorBinary implements IonCursor {
             );
         }
         if (slowSeek(peekIndex + valueLength - offset)) {
-            event = Event.NEEDS_DATA;
+            event = Event.NEEDS_DATA_ORDINAL;
             return true;
         }
         peekIndex = offset;
@@ -2439,7 +2458,7 @@ class IonCursorBinary implements IonCursor {
      * @param markerToSet the marker to set.
      */
     private void setSystemSymbolMarker(Marker markerToSet, int systemSid) {
-        event = Event.START_SCALAR;
+        event = Event.START_SCALAR_ORDINAL;
         markerToSet.typeId = SYSTEM_SYMBOL_VALUE;
         markerToSet.startIndex = -1;
         markerToSet.endIndex = systemSid;
@@ -2452,7 +2471,7 @@ class IonCursorBinary implements IonCursor {
      */
     private void setSystemMacroInvocationMarker(Marker markerToSet) {
         isSystemInvocation = true;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         markerToSet.typeId = SYSTEM_MACRO_INVOCATION_ID;
         markerToSet.startIndex = peekIndex;
         markerToSet.endIndex = -1;
@@ -2471,7 +2490,7 @@ class IonCursorBinary implements IonCursor {
     private void setUserMacroInvocationMarker(IonTypeID valueTid, Marker markerToSet, long length) {
         // It's not yet known whether the invocation represents a scalar or container, or even if it is complete.
         // A higher-level reader must provide additional instructions to evaluate the invocation.
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         markerToSet.typeId = valueTid;
         markerToSet.startIndex = peekIndex;
         // Unless this is a length-prefixed invocation, the end index of the macro invocation cannot be known until
@@ -2563,13 +2582,13 @@ class IonCursorBinary implements IonCursor {
             }
         }
         markerToSet.typeId = valueTid;
-        if (event == Event.START_CONTAINER) {
+        if (event == Event.START_CONTAINER_ORDINAL) {
             if (minorVersion == 0) {
                 prohibitEmptyOrderedStruct_1_0(markerToSet);
             }
             return true;
         }
-        return event == Event.START_SCALAR;
+        return event == Event.START_SCALAR_ORDINAL;
     }
 
     /**
@@ -2596,7 +2615,7 @@ class IonCursorBinary implements IonCursor {
             if (minorVersion == 0 ? slowReadAnnotationWrapperHeader_1_0(valueTid) : slowReadAnnotationWrapperHeader_1_1(valueTid)) {
                 return true;
             }
-            setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID);
+            setCheckpoint(CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID_ORDINAL);
         } else if (slowReadValueHeader(valueTid, isAnnotated, markerToSet)) {
             if (refillableState.isSkippingCurrentValue) {
                 // If the value will be skipped, its type ID must be set so that the core reader can determine
@@ -2618,10 +2637,10 @@ class IonCursorBinary implements IonCursor {
                 markerToSet.typeId = IonTypeID.NULL_TYPE_IDS_1_1[nullTypeIndex];
             }
         }
-        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER) {
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL) {
             return true;
         }
-        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+        if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL) {
             if (minorVersion == 0) {
                 prohibitEmptyOrderedStruct_1_0(markerToSet);
             }
@@ -2688,7 +2707,7 @@ class IonCursorBinary implements IonCursor {
              macroInvocationId = valueTid.macroId;
          }
          setUserMacroInvocationMarker(valueTid, markerToSet, -1);
-         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+         setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL);
          return false;
      }
 
@@ -2722,8 +2741,8 @@ class IonCursorBinary implements IonCursor {
             valueLength = valueTid.length;
         }
         if (valueTid.type != null && valueTid.type.ordinal() >= LIST_TYPE_ORDINAL) {
-            setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
-            event = Event.START_CONTAINER;
+            setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL);
+            event = Event.START_CONTAINER_ORDINAL;
         } else if (valueTid.isNopPad) {
             if (slowSeekPastNopPad(valueLength, isAnnotated)) {
                 return true;
@@ -2736,8 +2755,8 @@ class IonCursorBinary implements IonCursor {
             // this value is not used.
             return slowReadMacroInvocationHeader(valueTid, markerToSet, valueLength);
         } else {
-            setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
-            event = Event.START_SCALAR;
+            setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL);
+            event = Event.START_SCALAR_ORDINAL;
         }
         if (endIndex != DELIMITED_MARKER) {
             if (refillableState.isSkippingCurrentValue && valueLength > 0) {
@@ -2823,7 +2842,7 @@ class IonCursorBinary implements IonCursor {
         parent.typeId = valueMarker.typeId;
         parent.endIndex = valueMarker.endIndex;
         valueMarker.typeId = null;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         reset();
     }
 
@@ -2831,12 +2850,12 @@ class IonCursorBinary implements IonCursor {
      * Steps into the container on which the cursor is currently positioned, ensuring that the buffer is ready.
      * @return `event`, which conveys the result.
      */
-    private Event slowStepIntoContainer() {
-        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+    private byte slowStepIntoContainer() {
+        if (refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) {
             return event;
         }
         // Must be positioned on a container.
-        if (checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+        if (checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL) {
             // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
             // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
             // within the library.
@@ -2852,7 +2871,7 @@ class IonCursorBinary implements IonCursor {
         setCheckpointBeforeUnannotatedTypeId();
         valueMarker.typeId = null;
         hasAnnotations = false;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -2874,7 +2893,7 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event stepIntoContainer() {
+    public byte stepIntoContainer() {
         if (isSlowMode && checkAndSetContainerMode()) {
             return slowStepIntoContainer();
         }
@@ -2886,12 +2905,12 @@ class IonCursorBinary implements IonCursor {
      * Steps into an e-expression, treating it as a logical container.
      * @return `event`, which conveys the result.
      */
-    Event stepIntoEExpression() {
+    byte stepIntoEExpression() {
         if (valueMarker.typeId == null || !valueMarker.typeId.isMacroInvocation) {
             throw new IonException("Must be positioned on an e-expression.");
         }
         if (isSlowMode && checkAndSetContainerMode()) {
-            if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+            if (refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) {
                 return event;
             }
         }
@@ -2902,7 +2921,7 @@ class IonCursorBinary implements IonCursor {
         parent.endIndex = valueMarker.endIndex;
         valueMarker.typeId = null;
         setCheckpointBeforeUnannotatedTypeId();
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -2913,11 +2932,11 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream to seek to the target location; otherwise, false.
      */
     private boolean slowSeekToEndOfEExpression() {
-        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+        if (refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) {
             return true;
         }
 
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         // Seek past any remaining bytes from the previous value.
         long targetIndex;
         if (parent.endIndex == DELIMITED_MARKER) {
@@ -2937,7 +2956,7 @@ class IonCursorBinary implements IonCursor {
             }
         } else if (targetIndex == DELIMITED_MARKER && valueMarker.typeId != null) {
             seekPastDelimitedContainer_1_1();
-            return event == Event.NEEDS_DATA;
+            return event == Event.NEEDS_DATA_ORDINAL;
         }
         return false;
     }
@@ -2969,7 +2988,7 @@ class IonCursorBinary implements IonCursor {
      * @return NEEDS_INSTRUCTION if successful, or  NEEDS_DATA if more data is required to skip past the value on which
      *  the cursor is positioned (if any).
      */
-    Event stepOutOfEExpression() {
+    byte stepOutOfEExpression() {
         if (parent == null) {
             throw new IonException("Cannot step out at the top level.");
         }
@@ -3013,12 +3032,12 @@ class IonCursorBinary implements IonCursor {
             }
         }
         valueMarker.typeId = null;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         hasAnnotations = false;
     }
 
     @Override
-    public Event stepOutOfContainer() {
+    public byte stepOutOfContainer() {
         if (isSlowMode) {
             return slowStepOutOfContainer();
         }
@@ -3052,7 +3071,7 @@ class IonCursorBinary implements IonCursor {
             parent = null;
             containerIndex = -1;
         }
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         valueMarker.typeId = null;
         hasAnnotations = false;
     }
@@ -3062,17 +3081,17 @@ class IonCursorBinary implements IonCursor {
      * that enough bytes are available in the stream.
      * @return `event`, which conveys the result.
      */
-    private Event slowStepOutOfContainer() {
+    private byte slowStepOutOfContainer() {
         if (parent == null) {
             // Note: this is IllegalStateException for consistency with the legacy binary IonReader implementation.
             // Ideally it would be IonException and IllegalStateException would be reserved for indicating bugs in
             // within the library.
             throw new IllegalStateException("Cannot step out at top level.");
         }
-        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+        if (refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) {
             return event;
         }
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         // Seek past any remaining bytes from the previous value.
         if (parent.endIndex == DELIMITED_MARKER) {
             if (slowSkipRemainingDelimitedContainerElements_1_1()) {
@@ -3094,7 +3113,7 @@ class IonCursorBinary implements IonCursor {
      */
     private boolean uncheckedNextContainedToken() {
         if (parent.endIndex == peekIndex) {
-            event = Event.END_CONTAINER;
+            event = Event.END_CONTAINER_ORDINAL;
             return true;
         } else if (parent.endIndex == DELIMITED_MARKER || parent.typeId.isDelimited) {
             return uncheckedIsDelimitedEnd_1_1();
@@ -3157,7 +3176,7 @@ class IonCursorBinary implements IonCursor {
         if (peekIndex >= limit) {
             setCheckpointBeforeUnannotatedTypeId();
             if (parent != null && parent.endIndex == peekIndex) {
-                event = Event.END_CONTAINER;
+                event = Event.END_CONTAINER_ORDINAL;
             }
             return false;
         }
@@ -3193,14 +3212,14 @@ class IonCursorBinary implements IonCursor {
      */
     private void slowNextToken() {
         peekIndex = checkpoint;
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         while (true) {
-            if ((refillableState.state != State.READY && !slowMakeBufferReady()) || (parent != null && checkContainerEnd())) {
+            if ((refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) || (parent != null && checkContainerEnd())) {
                 return;
             }
             int b;
             switch (checkpointLocation) {
-                case BEFORE_UNANNOTATED_TYPE_ID:
+                case CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL:
                     if (dataHandler != null) {
                         reportConsumedData();
                     }
@@ -3227,7 +3246,7 @@ class IonCursorBinary implements IonCursor {
                     }
                     // Either a NOP has been skipped, or an annotation wrapper has been consumed.
                     continue;
-                case BEFORE_ANNOTATED_TYPE_ID:
+                case CheckpointLocation.BEFORE_ANNOTATED_TYPE_ID_ORDINAL:
                     valueMarker.typeId = null;
                     b = slowReadByte();
                     if (b < 0) {
@@ -3237,8 +3256,8 @@ class IonCursorBinary implements IonCursor {
                     // If already within an annotation wrapper, neither an IVM nor a NOP is possible, so the cursor
                     // must be positioned after the header for the wrapped value.
                     return;
-                case AFTER_SCALAR_HEADER:
-                case AFTER_CONTAINER_HEADER:
+                case CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL:
+                case CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL:
                     if (slowSkipRemainingValueBytes()) {
                         return;
                     }
@@ -3259,7 +3278,7 @@ class IonCursorBinary implements IonCursor {
             }
         } else if (valueMarker.endIndex == DELIMITED_MARKER && valueMarker.typeId != null && valueMarker.typeId.isDelimited) {
             seekPastDelimitedContainer_1_1();
-            if (event == Event.NEEDS_DATA) {
+            if (event == Event.NEEDS_DATA_ORDINAL) {
                 return true;
             }
         } else if (limit >= valueMarker.endIndex) {
@@ -3286,7 +3305,7 @@ class IonCursorBinary implements IonCursor {
      * If an oversized value is encountered, attempts to skip past it.
      * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
      */
-    private Event slowOverflowableNextToken() {
+    private byte slowOverflowableNextToken() {
         while (true) {
             slowNextToken();
             if (refillableState.isSkippingCurrentValue) {
@@ -3302,15 +3321,15 @@ class IonCursorBinary implements IonCursor {
      */
     private void seekPastOversizedValue() {
         refillableState.oversizedValueHandler.onOversizedValue();
-        if (refillableState.state == State.SEEK_DELIMITED) {
+        if (refillableState.state == State.SEEK_DELIMITED_ORDINAL) {
             // Discard all buffered bytes.
             slowSeek(availableAt(offset));
             refillableState.pinOffset = -1;
             refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
-            refillableState.state = State.SEEK_DELIMITED;
+            refillableState.state = State.SEEK_DELIMITED_ORDINAL;
             peekIndex = offset;
             shiftContainerEnds(refillableState.individualBytesSkippedWithoutBuffering);
-        } else if (refillableState.state != State.TERMINATED) {
+        } else if (refillableState.state != State.TERMINATED_ORDINAL) {
             slowSeek(valueMarker.endIndex - offset - refillableState.individualBytesSkippedWithoutBuffering);
             refillableState.totalDiscardedBytes += refillableState.individualBytesSkippedWithoutBuffering;
             peekIndex = offset;
@@ -3326,11 +3345,11 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event nextValue() {
+    public byte nextValue() {
         if (isSlowMode) {
             return slowNextValue();
         }
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         while (uncheckedNextToken());
         return event;
     }
@@ -3340,7 +3359,7 @@ class IonCursorBinary implements IonCursor {
      * the stream.
      * @return the result of the operation (e.g. START_SCALAR, END_CONTAINER).
      */
-    private Event slowNextValue() {
+    private byte slowNextValue() {
         if (refillableState.fillDepth > containerIndex) {
             // This value was filled, but was skipped. Reset the fillDepth so that the reader does not think the
             // next value was filled immediately upon encountering it.
@@ -3358,10 +3377,10 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream to skip the previous value; otherwise, false.
      */
     private boolean slowSkipToNextToken() {
-        if ((refillableState.state != State.READY && !slowMakeBufferReady())) {
+        if ((refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady())) {
             return true;
         }
-        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER || checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+        if (checkpointLocation == CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL || checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL) {
             return slowSkipRemainingValueBytes();
         }
         return false;
@@ -3426,7 +3445,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if not enough data was available in the stream to skip the previous value; otherwise, false.
      */
     private boolean skipToNextToken() {
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         if (isSlowMode) {
             if (slowSkipToNextToken()) {
                 return true;
@@ -3453,10 +3472,10 @@ class IonCursorBinary implements IonCursor {
      *     <li>START_SCALAR, if the reader is now positioned on a scalar value</li>
      * </ul>
      * @param taglessEncoding the {@link TaglessEncoding} of the tagless value on which to position the cursor.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event nextTaglessValue(TaglessEncoding taglessEncoding) {
-        event = Event.NEEDS_DATA;
+    public byte nextTaglessValue(TaglessEncoding taglessEncoding) {
+        event = Event.NEEDS_DATA_ORDINAL;
         if (isSlowMode) {
             if (slowSkipToNextToken()) {
                 return event;
@@ -3483,8 +3502,8 @@ class IonCursorBinary implements IonCursor {
         } else {
             valueMarker.endIndex = peekIndex + valueMarker.typeId.length;
         }
-        setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
-        event = Event.START_SCALAR;
+        setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL);
+        event = Event.START_SCALAR_ORDINAL;
         return event;
     }
 
@@ -3498,10 +3517,10 @@ class IonCursorBinary implements IonCursor {
      * </ul>
      * After return, `valueMarker` is set with the start and end indices of the AEB.
      * @param numberOfBytes the byte width of the AEB.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event fillArgumentEncodingBitmap(int numberOfBytes) {
-        event = Event.NEEDS_DATA;
+    public byte fillArgumentEncodingBitmap(int numberOfBytes) {
+        event = Event.NEEDS_DATA_ORDINAL;
         valueMarker.typeId = null;
         valueMarker.startIndex = peekIndex;
         valueMarker.endIndex = peekIndex + numberOfBytes;
@@ -3509,8 +3528,8 @@ class IonCursorBinary implements IonCursor {
             return event;
         }
         peekIndex = valueMarker.endIndex;
-        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-        event = Event.NEEDS_INSTRUCTION;
+        setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL);
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -3525,7 +3544,7 @@ class IonCursorBinary implements IonCursor {
             if (groupContinuation < 0) {
                 return -1;
             }
-            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
+            setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL);
         } else {
             groupContinuation = uncheckedReadFlexUInt_1_1();
         }
@@ -3540,9 +3559,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor successfully entered the argument group. Subsequently, the user must
      *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event enterTaggedArgumentGroup() {
+    public byte enterTaggedArgumentGroup() {
         if (skipToNextToken()) {
             return event;
         }
@@ -3560,7 +3579,7 @@ class IonCursorBinary implements IonCursor {
         }
         group.taglessEncoding = null;
         valueMarker.endIndex = peekIndex;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -3573,9 +3592,9 @@ class IonCursorBinary implements IonCursor {
      *     invoke {@link #nextGroupedValue()} to position it on the next value.</li>
      * </ul>
      * @param taglessEncoding the primitive type of the values in the group.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event enterTaglessArgumentGroup(TaglessEncoding taglessEncoding) {
+    public byte enterTaglessArgumentGroup(TaglessEncoding taglessEncoding) {
         if (skipToNextToken()) {
             return event;
         }
@@ -3594,7 +3613,7 @@ class IonCursorBinary implements IonCursor {
         group.pageEndIndex = peekIndex + groupContinuation;
         group.taglessEncoding = taglessEncoding;
         valueMarker.endIndex = peekIndex;
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -3609,7 +3628,7 @@ class IonCursorBinary implements IonCursor {
         if (isSlowMode) {
             // Fill the entire page.
             if (!fillAt(group.pageStartIndex, group.pageEndIndex - group.pageStartIndex)) {
-                event = Event.NEEDS_DATA;
+                event = Event.NEEDS_DATA_ORDINAL;
                 return true;
             }
             // TODO performance: exit slow mode until the page is finished.
@@ -3625,19 +3644,19 @@ class IonCursorBinary implements IonCursor {
      */
     private void setCheckpointAfterValueHeader() {
         switch (event) {
-            case START_SCALAR:
-                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER);
+            case Event.START_SCALAR_ORDINAL:
+                setCheckpoint(CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL);
                 break;
-            case START_CONTAINER:
-                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+            case Event.START_CONTAINER_ORDINAL:
+                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL);
                 break;
-            case NEEDS_INSTRUCTION:
+            case Event.NEEDS_INSTRUCTION_ORDINAL:
                 // A macro invocation header has just been read.
                 // Note: e-expression checkpoints are currently treated the same as container literal checkpoints.
                 // this could be changed in the future, if necessary, by adding a distinct CheckpointLocation for
-                // AFTER_E_EXPRESSION_HEADER, and potentially a distinct Event type for START_E_EXPRESSION. We will
+                // AFTER_E_EXPRESSION_HEADER, and potentially a distinct byte type for START_E_EXPRESSION. We will
                 // defer this work until we find it's necessary.
-                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER);
+                setCheckpoint(CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL);
                 break;
             default:
                 throw new IllegalStateException();
@@ -3648,9 +3667,9 @@ class IonCursorBinary implements IonCursor {
      * Positions the cursor on the next value in the tagged group. Upon return, the value will be filled and
      * `valueMarker` set to the value's start and end indices.
      * @param group the group to which the value belongs.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    private Event nextGroupedTaggedValue(ArgumentGroupMarker group) {
+    private byte nextGroupedTaggedValue(ArgumentGroupMarker group) {
         boolean isUserValue; // if false, the header represents no-op padding
         if (group.pageEndIndex < 0) {
             // Delimited.
@@ -3658,13 +3677,13 @@ class IonCursorBinary implements IonCursor {
             if (isSlowMode) {
                 b = slowReadByte();
                 if (b < 0) {
-                    event = Event.NEEDS_DATA;
+                    event = Event.NEEDS_DATA_ORDINAL;
                     return event;
                 }
                 if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
                     group.pageEndIndex = peekIndex;
-                    setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID);
-                    event = Event.NEEDS_INSTRUCTION;
+                    setCheckpoint(CheckpointLocation.BEFORE_UNANNOTATED_TYPE_ID_ORDINAL);
+                    event = Event.NEEDS_INSTRUCTION_ORDINAL;
                     return event;
                 }
                 isUserValue = slowReadHeader(b, false, valueMarker);
@@ -3672,7 +3691,7 @@ class IonCursorBinary implements IonCursor {
                 b = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
                 if (b == (OpCodes.DELIMITED_END_MARKER & SINGLE_BYTE_MASK)) {
                     group.pageEndIndex = peekIndex;
-                    event = Event.NEEDS_INSTRUCTION;
+                    event = Event.NEEDS_INSTRUCTION_ORDINAL;
                     return event;
                 }
                 isUserValue = uncheckedReadHeader(b, false, valueMarker);
@@ -3681,7 +3700,7 @@ class IonCursorBinary implements IonCursor {
         } else {
             if (peekIndex == group.pageEndIndex) {
                 // End of the group
-                event = Event.NEEDS_INSTRUCTION;
+                event = Event.NEEDS_INSTRUCTION_ORDINAL;
                 return event;
             }
             if (group.pageEndIndex > limit && fillArgumentGroupPage(group)) {
@@ -3700,15 +3719,15 @@ class IonCursorBinary implements IonCursor {
      * Positions the cursor on the next value in the tagless group. Upon return, the value will be filled and
      * `valueMarker` set to the value's start and end indices.
      * @param group the group to which the value belongs.
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    private Event nextGroupedTaglessValue(ArgumentGroupMarker group) {
+    private byte nextGroupedTaglessValue(ArgumentGroupMarker group) {
         if (peekIndex == group.pageEndIndex) {
             // End of the page.
             long continuation = readGroupContinuation();
             if (continuation == 0) {
                 // End of the group
-                event = Event.NEEDS_INSTRUCTION;
+                event = Event.NEEDS_INSTRUCTION_ORDINAL;
                 return event;
             }
             group.pageEndIndex = peekIndex + continuation;
@@ -3731,9 +3750,9 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor reached the end of the argument group. Subsequently, the caller must
      *     call {@link #exitArgumentGroup()}.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event nextGroupedValue() {
+    public byte nextGroupedValue() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
         if (peekIndex < valueMarker.endIndex) {
             peekIndex = valueMarker.endIndex;
@@ -3790,9 +3809,9 @@ class IonCursorBinary implements IonCursor {
     /**
      * Exits the cursor's current tagged argument group.
      * @param group the group to exit.
-     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     * @return a byte conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
      */
-    private Event exitTaggedArgumentGroup(ArgumentGroupMarker group) {
+    private byte exitTaggedArgumentGroup(ArgumentGroupMarker group) {
         if (group.pageEndIndex < 0) {
             if (seekToEndOfDelimitedArgumentGroup()) {
                 return event;
@@ -3800,16 +3819,16 @@ class IonCursorBinary implements IonCursor {
         } else if (seekToEndOfArgumentGroupPage(group)) {
             return event;
         }
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
     /**
      * Exits the cursor's current tagless argument group.
      * @param group the group to exit.
-     * @return an Event conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
+     * @return a byte conveying the result of the operation (either NEEDS_DATA or NEEDS_INSTRUCTION).
      */
-    private Event exitTaglessArgumentGroup(ArgumentGroupMarker group) {
+    private byte exitTaglessArgumentGroup(ArgumentGroupMarker group) {
         long continuation = -1;
         while (continuation != 0) {
             if (seekToEndOfArgumentGroupPage(group)) {
@@ -3821,7 +3840,7 @@ class IonCursorBinary implements IonCursor {
             }
             group.pageEndIndex = peekIndex + continuation;
         }
-        event = Event.NEEDS_INSTRUCTION;
+        event = Event.NEEDS_INSTRUCTION_ORDINAL;
         return event;
     }
 
@@ -3832,11 +3851,11 @@ class IonCursorBinary implements IonCursor {
      *     <li>NEEDS_INSTRUCTION, if the cursor successfully exited the argument group. Subsequently, the user must
      *     invoke a method on the cursor to position it on the next value.</li>
      * </ul>
-     * @return an Event conveying the result of the operation.
+     * @return a byte conveying the result of the operation.
      */
-    public Event exitArgumentGroup() {
+    public byte exitArgumentGroup() {
         ArgumentGroupMarker group = argumentGroupStack[argumentGroupIndex];
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         if (group.taglessEncoding == null) {
             return exitTaggedArgumentGroup(group);
         }
@@ -3844,8 +3863,8 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event fillValue() {
-        event = Event.VALUE_READY;
+    public byte fillValue() {
+        event = Event.VALUE_READY_ORDINAL;
         if (isSlowMode && refillableState.fillDepth <= containerIndex) {
             slowFillValue();
             if (refillableState.isSkippingCurrentValue) {
@@ -3860,15 +3879,15 @@ class IonCursorBinary implements IonCursor {
      * enough bytes are available in the stream.
      * @return `event`, which conveys the result.
      */
-    private Event slowFillValue() {
-        if (refillableState.state != State.READY && !slowMakeBufferReady()) {
+    private byte slowFillValue() {
+        if (refillableState.state != State.READY_ORDINAL && !slowMakeBufferReady()) {
             return event;
         }
         // Must be positioned after a header.
-        if (checkpointLocation != CheckpointLocation.AFTER_SCALAR_HEADER && checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER) {
+        if (checkpointLocation != CheckpointLocation.AFTER_SCALAR_HEADER_ORDINAL && checkpointLocation != CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL) {
             throw new IllegalStateException();
         }
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
 
         if (valueMarker.endIndex == DELIMITED_MARKER) {
             if (!slowFindDelimitedEnd_1_1()) {
@@ -3877,21 +3896,21 @@ class IonCursorBinary implements IonCursor {
         }
         if (limit >= valueMarker.endIndex || fillAt(peekIndex, valueMarker.endIndex - valueMarker.startIndex)) {
             if (refillableState.isSkippingCurrentValue) {
-                event = Event.NEEDS_INSTRUCTION;
+                event = Event.NEEDS_INSTRUCTION_ORDINAL;
             } else {
-                if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER) {
+                if (checkpointLocation == CheckpointLocation.AFTER_CONTAINER_HEADER_ORDINAL) {
                     // This container is buffered in its entirety. There is no need to fill the buffer again until stepping
                     // out of the fill depth.
                     refillableState.fillDepth = containerIndex + 1;
                 }
-                event = Event.VALUE_READY;
+                event = Event.VALUE_READY_ORDINAL;
             }
         }
         return event;
     }
 
     @Override
-    public Event getCurrentEvent() {
+    public byte getCurrentEvent() {
         return event;
     }
 
@@ -3931,7 +3950,7 @@ class IonCursorBinary implements IonCursor {
         this.limit = limit;
         setCheckpointBeforeUnannotatedTypeId();
         valueMarker.endIndex = -1;
-        event = Event.NEEDS_DATA;
+        event = Event.NEEDS_DATA_ORDINAL;
         valueMarker.typeId = null;
         // Slices are treated as if they were at the top level.
         parent = null;
@@ -3969,11 +3988,11 @@ class IonCursorBinary implements IonCursor {
     }
 
     @Override
-    public Event endStream() {
+    public byte endStream() {
         if (isValueIncomplete || isAwaitingMoreData()) {
             throw new IonException("Unexpected EOF.");
         }
-        return Event.NEEDS_DATA;
+        return Event.NEEDS_DATA_ORDINAL;
     }
 
     /**
@@ -3992,9 +4011,9 @@ class IonCursorBinary implements IonCursor {
     private boolean slowIsAwaitingMoreData() {
         // Note: this does not detect early end-of-stream in all cases, as doing so would require reading from
         // the input stream, which is not worth the expense.
-        return refillableState.state != State.TERMINATED
-            && (refillableState.state == State.SEEK
-            || refillableState.state == State.SEEK_DELIMITED
+        return refillableState.state != State.TERMINATED_ORDINAL
+            && (refillableState.state == State.SEEK_ORDINAL
+            || refillableState.state == State.SEEK_DELIMITED_ORDINAL
             || refillableState.bytesRequested > 1
             || peekIndex > checkpoint);
     }

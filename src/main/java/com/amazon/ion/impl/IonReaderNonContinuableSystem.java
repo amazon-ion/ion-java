@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 
-import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA_ORDINAL;
 
 /**
  * Provides a system-level view of an Ion stream. This differs from the application-level view in that system values
@@ -119,7 +119,7 @@ final class IonReaderNonContinuableSystem implements IonReader {
             // one-by-one on each call to next().
             return type;
         }
-        if (reader.nextValue() == NEEDS_DATA) {
+        if (reader.nextValue() == NEEDS_DATA_ORDINAL) {
             if (handleIvm()) {
                 // This happens if one or more IVMs occurs before the end of the stream.
                 return type;
@@ -159,15 +159,15 @@ final class IonReaderNonContinuableSystem implements IonReader {
      * Prepares a scalar value to be parsed by ensuring it is present in the buffer.
      */
     private void prepareScalar() {
-        IonCursor.Event event = reader.getCurrentEvent();
-        if (event == IonCursor.Event.VALUE_READY) {
+        byte event = reader.getCurrentEvent();
+        if (event == IonCursor.Event.VALUE_READY_ORDINAL) {
             return;
         }
-        if (event != IonCursor.Event.START_SCALAR) {
+        if (event != IonCursor.Event.START_SCALAR_ORDINAL) {
             // Note: existing tests expect IllegalStateException in this case.
             throw new IllegalStateException("Reader is not positioned on a scalar value.");
         }
-        if (reader.fillValue() != IonCursor.Event.VALUE_READY) {
+        if (reader.fillValue() != IonCursor.Event.VALUE_READY_ORDINAL) {
             throw new IonException("Unexpected EOF.");
         }
     }

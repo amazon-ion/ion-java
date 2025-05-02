@@ -622,8 +622,8 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         private boolean valueUnavailable() {
-            Event event = fillValue();
-            return event == Event.NEEDS_DATA || event == Event.NEEDS_INSTRUCTION;
+            byte event = fillValue();
+            return event == Event.NEEDS_DATA_ORDINAL || event == Event.NEEDS_INSTRUCTION_ORDINAL;
         }
 
         private void finishReadingSymbolTableStruct() {
@@ -811,21 +811,21 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         }
 
         void readSymbolTable() {
-            Event event;
+            byte event;
             while (true) {
                 switch (state) {
                     case ON_SYMBOL_TABLE_STRUCT:
-                        if (Event.NEEDS_DATA == stepIntoContainer()) {
+                        if (Event.NEEDS_DATA_ORDINAL == stepIntoContainer()) {
                             return;
                         }
                         state = State.ON_SYMBOL_TABLE_FIELD;
                         break;
                     case ON_SYMBOL_TABLE_FIELD:
                         event = IonReaderContinuableApplicationBinary.super.nextValue();
-                        if (Event.NEEDS_DATA == event) {
+                        if (Event.NEEDS_DATA_ORDINAL == event) {
                             return;
                         }
-                        if (event == Event.END_CONTAINER) {
+                        if (event == Event.END_CONTAINER_ORDINAL) {
                             finishReadingSymbolTableStruct();
                             return;
                         }
@@ -833,7 +833,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         break;
                     case ON_SYMBOL_TABLE_SYMBOLS:
                         if (IonReaderContinuableApplicationBinary.super.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == stepIntoContainer()) {
+                            if (Event.NEEDS_DATA_ORDINAL == stepIntoContainer()) {
                                 return;
                             }
                             startReadingSymbolsList();
@@ -843,7 +843,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         break;
                     case ON_SYMBOL_TABLE_IMPORTS:
                         if (IonReaderContinuableApplicationBinary.super.getType() == IonType.LIST) {
-                            if (Event.NEEDS_DATA == stepIntoContainer()) {
+                            if (Event.NEEDS_DATA_ORDINAL == stepIntoContainer()) {
                                 return;
                             }
                             startReadingImportsList();
@@ -858,10 +858,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         break;
                     case READING_SYMBOL_TABLE_SYMBOLS_LIST:
                         event = IonReaderContinuableApplicationBinary.super.nextValue();
-                        if (event == Event.NEEDS_DATA) {
+                        if (event == Event.NEEDS_DATA_ORDINAL) {
                             return;
                         }
-                        if (event == Event.END_CONTAINER) {
+                        if (event == Event.END_CONTAINER_ORDINAL) {
                             finishReadingSymbolsList();
                             break;
                         }
@@ -875,10 +875,10 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         break;
                     case READING_SYMBOL_TABLE_IMPORTS_LIST:
                         event = IonReaderContinuableApplicationBinary.super.nextValue();
-                        if (event == Event.NEEDS_DATA) {
+                        if (event == Event.NEEDS_DATA_ORDINAL) {
                             return;
                         }
-                        if (event == Event.END_CONTAINER) {
+                        if (event == Event.END_CONTAINER_ORDINAL) {
                             finishReadingImportsList();
                             break;
                         }
@@ -886,13 +886,13 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                         break;
                     case READING_SYMBOL_TABLE_IMPORT_STRUCT:
                         event = IonReaderContinuableApplicationBinary.super.nextValue();
-                        if (event == Event.NEEDS_DATA) {
+                        if (event == Event.NEEDS_DATA_ORDINAL) {
                             return;
                         }
-                        if (event == Event.END_CONTAINER) {
+                        if (event == Event.END_CONTAINER_ORDINAL) {
                             finishReadingImportStruct();
                             break;
-                        } else if (event != Event.START_SCALAR) {
+                        } else if (event != Event.START_SCALAR_ORDINAL) {
                             break;
                         }
                         startReadingImportStructField();
@@ -944,14 +944,14 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     private State state = State.READING_VALUE;
 
     @Override
-    public Event nextValue() {
-        Event event;
+    public byte nextValue() {
+        byte event;
         if (parent == null || state != State.READING_VALUE) {
             while (true) {
                 if (state != State.READING_VALUE) {
                     symbolTableReader.readSymbolTable();
                     if (state != State.READING_VALUE) {
-                        event = Event.NEEDS_DATA;
+                        event = Event.NEEDS_DATA_ORDINAL;
                         break;
                     }
                 }

@@ -22,11 +22,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.amazon.ion.BitUtils.bytes;
-import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
-import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION;
-import static com.amazon.ion.IonCursor.Event.VALUE_READY;
-import static com.amazon.ion.IonCursor.Event.START_CONTAINER;
-import static com.amazon.ion.IonCursor.Event.START_SCALAR;
+import static com.amazon.ion.IonCursor.Event.NEEDS_DATA_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.NEEDS_INSTRUCTION_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.VALUE_READY_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.START_CONTAINER_ORDINAL;
+import static com.amazon.ion.IonCursor.Event.START_SCALAR_ORDINAL;
 import static com.amazon.ion.TestUtils.cleanCommentedHexBytes;
 import static com.amazon.ion.TestUtils.hexStringToByteArray;
 import static com.amazon.ion.TestUtils.withIvm;
@@ -103,7 +103,7 @@ public class IonCursorBinaryTest {
                 ResizingPipedInputStream pipe = new ResizingPipedInputStream(data.length);
                 IonCursorBinary cursor = new IonCursorBinary(STANDARD_BUFFER_CONFIGURATION, pipe, null, 0, 0);
                 for (byte b : data) {
-                    assertEquals(NEEDS_DATA, cursor.nextValue());
+                    assertEquals(NEEDS_DATA_ORDINAL, cursor.nextValue());
                     pipe.receive(b);
                 }
                 return cursor;
@@ -117,12 +117,12 @@ public class IonCursorBinaryTest {
      * Provides Expectations that verify that advancing the cursor to the next value results in the given event, and
      * filling that value results in a Marker with the given start and end indices.
      */
-    private static ExpectationProvider<IonCursorBinary> fill(IonCursor.Event expectedEvent, int expectedStart, int expectedEnd) {
+    private static ExpectationProvider<IonCursorBinary> fill(byte expectedEvent, int expectedStart, int expectedEnd) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill(%s, %d, %d)", expectedEvent, expectedStart, expectedEnd),
             cursor -> {
                 assertEquals(expectedEvent, cursor.nextValue());
-                assertEquals(VALUE_READY, cursor.fillValue());
+                assertEquals(VALUE_READY_ORDINAL, cursor.fillValue());
                 Marker marker = cursor.getValueMarker();
                 assertEquals(expectedStart, marker.startIndex);
                 assertEquals(expectedEnd, marker.endIndex);
@@ -135,12 +135,12 @@ public class IonCursorBinaryTest {
      * attempting to fill that value results in NEEDS_INSTRUCTION, indicating that the value could not be filled due
      * to being oversize.
      */
-    private static ExpectationProvider<IonCursorBinary> fillIsOversize(IonCursor.Event expectedEvent, Supplier<Integer> oversizeCounter) {
+    private static ExpectationProvider<IonCursorBinary> fillIsOversize(byte expectedEvent, Supplier<Integer> oversizeCounter) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fillOversized(%s)", expectedEvent),
             cursor -> {
                 assertEquals(expectedEvent, cursor.nextValue());
-                assertEquals(NEEDS_INSTRUCTION, cursor.fillValue());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.fillValue());
                 assertEquals(1, oversizeCounter.get());
             }
         ));
@@ -162,7 +162,7 @@ public class IonCursorBinaryTest {
      * results in a Marker with the given start and end indices.
      */
     private static ExpectationProvider<IonCursorBinary> fillScalar(int expectedStart, int expectedEnd) {
-        return fill(START_SCALAR, expectedStart, expectedEnd);
+        return fill(START_SCALAR_ORDINAL, expectedStart, expectedEnd);
     }
 
     /**
@@ -174,7 +174,7 @@ public class IonCursorBinaryTest {
     @SuppressWarnings("unchecked")
     private static ExpectationProvider<IonCursorBinary> fillContainer(int expectedStart, int expectedEnd, ExpectationProvider<IonCursorBinary>... expectations) {
         return consumer -> {
-            fill(START_CONTAINER, expectedStart, expectedEnd).accept(consumer);
+            fill(START_CONTAINER_ORDINAL, expectedStart, expectedEnd).accept(consumer);
             consumer.accept((Expectation<IonCursorBinary>) STEP_IN);
             for (Consumer<Consumer<Expectation<IonCursorBinary>>> expectation : expectations) {
                 expectation.accept(consumer);
@@ -458,7 +458,7 @@ public class IonCursorBinaryTest {
             cursor,
             container(
                 // The oversize delimited list is skipped.
-                fillIsOversize(START_CONTAINER, oversizeValueCounter::get),
+                fillIsOversize(START_CONTAINER_ORDINAL, oversizeValueCounter::get),
                 scalar(), type(IonType.INT),
                 endContainer()
             ),
@@ -488,7 +488,7 @@ public class IonCursorBinaryTest {
         );
         assertSequence(
             cursor,
-            fill(START_CONTAINER, 5, 11),
+            fill(START_CONTAINER_ORDINAL, 5, 11),
             container(
                 fillScalar(14, 14)
             ),
@@ -520,7 +520,7 @@ public class IonCursorBinaryTest {
             // When reading from a fixed-size input source, the cursor does not need peek ahead to find the end of
             // the delimited container during fill, so it remains -1 in that case. Otherwise, fill looks ahead to
             // find the end index and stores in the index so that it does not need to be repetitively calculated.
-            fill(START_CONTAINER, 5, constructFromBytes ? -1 : 14),
+            fill(START_CONTAINER_ORDINAL, 5, constructFromBytes ? -1 : 14),
             container(
                 fillScalar(17, 17)
             ),
@@ -661,9 +661,9 @@ public class IonCursorBinaryTest {
             0x20
         );
         cursor.close();
-        assertEquals(IonCursor.Event.NEEDS_DATA, cursor.nextValue());
+        assertEquals(IonCursor.Event.NEEDS_DATA_ORDINAL, cursor.nextValue());
         assertNull(cursor.getValueMarker().typeId);
-        assertEquals(IonCursor.Event.NEEDS_DATA, cursor.nextValue());
+        assertEquals(IonCursor.Event.NEEDS_DATA_ORDINAL, cursor.nextValue());
         assertNull(cursor.getValueMarker().typeId);
         cursor.close();
     }
@@ -677,14 +677,14 @@ public class IonCursorBinaryTest {
             0x20, // Int 0
             0xE0, 0x01 // Incomplete IVM
         );
-        assertEquals(START_SCALAR, cursor.nextValue());
+        assertEquals(START_SCALAR_ORDINAL, cursor.nextValue());
         if (constructFromBytes) {
             // This is a fixed stream, so no more bytes will become available. An error must be raised when the
             // incomplete IVM is encountered.
             assertThrows(IonException.class, cursor::nextValue);
         } else {
             // This is a growing stream, so the cursor waits for more bytes.
-            assertEquals(NEEDS_DATA, cursor.nextValue());
+            assertEquals(NEEDS_DATA_ORDINAL, cursor.nextValue());
         }
         cursor.close();
     }
@@ -789,7 +789,7 @@ public class IonCursorBinaryTest {
         boolean isSystemInvocation
     ) throws Exception {
         try (IonCursorBinary cursor = inputType.initializeCursor(withIvm(1, input))) {
-            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextValue());
             Marker invocationMarker = cursor.getValueMarker();
             assertTrue(invocationMarker.typeId.isMacroInvocation);
             assertEquals(expectedStartIndex, invocationMarker.startIndex);
@@ -905,7 +905,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("ready: %s[%d,%d]", expectedType, expectedStartIndex, expectedEndIndex),
             cursor -> {
-                assertEquals(VALUE_READY, cursor.getCurrentEvent());
+                assertEquals(VALUE_READY_ORDINAL, cursor.getCurrentEvent());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -914,7 +914,7 @@ public class IonCursorBinaryTest {
     /**
      * Provides Expectations that verify that the cursor's current event matches the expected event.
      */
-    private static ExpectationProvider<IonCursorBinary> event(IonCursor.Event expectedEvent) {
+    private static ExpectationProvider<IonCursorBinary> event(byte expectedEvent) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("%s", expectedEvent),
             cursor -> {
@@ -930,7 +930,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("macro invocation %d", id),
             cursor -> {
-                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.getCurrentEvent());
                 assertTrue(cursor.getValueMarker().typeId.isMacroInvocation);
                 assertEquals(id, cursor.getMacroInvocationId());
             }
@@ -945,7 +945,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("next macro invocation %d", id),
             cursor -> {
-                assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextValue());
                 assertTrue(cursor.getValueMarker().typeId.isMacroInvocation);
                 assertEquals(id, cursor.getMacroInvocationId());
             }
@@ -960,7 +960,7 @@ public class IonCursorBinaryTest {
             "stepIn macro invocation",
             cursor -> {
                 cursor.stepIntoEExpression();
-                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.getCurrentEvent());
             }
         ));
     }
@@ -973,7 +973,7 @@ public class IonCursorBinaryTest {
             "stepOut macro invocation",
             cursor -> {
                 cursor.stepOutOfEExpression();
-                assertEquals(NEEDS_INSTRUCTION, cursor.getCurrentEvent());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.getCurrentEvent());
             }
         ));
     }
@@ -986,7 +986,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("next tagless %s", taglessEncoding.name()),
             cursor -> {
-                assertEquals(START_SCALAR, cursor.nextTaglessValue(taglessEncoding));
+                assertEquals(START_SCALAR_ORDINAL, cursor.nextTaglessValue(taglessEncoding));
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -1000,7 +1000,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("next %d-byte AEB", numberOfBytes),
             cursor -> {
-                assertEquals(NEEDS_INSTRUCTION, cursor.fillArgumentEncodingBitmap(numberOfBytes));
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.fillArgumentEncodingBitmap(numberOfBytes));
                 assertValueMarker(cursor, null, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -1014,8 +1014,8 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("fill tagless %s", taglessEncoding.name()),
             cursor -> {
-                assertEquals(START_SCALAR, cursor.nextTaglessValue(taglessEncoding));
-                assertEquals(VALUE_READY, cursor.fillValue());
+                assertEquals(START_SCALAR_ORDINAL, cursor.nextTaglessValue(taglessEncoding));
+                assertEquals(VALUE_READY_ORDINAL, cursor.fillValue());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -1029,9 +1029,9 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("stepIn: %s[%d,%d]", expectedType, expectedStartIndex, expectedEndIndex),
             cursor -> {
-                assertEquals(START_CONTAINER, cursor.getCurrentEvent());
+                assertEquals(START_CONTAINER_ORDINAL, cursor.getCurrentEvent());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
-                assertEquals(NEEDS_INSTRUCTION, cursor.stepIntoContainer());
+                assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.stepIntoContainer());
             }
         ));
     }
@@ -1042,7 +1042,7 @@ public class IonCursorBinaryTest {
     private static ExpectationProvider<IonCursorBinary> stepOutOfContainer() {
         return consumer -> consumer.accept(new Expectation<>(
             "stepOut",
-            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.stepOutOfContainer())
+            cursor -> assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.stepOutOfContainer())
         ));
     }
 
@@ -1217,10 +1217,10 @@ public class IonCursorBinaryTest {
      * A request to be applied to an IonCursorBinary, and the expected response.
      */
     private static class Instruction {
-        final Function<IonCursorBinary, IonCursor.Event> request;
+        final Function<IonCursorBinary, Byte> request;
         final ExpectationProvider<IonCursorBinary> response;
 
-        private Instruction(Function<IonCursorBinary, IonCursor.Event> request, ExpectationProvider<IonCursorBinary> response) {
+        private Instruction(Function<IonCursorBinary, Byte> request, ExpectationProvider<IonCursorBinary> response) {
             this.request = request;
             this.response = response;
         }
@@ -1231,7 +1231,7 @@ public class IonCursorBinaryTest {
          * @return false if the response was `NEEDS_DATA`, true if the response matched the expectation.
          */
         boolean executeAndValidate(IonCursorBinary cursor) {
-            if (request.apply(cursor) != NEEDS_DATA) {
+            if (request.apply(cursor) != NEEDS_DATA_ORDINAL) {
                 response.accept(evaluateImmediately(cursor));
                 return true;
             }
@@ -1243,7 +1243,7 @@ public class IonCursorBinaryTest {
      * Creates a new Instruction.
      */
     private static Instruction instruction(
-        Function<IonCursorBinary, IonCursor.Event> request,
+        Function<IonCursorBinary, Byte> request,
         ExpectationProvider<IonCursorBinary> response
     ) {
         return new Instruction(request, response);
@@ -1329,8 +1329,8 @@ public class IonCursorBinaryTest {
             // This is the end of the stream, so the response is not used.
             instruction(
                 cursor -> {
-                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.nextValue();
                 },
@@ -1379,8 +1379,8 @@ public class IonCursorBinaryTest {
             // This is the end of the stream, so the response is not used.
             instruction(
                 cursor -> {
-                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.nextValue();
                 },
@@ -1466,8 +1466,8 @@ public class IonCursorBinaryTest {
             // This is the end of the stream, so the response is not used.
             instruction(
                 cursor -> {
-                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.nextValue();
                 },
@@ -1503,14 +1503,14 @@ public class IonCursorBinaryTest {
     private static ExpectationProvider<IonCursorBinary> enterTaglessArgumentGroup(TaglessEncoding type) {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("enter tagless %s group", type.name()),
-            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.enterTaglessArgumentGroup(type))
+            cursor -> assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.enterTaglessArgumentGroup(type))
         ));
     }
 
     private static ExpectationProvider<IonCursorBinary> enterTaggedArgumentGroup() {
         return consumer -> consumer.accept(new Expectation<>(
             "enter tagged group",
-            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.enterTaggedArgumentGroup())
+            cursor -> assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.enterTaggedArgumentGroup())
         ));
     }
 
@@ -1518,7 +1518,7 @@ public class IonCursorBinaryTest {
         return consumer -> consumer.accept(new Expectation<>(
             String.format("grouped value %s[%d, %d]", expectedType, expectedStartIndex, expectedEndIndex),
             cursor -> {
-                assertEquals(IonType.isContainer(expectedType) ? START_CONTAINER : START_SCALAR, cursor.nextGroupedValue());
+                assertEquals(IonType.isContainer(expectedType) ? START_CONTAINER_ORDINAL : START_SCALAR_ORDINAL, cursor.nextGroupedValue());
                 assertValueMarker(cursor, expectedType, expectedStartIndex, expectedEndIndex);
             }
         ));
@@ -1527,14 +1527,14 @@ public class IonCursorBinaryTest {
     private static ExpectationProvider<IonCursorBinary> endOfGroup() {
         return consumer -> consumer.accept(new Expectation<>(
             "end of group",
-            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.nextGroupedValue())
+            cursor -> assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextGroupedValue())
         ));
     }
 
     private static ExpectationProvider<IonCursorBinary> exitArgumentGroup() {
         return consumer -> consumer.accept(new Expectation<>(
             "exit group",
-            cursor -> assertEquals(NEEDS_INSTRUCTION, cursor.exitArgumentGroup())
+            cursor -> assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.exitArgumentGroup())
         ));
     }
 
@@ -1744,73 +1744,73 @@ public class IonCursorBinaryTest {
         List<Instruction> instructions = Arrays.asList(
             instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0x13), stepInMacroInvocation())),
             instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
-            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION_ORDINAL)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
             instruction(
                 cursor -> {
-                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextGroupedValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     assertValueMarker(cursor, IonType.LIST, 9, 12);
                     return cursor.stepIntoContainer();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             instruction(IonCursorBinary::nextValue, valueMarker(IonType.STRING, 10, 11)),
             instruction(
                 cursor -> {
-                    if (cursor.nextValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     // Note: the value byte of the string is skipped, not buffered.
                     assertValueMarker(cursor, IonType.FLOAT, 11, 11);
                     return cursor.stepOutOfContainer();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             instruction(
                 cursor -> {
-                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextGroupedValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.exitArgumentGroup();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
-            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION)),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION_ORDINAL)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 13, 14)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 15, 16)),
             instruction(
                 cursor -> {
-                    if (cursor.nextGroupedValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextGroupedValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.exitArgumentGroup();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             instruction(
                 cursor -> {
-                    if (cursor.stepOutOfEExpression() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.stepOutOfEExpression() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
-                    if (cursor.nextValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     assertValueMarker(cursor, IonType.LIST, 18, 19);
                     return cursor.stepIntoContainer();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             instruction(
                 cursor -> {
-                    if (cursor.nextValue() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.nextValue() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     assertValueMarker(cursor, IonType.INT, 19, 19);
                     return cursor.stepOutOfContainer();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             // This is the end of the stream, so the response is not used.
             instruction(IonCursorBinary::nextValue, null)
@@ -1848,20 +1848,20 @@ public class IonCursorBinaryTest {
         List<Instruction> instructions = Arrays.asList(
             instruction(IonCursorBinary::nextValue, allOf(macroInvocation(0x13), stepInMacroInvocation())),
             instruction(cursor -> cursor.fillArgumentEncodingBitmap(1), valueMarker(null, 5, 6)),
-            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::enterTaggedArgumentGroup, event(NEEDS_INSTRUCTION_ORDINAL)),
             instruction(IonCursorBinary::nextGroupedValue, valueMarker(IonType.INT, 8, 8)),
             // Skip the list argument
-            instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION)),
-            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION)),
+            instruction(IonCursorBinary::exitArgumentGroup, event(NEEDS_INSTRUCTION_ORDINAL)),
+            instruction(cursor -> cursor.enterTaglessArgumentGroup(TaglessEncoding.UINT8), event(NEEDS_INSTRUCTION_ORDINAL)),
             // Skip all arguments in the group
             instruction(
                 cursor -> {
-                    if (cursor.exitArgumentGroup() == NEEDS_DATA) {
-                        return NEEDS_DATA;
+                    if (cursor.exitArgumentGroup() == NEEDS_DATA_ORDINAL) {
+                        return NEEDS_DATA_ORDINAL;
                     }
                     return cursor.stepOutOfEExpression();
                 },
-                event(NEEDS_INSTRUCTION)
+                event(NEEDS_INSTRUCTION_ORDINAL)
             ),
             instruction(IonCursorBinary::nextValue, valueMarker(IonType.LIST, 14, 15)),
             // This is the end of the stream, so the response is not used.
@@ -1883,10 +1883,10 @@ public class IonCursorBinaryTest {
             "93 61 62 63 | \"abc\" \n"
         )));
         try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
-            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextValue());
             cursor.stepIntoEExpression();
             cursor.stepOutOfEExpression();
-            assertEquals(START_SCALAR, cursor.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, cursor.nextValue());
         }
     }
 
@@ -1899,11 +1899,11 @@ public class IonCursorBinaryTest {
             "60             | 0 \n"
         )));
         try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
-            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextValue());
             cursor.stepIntoEExpression();
             cursor.nextTaglessValue(TaglessEncoding.FLEX_SYM);
             cursor.stepOutOfEExpression();
-            assertEquals(START_SCALAR, cursor.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, cursor.nextValue());
             assertEquals(IonType.INT, cursor.valueMarker.typeId.type);
         }
     }
@@ -1917,11 +1917,11 @@ public class IonCursorBinaryTest {
             "93 61 62 63 | \"abc\" \n"
         )));
         try (IonCursorBinary cursor = initializeCursor(STANDARD_BUFFER_CONFIGURATION, constructFromBytes, data)) {
-            assertEquals(NEEDS_INSTRUCTION, cursor.nextValue());
+            assertEquals(NEEDS_INSTRUCTION_ORDINAL, cursor.nextValue());
             cursor.stepIntoEExpression();
-            assertEquals(START_CONTAINER, cursor.nextValue());
+            assertEquals(START_CONTAINER_ORDINAL, cursor.nextValue());
             cursor.stepOutOfEExpression();
-            assertEquals(START_SCALAR, cursor.nextValue());
+            assertEquals(START_SCALAR_ORDINAL, cursor.nextValue());
             assertEquals(IonType.STRING, cursor.valueMarker.typeId.type);
         }
     }

@@ -12,9 +12,11 @@ public interface IonCursor extends Closeable {
 
     /**
      * Conveys the type of event that occurred as a result of operating on the cursor.
+     *
+     * Using byte constants instead of enum values seems to be significantly faster, and it also reduces the memory
+     * footprint of any class that stores them. See https://github.com/amazon-ion/ion-java/pull/1072.
      */
     enum Event {
-
         /**
          * There is not enough data in the stream to complete the requested operation. The operation should be retried
          * when more data is available. Note that there is no way to "cancel" a previously requested operation;
@@ -47,7 +49,15 @@ public interface IonCursor extends Closeable {
         /**
          * The cursor has reached the end of the current container, and requires an instruction to proceed.
          */
-        END_CONTAINER
+        END_CONTAINER,
+        ;
+
+        public static final byte NEEDS_DATA_ORDINAL = 0;
+        public static final byte NEEDS_INSTRUCTION_ORDINAL = 1;
+        public static final byte START_SCALAR_ORDINAL = 2;
+        public static final byte VALUE_READY_ORDINAL = 3;
+        public static final byte START_CONTAINER_ORDINAL = 4;
+        public static final byte END_CONTAINER_ORDINAL = 5;
     }
 
     /**
@@ -61,7 +71,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event nextValue();
+    byte nextValue();
 
     /**
      * Steps the cursor into the container value on which the cursor is currently positioned. This method may return:
@@ -73,7 +83,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event stepIntoContainer();
+    byte stepIntoContainer();
 
     /**
      * Steps the cursor out of the current container, skipping any values in the container that may follow. This method
@@ -86,7 +96,7 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event stepOutOfContainer();
+    byte stepOutOfContainer();
 
     /**
      * Buffers the entirety of the value on which the cursor is currently positioned. This method may return:
@@ -97,13 +107,13 @@ public interface IonCursor extends Closeable {
      * </ul>
      * @return an Event conveying the result of the operation.
      */
-    Event fillValue();
+    byte fillValue();
 
     /**
      * Conveys the result of the previous operation.
      * @return an Event conveying the result of the previous operation.
      */
-    Event getCurrentEvent();
+    byte getCurrentEvent();
 
     /**
      * Causes the cursor to force completion of the value on which it is currently positioned, if any. This method may
@@ -122,5 +132,5 @@ public interface IonCursor extends Closeable {
      * @throws IonException if this method is called below the top level or when the cursor is positioned on an
      * incomplete value.
      */
-    Event endStream();
+    byte endStream();
 }
