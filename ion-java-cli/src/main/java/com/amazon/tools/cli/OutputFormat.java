@@ -40,7 +40,7 @@ public enum OutputFormat {
         switch (format) {
             case TEXT: return IonTextWriterBuilder.standard().withImports(symbols).build(out);
             case PRETTY: return IonTextWriterBuilder.pretty().withImports(symbols).build(out);
-            case EVENTS: return IonTextWriterBuilder.pretty().withImports(symbols).build(out);
+            case EVENTS: return IonTextWriterBuilder.standard().withImports(symbols).build(out);
             case BINARY: return IonBinaryWriterBuilder.standard().withImports(symbols).build(out);
             case NONE: return IonTextWriterBuilder.standard().withImports(symbols).build(new NoOpOutputStream());
             default: throw new IllegalStateException("Unsupported output format: " + format);
