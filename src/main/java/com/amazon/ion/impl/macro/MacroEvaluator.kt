@@ -10,6 +10,8 @@ import com.amazon.ion.util.unreachable
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * Evaluates an EExpression from a List of [EExpressionBodyExpression] and the [TemplateBodyExpression]s
@@ -52,6 +54,8 @@ class MacroEvaluator {
         private var numExpandedExpressions = 0
         /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(32)
+        /** Pool of [Expression] to minimize allocation and garbage collection. */
+        val expressionPool: PooledExpressionFactory = PooledExpressionFactory()
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
         fun getExpander(expansionKind: ExpansionKind, expressions: List<Expression>, startInclusive: Int, endExclusive: Int, environment: Environment): ExpansionInfo {
@@ -87,6 +91,7 @@ class MacroEvaluator {
 
         fun reset() {
             numExpandedExpressions = 0
+            expressionPool.clear()
         }
     }
 
@@ -279,7 +284,7 @@ class MacroEvaluator {
                     }
                 }
                 thisExpansion.expansionKind = Empty
-                return StringValue(value = sb.toString())
+                return thisExpansion.session.expressionPool.createStringValue(Collections.emptyList(), sb.toString())
             }
         },
         MakeSymbol {
@@ -298,7 +303,7 @@ class MacroEvaluator {
                         is FieldName -> unreachable()
                     }
                 }
-                return SymbolValue(value = newSymbolToken(sb.toString()))
+                return thisExpansion.session.expressionPool.createSymbolValue(Collections.emptyList(), newSymbolToken(sb.toString()))
             }
         },
         MakeBlob {
@@ -314,7 +319,7 @@ class MacroEvaluator {
                     }
                 }
                 thisExpansion.expansionKind = Empty
-                return BlobValue(value = baos.toByteArray())
+                return thisExpansion.session.expressionPool.createBlobValue(Collections.emptyList(), baos.toByteArray())
             }
         },
         MakeDecimal {
@@ -325,7 +330,7 @@ class MacroEvaluator {
                 val coefficient = thisExpansion.readExactlyOneArgument<IntValue>(COEFFICIENT_ARG).bigIntegerValue
                 val exponent = thisExpansion.readExactlyOneArgument<IntValue>(EXPONENT_ARG).bigIntegerValue
                 thisExpansion.expansionKind = Empty
-                return DecimalValue(value = BigDecimal(coefficient, -1 * exponent.intValueExact()))
+                return thisExpansion.session.expressionPool.createDecimalValue(Collections.emptyList(), BigDecimal(coefficient, -1 * exponent.intValueExact()))
             }
         },
         MakeTimestamp {
@@ -379,7 +384,7 @@ class MacroEvaluator {
                         }
                     }
                     thisExpansion.expansionKind = Empty
-                    return TimestampValue(value = ts)
+                    return thisExpansion.session.expressionPool.createTimestampValue(Collections.emptyList(), ts)
                 } catch (e: IllegalArgumentException) {
                     throw IonException(e.message)
                 }
@@ -391,10 +396,12 @@ class MacroEvaluator {
 
             override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
                 val fieldName = thisExpansion.readExactlyOneArgument<TextValue>(FIELD_NAME)
-                val fieldNameExpression = when (fieldName) {
-                    is SymbolValue -> FieldName(fieldName.value)
-                    is StringValue -> FieldName(newSymbolToken(fieldName.value))
-                }
+                val fieldNameExpression = thisExpansion.session.expressionPool.createFieldName(
+                    when (fieldName) {
+                        is SymbolValue -> fieldName.value
+                        is StringValue -> newSymbolToken(fieldName.value)
+                    }
+                )
 
                 thisExpansion.readExactlyOneArgument<DataModelValue>(FIELD_VALUE)
 
@@ -490,7 +497,7 @@ class MacroEvaluator {
                 val a = thisExpansion.readExactlyOneArgument<IntValue>(ARG_A).bigIntegerValue
                 val b = thisExpansion.readExactlyOneArgument<IntValue>(ARG_B).bigIntegerValue
                 thisExpansion.expansionKind = Empty
-                return BigIntValue(value = a + b)
+                return thisExpansion.session.expressionPool.createBigIntValue(Collections.emptyList(), a + b)
             }
         },
         Delta {
@@ -510,7 +517,7 @@ class MacroEvaluator {
                         val nextDelta = nextExpandedArg.bigIntegerValue
                         val nextOutput = runningTotal + nextDelta
                         thisExpansion.additionalState = nextOutput
-                        return BigIntValue(value = nextOutput)
+                        return thisExpansion.session.expressionPool.createBigIntValue(Collections.emptyList(), nextOutput)
                     }
                     EndOfExpansion -> return EndOfExpansion
                     else -> throw IonException("delta arguments must be integers")
