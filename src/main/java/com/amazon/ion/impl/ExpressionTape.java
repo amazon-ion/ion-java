@@ -8,6 +8,9 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.macro.Expression;
+import com.amazon.ion.impl.macro.Macro;
+import com.amazon.ion.impl.macro.SystemMacro;
+import com.amazon.ion.impl.macro.TemplateMacro;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -97,6 +100,46 @@ public class ExpressionTape { // TODO make internal
             }
             variableStarts[numberOfVariables++] = index;
         }
+
+        int findEndOfExpression(int startIndex) {
+            int relativeDepth = 0;
+            int i = startIndex;
+            loop: while (i < size) {
+                switch (types[i]) {
+                    case FIELD_NAME:
+                    case ANNOTATION:
+                    case DATA_MODEL_SCALAR:
+                    case VARIABLE:
+                        if (relativeDepth == 0) {
+                            if (i > startIndex) {
+                                break loop;
+                            }
+                        }
+                        break;
+                    case E_EXPRESSION:
+                    case EXPRESSION_GROUP:
+                    case DATA_MODEL_CONTAINER:
+                        if (relativeDepth == 0) {
+                            if (i > startIndex) {
+                                break loop;
+                            }
+                        }
+                        relativeDepth++;
+                        break;
+                    case EXPRESSION_GROUP_END:
+                    case DATA_MODEL_CONTAINER_END:
+                    case E_EXPRESSION_END:
+                        if (--relativeDepth < 0) {
+                            break loop;
+                        }
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                }
+                i++;
+            }
+            return i;
+        }
     }
 
     private Core core;
@@ -179,6 +222,73 @@ public class ExpressionTape { // TODO make internal
         core.size++;
     }
 
+    private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart) {
+        for (int i = sourceStart; i < sourceEnd; i++) {
+            if (source.types[i] == ExpressionType.VARIABLE) {
+                if (arguments == null) {
+                    // This is a top-level template body. There is no invocation yet, so there is nothing to substitute.
+                    copyFrom(source, i);
+                    continue;
+                }
+                int variableIndex = (int) source.contexts[i];
+                int eExpressionIndex = arguments.ends[argumentsStart];
+                if (variableIndex >= arguments.numberOfExpressions[eExpressionIndex]) {
+                    // This argument is elided.
+                    if (core.contexts[core.size - 1] == SystemMacro.IfNone) {
+                        // Elide the IfNone invocation, substitute the second argument, skip the third.
+                        core.size--;
+                        this.i--;
+                        int expressionEnd = source.findEndOfExpression(++i);
+                        inlineExpression(source, i, expressionEnd, null, -1);
+                        i = sourceEnd;
+                    } else {
+                        // TODO does this ever occur in a position where it could simply be elided?
+                        add(null, ExpressionType.EXPRESSION_GROUP, null);
+                        add(null, ExpressionType.EXPRESSION_GROUP_END, null);
+                    }
+                } else {
+                    int expressionStart = arguments.expressionStarts[eExpressionIndex][variableIndex];
+                    int expressionEnd = arguments.findEndOfExpression(expressionStart);
+                    inlineExpression(arguments, expressionStart, expressionEnd, null, -1);
+                }
+            } else if (source.types[i] == ExpressionType.E_EXPRESSION) {
+                // Recursive inlining
+                // TODO have a limit on depth / size
+                Macro macro = (Macro) source.contexts[i];
+                Core expressionSource = null;
+                if (macro instanceof TemplateMacro) {
+                    expressionSource = macro.getBodyTape();
+                } else if (macro instanceof SystemMacro) {
+                    SystemMacro systemMacro = (SystemMacro) macro;
+                    // Some system macros cannot be inlined because they have special behavior that is not captured
+                    // by a template body.
+                    if (systemMacro.getBody() != null) {
+                        expressionSource = systemMacro.getBodyTape();
+                    }
+                }
+                if (expressionSource != null) {
+                    inlineExpression(expressionSource, 0, expressionSource.size, source, i);
+                    i = source.findEndOfExpression(i) - 1; // TODO this passed with and without -1; missing coverage?
+                } else {
+                    // This invocation cannot be inlined.
+                    // TODO de-duplicate with the branch below
+                    int expressionEnd = source.findEndOfExpression(i);
+                    copyFrom(source, i);
+                    inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
+                    i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
+                }
+            } else if (source.types[i].isContainerStart()) {
+                int expressionEnd = source.findEndOfExpression(i);
+                copyFrom(source, i);
+                inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
+                i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
+            } else {
+                // Scalar, field name, or container end
+                copyFrom(source, i);
+            }
+        }
+    }
+
     private void add(Object context, ExpressionType type, Object value) {
         if (i >= core.contexts.length) {
             core.grow();
@@ -189,6 +299,20 @@ public class ExpressionTape { // TODO make internal
         core.starts[i] = -1;
         core.ends[i] = -1;
         setExpressionStart(type);
+        i++;
+        core.size++;
+    }
+
+    private void copyFrom(Core other, int otherIndex) {
+        if (i >= core.contexts.length) {
+            core.grow();
+        }
+        core.contexts[i] = other.contexts[otherIndex];
+        core.types[i] = other.types[otherIndex];
+        core.values[i] = other.values[otherIndex];
+        core.starts[i] = other.starts[otherIndex];
+        core.ends[i] = other.ends[otherIndex];
+        setExpressionStart(core.types[i]);
         i++;
         core.size++;
     }
@@ -645,6 +769,12 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
+    public static ExpressionTape.Core inlineNestedInvocations(ExpressionTape.Core tape) {
+        ExpressionTape newTape = new ExpressionTape(null, tape.size + 64); // TODO arbitrary, adding some room in anticipation of inlining some invocations. Consider being more accurate
+        newTape.inlineExpression(tape, 0, tape.size, null, -1);
+        return newTape.core;
+    }
+
     public static ExpressionTape.Core from(List<Expression> expressions) { // TODO possibly temporary, until Expression model is replaced
         // Note: this method doesn't really need to be efficient, as it happens (at most) once during compile time.
         // First pass: determine the required size of the tape. All container types require two tape expressions: one
@@ -706,12 +836,17 @@ public class ExpressionTape { // TODO make internal
                     tape.add(annotations, ExpressionType.ANNOTATION, null);
                 }
                 tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER, null); // TODO could pass along the endIndex as context?
-                List<ExpressionType> endsAtEndIndex = ends[container.getEndExclusive()];
-                if (endsAtEndIndex == null) {
-                    endsAtEndIndex = new ArrayList<>();
+                if (container.getEndExclusive() == i) {
+                    // This is an empty container
+                    tape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END, null);
+                } else {
+                    List<ExpressionType> endsAtEndIndex = ends[container.getEndExclusive()];
+                    if (endsAtEndIndex == null) {
+                        endsAtEndIndex = new ArrayList<>();
+                    }
+                    endsAtEndIndex.add(ExpressionType.DATA_MODEL_CONTAINER_END);
+                    ends[container.getEndExclusive()] = endsAtEndIndex;
                 }
-                endsAtEndIndex.add(ExpressionType.DATA_MODEL_CONTAINER_END);
-                ends[container.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.DataModelValue) {
                 Expression.DataModelValue value = ((Expression.DataModelValue) expression);
                 tape.addDataModelValue(value);
@@ -803,43 +938,7 @@ public class ExpressionTape { // TODO make internal
     public void seekPastExpression() {
         // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
         // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
-        int relativeDepth = 0;
-        int startIndex = i;
-        loop: while (i < core.size) {
-            switch (core.types[i]) {
-                case FIELD_NAME:
-                case ANNOTATION:
-                case DATA_MODEL_SCALAR:
-                case VARIABLE:
-                    if (relativeDepth == 0) {
-                        if (i > startIndex) {
-                            break loop;
-                        }
-                    }
-                    break;
-                case E_EXPRESSION:
-                case EXPRESSION_GROUP:
-                case DATA_MODEL_CONTAINER:
-                    if (relativeDepth == 0) {
-                        if (i > startIndex) {
-                            break loop;
-                        }
-                    }
-                    relativeDepth++;
-                    break;
-                case EXPRESSION_GROUP_END:
-                case DATA_MODEL_CONTAINER_END:
-                case E_EXPRESSION_END:
-                    if (--relativeDepth < 0) {
-                        break loop;
-                    }
-                    break;
-                default:
-                    throw new IllegalStateException();
-            }
-            i++;
-        }
-        i++; // This positions the tape *after* the end of the expression that was located above.
+        i = core.findEndOfExpression(i) + 1; // This positions the tape *after* the end of the expression that was located above.
         iNext = i;
     }
 

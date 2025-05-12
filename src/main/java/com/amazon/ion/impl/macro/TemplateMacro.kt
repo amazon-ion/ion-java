@@ -11,7 +11,7 @@ import com.amazon.ion.impl.*
 class TemplateMacro @JvmOverloads constructor(
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>,
-    override val bodyTape: ExpressionTape.Core = ExpressionTape.from(body)
+    override val bodyTape: ExpressionTape.Core = ExpressionTape.inlineNestedInvocations(ExpressionTape.from(body))
 ) : Macro {
 
     // TODO: Consider rewriting the body of the macro if we discover that there are any macros invoked using only
