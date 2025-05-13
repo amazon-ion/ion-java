@@ -1624,7 +1624,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (event == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1);
             boolean isSingleton = true;
             while (nextGroupedValue() != Event.NEEDS_INSTRUCTION || isMacroInvocation()) {
                 readValueAsExpression(false);
@@ -1640,15 +1640,15 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             if (exitArgumentGroup() == Event.NEEDS_DATA) {
                 throw new UnsupportedOperationException("TODO: support continuable parsing of macro arguments.");
             }
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1);
         }
 
         /**
          * Adds an expression that conveys that the parameter was not present (void).
          */
         private void addVoidExpression() {
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1);
         }
 
         @Override

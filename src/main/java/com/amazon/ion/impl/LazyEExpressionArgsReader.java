@@ -121,7 +121,7 @@ abstract class LazyEExpressionArgsReader {
      * Reads a scalar value from the stream into an expression.
      */
     private void readScalarValueAsExpression() {
-        expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_SCALAR, (int) reader.valueMarker.startIndex, (int) reader.valueMarker.endIndex);
+        expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, (int) reader.valueMarker.startIndex, (int) reader.valueMarker.endIndex);
     }
 
     /**
@@ -134,23 +134,23 @@ abstract class LazyEExpressionArgsReader {
     ) {
         boolean isExpressionGroup = isContainerAnExpressionGroup();
         if (isExpressionGroup) {
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1);
         } else {
-            expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_CONTAINER, -1, -1);
+            expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_CONTAINER_ORDINAL, -1, -1);
         }
         // TODO if the container is prefixed, don't recursively step through it
         stepInRaw();
         while (nextRaw()) {
             if (type == IonType.STRUCT) {
                 // TODO avoid having to create SymbolToken every time
-                expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME, -1, -1);
+                expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
             }
             readValueAsExpression(false); // TODO avoid recursion
         }
         if (isExpressionGroup) {
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
+            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1);
         } else {
-            expressionTape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END, -1, -1);
+            expressionTape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL, -1, -1);
         }
         stepOutRaw();
     }
@@ -159,11 +159,11 @@ abstract class LazyEExpressionArgsReader {
      * Reads the rest of the stream into a single expression group.
      */
     private void readStreamAsExpressionGroup() {
-        expressionTape.add(null, ExpressionType.EXPRESSION_GROUP, -1, -1);
+        expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1);
         do {
             readValueAsExpression(false); // TODO avoid recursion
         } while (nextRaw());
-        expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END, -1, -1);
+        expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1);
     }
 
     /**
@@ -183,7 +183,7 @@ abstract class LazyEExpressionArgsReader {
         IonType type = reader.getEncodingType();
         if (reader.hasAnnotations()) {
             List<SymbolToken> annotations = getAnnotations(); // TODO make this lazy too
-            expressionTape.add(annotations, ExpressionType.ANNOTATION, -1, -1);
+            expressionTape.add(annotations, ExpressionType.ANNOTATION_ORDINAL, -1, -1);
         }
         if (IonType.isContainer(type) && !reader.isNullValue()) {
             readContainerValueAsExpression(type);
@@ -201,7 +201,7 @@ abstract class LazyEExpressionArgsReader {
         List<Macro.Parameter> signature = macro.getSignature();
         PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
         // TODO avoid eagerly stepping through prefixed expressions
-        expressionTape.add(macro, ExpressionType.E_EXPRESSION, -1, -1);
+        expressionTape.add(macro, ExpressionType.E_EXPRESSION_ORDINAL, -1, -1);
         int numberOfParameters = signature.size();
         for (int i = 0; i < numberOfParameters; i++) {
             readParameter(
@@ -211,7 +211,7 @@ abstract class LazyEExpressionArgsReader {
             );
         }
         stepOutOfEExpression();
-        expressionTape.add(null, ExpressionType.E_EXPRESSION_END, -1, -1);
+        expressionTape.add(null, ExpressionType.E_EXPRESSION_END_ORDINAL, -1, -1);
     }
 
     /**
@@ -222,7 +222,7 @@ abstract class LazyEExpressionArgsReader {
         reader.pinBytesInCurrentValue();
         if (reader.isInStruct()) {
             // TODO avoid having to create SymbolToken every time
-            expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME, -1, -1);
+            expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
         }
         collectEExpressionArgs();
         macroEvaluator.initExpansion(expressionTape);

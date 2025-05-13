@@ -18,6 +18,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.amazon.ion.impl.ExpressionType.ANNOTATION_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.DATA_MODEL_CONTAINER_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.DATA_MODEL_SCALAR_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_END_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_END_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.FIELD_NAME_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
+
 public class ExpressionTape { // TODO make internal
 
     public static class ExpressionPointer {
@@ -44,7 +55,7 @@ public class ExpressionTape { // TODO make internal
     public static class Core {
         private Object[] contexts;
         private Object[] values; // Elements are null for values that haven't yet been materialized
-        private ExpressionType[] types;
+        private byte[] types;
         private int[] starts;
         private int[] ends;
         private int[][] expressionStarts;
@@ -56,7 +67,7 @@ public class ExpressionTape { // TODO make internal
         Core(int initialSize) {
             contexts = new Object[initialSize];
             values = new Object[initialSize];
-            types = new ExpressionType[initialSize];
+            types = new byte[initialSize];
             starts = new int[initialSize];
             ends = new int[initialSize];
             expressionStarts = new int[1][];
@@ -106,19 +117,19 @@ public class ExpressionTape { // TODO make internal
             int i = startIndex;
             loop: while (i < size) {
                 switch (types[i]) {
-                    case FIELD_NAME:
-                    case ANNOTATION:
-                    case DATA_MODEL_SCALAR:
-                    case VARIABLE:
+                    case FIELD_NAME_ORDINAL:
+                    case ANNOTATION_ORDINAL:
+                    case DATA_MODEL_SCALAR_ORDINAL:
+                    case VARIABLE_ORDINAL:
                         if (relativeDepth == 0) {
                             if (i > startIndex) {
                                 break loop;
                             }
                         }
                         break;
-                    case E_EXPRESSION:
-                    case EXPRESSION_GROUP:
-                    case DATA_MODEL_CONTAINER:
+                    case E_EXPRESSION_ORDINAL:
+                    case EXPRESSION_GROUP_ORDINAL:
+                    case DATA_MODEL_CONTAINER_ORDINAL:
                         if (relativeDepth == 0) {
                             if (i > startIndex) {
                                 break loop;
@@ -126,9 +137,9 @@ public class ExpressionTape { // TODO make internal
                         }
                         relativeDepth++;
                         break;
-                    case EXPRESSION_GROUP_END:
-                    case DATA_MODEL_CONTAINER_END:
-                    case E_EXPRESSION_END:
+                    case EXPRESSION_GROUP_END_ORDINAL:
+                    case DATA_MODEL_CONTAINER_END_ORDINAL:
+                    case E_EXPRESSION_END_ORDINAL:
                         if (--relativeDepth < 0) {
                             break loop;
                         }
@@ -181,34 +192,34 @@ public class ExpressionTape { // TODO make internal
         eExpressionActiveAtDepth[depth] = isEExpression ? numberOfEExpressions - 1 : -1;
     }
 
-    private void setExpressionStart(ExpressionType type) {
-        if (type == ExpressionType.E_EXPRESSION) {
+    private void setExpressionStart(byte type) {
+        if (type == ExpressionType.E_EXPRESSION_ORDINAL) {
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             core.ends[i] = numberOfEExpressions++;
             core.ensureEExpressionIndexAvailable(numberOfEExpressions);
             increaseDepth(true);
-        } else if (type.isContainerStart()) {
+        } else if (ExpressionType.isContainerStart(type)) {
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             increaseDepth(false);
-        } else if (type == ExpressionType.DATA_MODEL_SCALAR || type == ExpressionType.ANNOTATION) { // TODO what about field names?
+        } else if (type == ExpressionType.DATA_MODEL_SCALAR_ORDINAL || type == ExpressionType.ANNOTATION_ORDINAL) { // TODO what about field names?
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
-        } else if (type == ExpressionType.VARIABLE) {
+        } else if (type == ExpressionType.VARIABLE_ORDINAL) {
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             core.setNextVariable(i);
-        } else if (type.isEnd()) {
+        } else if (ExpressionType.isEnd(type)) {
             depth--;
         }
     }
 
-    void add(Object context, ExpressionType type, int start, int end) {
+    void add(Object context, byte type, int start, int end) {
         if (i >= core.contexts.length) {
             core.grow();
         }
@@ -224,7 +235,7 @@ public class ExpressionTape { // TODO make internal
 
     private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart) {
         for (int i = sourceStart; i < sourceEnd; i++) {
-            if (source.types[i] == ExpressionType.VARIABLE) {
+            if (source.types[i] == ExpressionType.VARIABLE_ORDINAL) {
                 if (arguments == null) {
                     // This is a top-level template body. There is no invocation yet, so there is nothing to substitute.
                     copyFrom(source, i);
@@ -243,15 +254,15 @@ public class ExpressionTape { // TODO make internal
                         i = sourceEnd;
                     } else {
                         // TODO does this ever occur in a position where it could simply be elided?
-                        add(null, ExpressionType.EXPRESSION_GROUP, null);
-                        add(null, ExpressionType.EXPRESSION_GROUP_END, null);
+                        add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null);
+                        add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, null);
                     }
                 } else {
                     int expressionStart = arguments.expressionStarts[eExpressionIndex][variableIndex];
                     int expressionEnd = arguments.findEndOfExpression(expressionStart);
                     inlineExpression(arguments, expressionStart, expressionEnd, null, -1);
                 }
-            } else if (source.types[i] == ExpressionType.E_EXPRESSION) {
+            } else if (source.types[i] == ExpressionType.E_EXPRESSION_ORDINAL) {
                 // Recursive inlining
                 // TODO have a limit on depth / size
                 Macro macro = (Macro) source.contexts[i];
@@ -277,7 +288,7 @@ public class ExpressionTape { // TODO make internal
                     inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
                     i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
                 }
-            } else if (source.types[i].isContainerStart()) {
+            } else if (ExpressionType.isContainerStart(source.types[i])) {
                 int expressionEnd = source.findEndOfExpression(i);
                 copyFrom(source, i);
                 inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
@@ -289,7 +300,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    private void add(Object context, ExpressionType type, Object value) {
+    private void add(Object context, byte type, Object value) {
         if (i >= core.contexts.length) {
             core.grow();
         }
@@ -318,7 +329,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public void addScalar(IonType type, Object value) {
-        add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR, value);
+        add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, value);
     }
 
     public void next() {
@@ -333,7 +344,7 @@ public class ExpressionTape { // TODO make internal
         return i;
     }
 
-    public ExpressionType type() {
+    public byte type() {
         return core.types[i];
     }
 
@@ -374,10 +385,10 @@ public class ExpressionTape { // TODO make internal
     public int findIndexAfterEndEExpression() {
         int relativeDepth = 0;
         for (int index = i; index < core.size; index++) {
-            ExpressionType type = core.types[index];
-            if (type == ExpressionType.E_EXPRESSION) {
+            byte type = core.types[index];
+            if (type == ExpressionType.E_EXPRESSION_ORDINAL) {
                 relativeDepth++;
-            } else if (type == ExpressionType.E_EXPRESSION_END) {
+            } else if (type == ExpressionType.E_EXPRESSION_END_ORDINAL) {
                 if (relativeDepth == 0) {
                     return index + 1;
                 }
@@ -397,10 +408,10 @@ public class ExpressionTape { // TODO make internal
     public void advanceToAfterEndEExpression() {
         int relativeDepth = 0;
         while (i < core.size) {
-            ExpressionType type = core.types[i++];
-            if (type == ExpressionType.E_EXPRESSION) {
+            byte type = core.types[i++];
+            if (type == ExpressionType.E_EXPRESSION_ORDINAL) {
                 relativeDepth++;
-            } else if (type == ExpressionType.E_EXPRESSION_END) {
+            } else if (type == ExpressionType.E_EXPRESSION_END_ORDINAL) {
                 if (relativeDepth == 0) {
                     break;
                 }
@@ -413,10 +424,10 @@ public class ExpressionTape { // TODO make internal
     public void advanceToAfterEndContainer() {
         int relativeDepth = 0;
         while (i < core.size) {
-            ExpressionType type = core.types[i++];
-            if (type == ExpressionType.DATA_MODEL_CONTAINER) {
+            byte type = core.types[i++];
+            if (type == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL) {
                 relativeDepth++;
-            } else if (type == ExpressionType.DATA_MODEL_CONTAINER_END) {
+            } else if (type == ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL) {
                 if (relativeDepth == 0) {
                     break;
                 }
@@ -431,7 +442,7 @@ public class ExpressionTape { // TODO make internal
         //  the way out. Would need to test that the stored shift amount applied only when necessary and determine
         //  whether multiple shifts could be applied to the same index (I think not)
         for (int i = 0; i < core.size; i++) {
-            if (core.types[i] != ExpressionType.E_EXPRESSION && core.starts[i] >= 0) {
+            if (core.types[i] != ExpressionType.E_EXPRESSION_ORDINAL && core.starts[i] >= 0) {
                 core.starts[i] -= shiftAmount;
                 core.ends[i] -= shiftAmount;
             }
@@ -724,44 +735,44 @@ public class ExpressionTape { // TODO make internal
         backedByReader = false;
         List<SymbolToken> annotations = value.getAnnotations();
         if (!annotations.isEmpty()) {
-            add(annotations, ExpressionType.ANNOTATION, null);
+            add(annotations, ExpressionType.ANNOTATION_ORDINAL, null);
         }
         IonType type = value.getType();
         if (value instanceof Expression.NullValue) {
-            add(NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR, null);
+            add(NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, null);
         } else {
             IonTypeID typeID = NON_NULL_SCALAR_TYPE_IDS[type.ordinal()];
             switch (type) {
                 case BOOL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.BoolValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BoolValue) value).getValue());
                     break;
                 case INT:
                     if (value instanceof Expression.LongIntValue) {
-                        add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.LongIntValue) value).getValue());
+                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.LongIntValue) value).getValue());
                     } else {
-                        add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.BigIntValue) value).getValue());
+                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BigIntValue) value).getValue());
                     }
                     break;
                 case FLOAT:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.FloatValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.FloatValue) value).getValue());
                     break;
                 case DECIMAL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.DecimalValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.DecimalValue) value).getValue());
                     break;
                 case TIMESTAMP:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.TimestampValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.TimestampValue) value).getValue());
                     break;
                 case SYMBOL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.SymbolValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.SymbolValue) value).getValue());
                     break;
                 case STRING:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.StringValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.StringValue) value).getValue());
                     break;
                 case CLOB:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.ClobValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.ClobValue) value).getValue());
                     break;
                 case BLOB:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR, ((Expression.BlobValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BlobValue) value).getValue());
                     break;
                 default:
                     throw new IllegalStateException();
@@ -791,72 +802,72 @@ public class ExpressionTape { // TODO make internal
         }
 
         ExpressionTape tape = new ExpressionTape(null, tapeSize);
-        List<ExpressionType>[] ends = new List[expressions.size() + 1];
+        List<Byte>[] ends = new List[expressions.size() + 1];
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
-            List<ExpressionType> endsAtExpressionIndex = ends[i];
+            List<Byte> endsAtExpressionIndex = ends[i];
             if (endsAtExpressionIndex != null) {
                 for (int j = endsAtExpressionIndex.size() - 1; j >= 0; j--) {
                     tape.add(null, endsAtExpressionIndex.get(j), null);
                 }
             }
             if (expression instanceof Expression.FieldName) {
-                tape.add(((Expression.FieldName) expression).getValue(), ExpressionType.FIELD_NAME, null);
+                tape.add(((Expression.FieldName) expression).getValue(), ExpressionType.FIELD_NAME_ORDINAL, null);
             } else if (expression instanceof Expression.EExpression) {
                 Expression.EExpression eExpression = (Expression.EExpression) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION, null);
-                List<ExpressionType> endsAtEndIndex = ends[eExpression.getEndExclusive()];
+                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null);
+                List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
                 }
-                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END);
+                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END_ORDINAL);
                 ends[eExpression.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.MacroInvocation) {
                 Expression.MacroInvocation eExpression = (Expression.MacroInvocation) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION, null);
-                List<ExpressionType> endsAtEndIndex = ends[eExpression.getEndExclusive()];
+                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null);
+                List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
                 }
-                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END);
+                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END_ORDINAL);
                 ends[eExpression.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.ExpressionGroup) {
                 Expression.ExpressionGroup group = (Expression.ExpressionGroup) expression;
-                tape.add(null, ExpressionType.EXPRESSION_GROUP, null); // TODO could pass along the endIndex as context?
-                List<ExpressionType> endsAtEndIndex = ends[group.getEndExclusive()];
+                tape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null); // TODO could pass along the endIndex as context?
+                List<Byte> endsAtEndIndex = ends[group.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
                 }
-                endsAtEndIndex.add(ExpressionType.EXPRESSION_GROUP_END);
+                endsAtEndIndex.add(ExpressionType.EXPRESSION_GROUP_END_ORDINAL);
                 ends[group.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.DataModelContainer) {
                 Expression.DataModelContainer container = ((Expression.DataModelContainer) expression);
                 List<SymbolToken> annotations = container.getAnnotations();
                 if (!annotations.isEmpty()) {
-                    tape.add(annotations, ExpressionType.ANNOTATION, null);
+                    tape.add(annotations, ExpressionType.ANNOTATION_ORDINAL, null);
                 }
-                tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER, null); // TODO could pass along the endIndex as context?
+                tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER_ORDINAL, null); // TODO could pass along the endIndex as context?
                 if (container.getEndExclusive() == i) {
                     // This is an empty container
-                    tape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END, null);
+                    tape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL, null);
                 } else {
-                    List<ExpressionType> endsAtEndIndex = ends[container.getEndExclusive()];
+                    List<Byte> endsAtEndIndex = ends[container.getEndExclusive()];
                     if (endsAtEndIndex == null) {
                         endsAtEndIndex = new ArrayList<>();
                     }
-                    endsAtEndIndex.add(ExpressionType.DATA_MODEL_CONTAINER_END);
+                    endsAtEndIndex.add(ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL);
                     ends[container.getEndExclusive()] = endsAtEndIndex;
                 }
             } else if (expression instanceof Expression.DataModelValue) {
                 Expression.DataModelValue value = ((Expression.DataModelValue) expression);
                 tape.addDataModelValue(value);
             } else if (expression instanceof Expression.VariableRef) {
-                tape.add(((Expression.VariableRef) expression).getSignatureIndex(), ExpressionType.VARIABLE, null);
+                tape.add(((Expression.VariableRef) expression).getSignatureIndex(), ExpressionType.VARIABLE_ORDINAL, null);
             } else {
                 throw new IllegalStateException();
             }
         }
-        List<ExpressionType> endsAtExpressionIndex = ends[expressions.size()];
+        List<Byte> endsAtExpressionIndex = ends[expressions.size()];
         if (endsAtExpressionIndex != null) {
             for (int j = endsAtExpressionIndex.size() - 1; j >= 0; j--) {
                 tape.add(null, endsAtExpressionIndex.get(j), null);
@@ -902,8 +913,8 @@ public class ExpressionTape { // TODO make internal
         }
         for (int i = 0; i < numberOfExpressions; i++) {
             int expressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
-            ExpressionType targetType = argumentCore.types[expressionIndex];
-            if (targetType == ExpressionType.VARIABLE) {
+            byte targetType = argumentCore.types[expressionIndex];
+            if (targetType == ExpressionType.VARIABLE_ORDINAL) {
                 int localVariableId = (int) argumentCore.contexts[expressionIndex];
                 if (localVariableId >= arguments.expressionPointersSize) {
                     // The variable was elided.
@@ -917,8 +928,8 @@ public class ExpressionTape { // TODO make internal
                         // This localVariableId must have already been resolved, so it's somewhere in the list already.
                         for (int j = 0; j < i; j++) {
                             int previousExpressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
-                            ExpressionType previousTargetType = argumentCore.types[expressionIndex];
-                            if (previousTargetType == ExpressionType.VARIABLE && localVariableId == (int) argumentCore.contexts[previousExpressionIndex]) {
+                            byte previousTargetType = argumentCore.types[expressionIndex];
+                            if (previousTargetType == ExpressionType.VARIABLE_ORDINAL && localVariableId == (int) argumentCore.contexts[previousExpressionIndex]) {
                                 pointer = expressionPointers[j];
                                 pointerSource = pointer.source;
                                 pointerIndex = pointer.index;

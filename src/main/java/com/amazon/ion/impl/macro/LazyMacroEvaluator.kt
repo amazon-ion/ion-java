@@ -191,7 +191,7 @@ class LazyMacroEvaluator : IonReader {
                 if (expressionTape.isExhausted) {
                     return ExpressionType.END_OF_EXPANSION_ORDINAL
                 }
-                val nextType = expressionTape.type().ord
+                val nextType = expressionTape.type()
                 if (ExpressionType.isEnd(nextType)) {
                     if (nextType == ExpressionType.EXPRESSION_GROUP_END_ORDINAL || nextType == ExpressionType.E_EXPRESSION_END_ORDINAL) {
                         // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
@@ -1053,7 +1053,7 @@ class LazyMacroEvaluator : IonReader {
             arguments.next()
             arguments.prepareNext()
             val argument = arguments.type()
-            if (argument.isEnd) {
+            if (ExpressionType.isEnd(argument)) {
                 session.currentAnnotations = null
                 session.currentFieldName = null
                 writer.stepOut()
@@ -1061,15 +1061,15 @@ class LazyMacroEvaluator : IonReader {
                 continue
             }
             when (argument) {
-                ExpressionType.ANNOTATION -> {
+                ExpressionType.ANNOTATION_ORDINAL -> {
                     session.currentAnnotations = arguments.context() as List<SymbolToken>
                     writer.setTypeAnnotationSymbols(*session.currentAnnotations!!.toTypedArray())
                 }
-                ExpressionType.DATA_MODEL_CONTAINER -> {
+                ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
                     currentValueType = arguments.ionType()
                     writer.stepIn(currentValueType)
                 }
-                ExpressionType.DATA_MODEL_SCALAR -> {
+                ExpressionType.DATA_MODEL_SCALAR_ORDINAL -> {
                     currentValueType = arguments.ionType()
                     when (currentValueType) {
                         IonType.NULL -> writer.writeNull()
@@ -1091,12 +1091,12 @@ class LazyMacroEvaluator : IonReader {
                         else -> throw IllegalStateException("Unexpected branch")
                     }
                 }
-                ExpressionType.FIELD_NAME -> {
+                ExpressionType.FIELD_NAME_ORDINAL -> {
                     session.currentFieldName = arguments.context() as SymbolToken
                     writer.setFieldNameSymbol(session.currentFieldName)
                 }
-                ExpressionType.E_EXPRESSION -> writer.startMacro(arguments.context() as Macro)
-                ExpressionType.EXPRESSION_GROUP -> writer.startExpressionGroup()
+                ExpressionType.E_EXPRESSION_ORDINAL -> writer.startMacro(arguments.context() as Macro)
+                ExpressionType.EXPRESSION_GROUP_ORDINAL -> writer.startExpressionGroup()
                 else -> throw IllegalStateException("Unexpected branch")
             }
             index++
