@@ -247,6 +247,90 @@ abstract class LazyEExpressionArgsReader {
         }
     }
 
+    private int collectAndFlattenComplexEExpression(int numberOfParameters, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+        // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
+        int macroBodyTapeIndex = 0;
+        int numberOfVariables = macroBodyTape.getNumberOfVariables();
+        // Key: signature index. Value: Marker for the location of the argument in the stream or tape.
+        Marker[] variableMap = new Marker[numberOfVariables]; //getMarkerMap(numberOfVariables); //new Marker[numberOfVariables];
+        int numberOfDuplicatedVariables = 0;
+        int numberOfOutOfOrderVariables = 0;
+        for (int i = 0; i < numberOfVariables; i++) {
+            // Now, materialize and insert the argument from the invocation.
+            // Copy everything up to the next variable.
+            macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
+            int variableOrdinal = macroBodyTape.getVariableOrdinal(i);
+            int invocationOrdinal = i - numberOfDuplicatedVariables + numberOfOutOfOrderVariables;
+            while (true) {
+                if (invocationOrdinal == variableOrdinal) {
+                    // This is the common case: the parameter that is about to be read matches the ordinal of the next
+                    // variable in the signature. This means it can be copied into the tape without using scratch space.
+                    int startIndexInTape = expressionTape.size();
+                    readParameter(
+                        signature.get(invocationOrdinal),
+                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
+                        invocationOrdinal == (numberOfParameters - 1)
+                    );
+                    Marker marker = getMarker();
+                    marker.typeId = null;
+                    marker.startIndex = startIndexInTape;
+                    marker.endIndex = expressionTape.size();
+                    variableMap[variableOrdinal] = marker;
+                    break;
+                } else if (invocationOrdinal < variableOrdinal) {
+                    // The variable for this ordinal cannot have been read yet.
+                    int scratchStartIndex = expressionTapeScratch.size();
+                    expressionTape = expressionTapeScratch;
+                    readParameter(
+                        signature.get(invocationOrdinal),
+                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
+                        invocationOrdinal == (numberOfParameters - 1)
+                    );
+                    expressionTape = expressionTapeOrdered;
+                    Marker marker = getMarker();
+                    marker.startIndex = scratchStartIndex;
+                    marker.endIndex = expressionTapeScratch.size();
+                    // This is a sentinel to denote that the expression is in the scratch tape.
+                    marker.typeId = IonTypeID.ALWAYS_INVALID_TYPE_ID;
+                    variableMap[invocationOrdinal] = marker;
+                    numberOfOutOfOrderVariables++;
+                } else {
+                    // This is a variable that has already been encountered.
+                    Marker marker = variableMap[variableOrdinal];
+                    if (marker == null) {
+                        throw new IllegalStateException("Every variable ordinal must be recorded as it is encountered.");
+                    }
+                    numberOfDuplicatedVariables++;
+                    ExpressionTape source = marker.typeId == IonTypeID.ALWAYS_INVALID_TYPE_ID ? expressionTapeScratch : expressionTape;
+                    // The argument for this variable has already been read. Copy it from the tape.
+                    expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
+                    break;
+                }
+                invocationOrdinal++;
+            }
+        }
+        //--markerMapPoolIndex;
+        return macroBodyTapeIndex;
+    }
+
+    private int collectAndFlattenSimpleEExpression(int numberOfParameters, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+        // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
+        int macroBodyTapeIndex = 0;
+        int numberOfVariables = macroBodyTape.getNumberOfVariables();
+        for (int i = 0; i < numberOfVariables; i++) {
+            // Copy everything up to the next variable.
+            macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
+            // This is the common case: the parameter that is about to be read matches the ordinal of the next
+            // variable in the signature. This means it can be copied into the tape without using scratch space.
+            readParameter(
+                signature.get(i),
+                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
+                i == (numberOfParameters - 1)
+            );
+        }
+        return macroBodyTapeIndex;
+    }
+
     private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
         ExpressionTape.Core macroBodyTape = macro.getBodyTape();
         // TODO avoid eagerly stepping through prefixed expressions
@@ -259,70 +343,10 @@ abstract class LazyEExpressionArgsReader {
                 stepOutOfEExpression();
                 return constantTape;
             }
+        } else if (macro.isSimple()) {
+            macroBodyTapeIndex = collectAndFlattenSimpleEExpression(numberOfParameters, macroBodyTape, signature, presenceBitmap);
         } else {
-            // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
-            // TODO pool the map
-            int numberOfVariables = macroBodyTape.getNumberOfVariables();
-            // Key: signature index. Value: Marker for the location of the argument in the stream or tape.
-            Marker[] variableMap = new Marker[numberOfVariables]; //getMarkerMap(numberOfVariables); //new Marker[numberOfVariables];
-            int numberOfDuplicatedVariables = 0;
-            int numberOfOutOfOrderVariables = 0;
-            for (int i = 0; i < numberOfVariables; i++) {
-                // Now, materialize and insert the argument from the invocation.
-                // Copy everything up to the next variable.
-                macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
-                int variableOrdinal = macroBodyTape.getVariableOrdinal(i);
-                int invocationOrdinal = i - numberOfDuplicatedVariables + numberOfOutOfOrderVariables;
-                while (true) {
-                    if (invocationOrdinal == variableOrdinal) {
-                        // This is the common case: the parameter that is about to be read matches the ordinal of the next
-                        // variable in the signature. This means it can be copied into the tape without using scratch space.
-                        int startIndexInTape = expressionTape.size();
-                        readParameter(
-                            signature.get(invocationOrdinal),
-                            presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                            invocationOrdinal == (numberOfParameters - 1)
-                        );
-                        // TODO could compile in whether or not the signature has out-of-order or duplicate variable ordinals.
-                        Marker marker = getMarker();
-                        marker.typeId = null;
-                        marker.startIndex = startIndexInTape;
-                        marker.endIndex = expressionTape.size();
-                        variableMap[variableOrdinal] = marker;
-                        break;
-                    } else if (invocationOrdinal < variableOrdinal) {
-                        // The variable for this ordinal cannot have been read yet.
-                        int scratchStartIndex = expressionTapeScratch.size();
-                        expressionTape = expressionTapeScratch;
-                        readParameter(
-                            signature.get(invocationOrdinal),
-                            presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                            invocationOrdinal == (numberOfParameters - 1)
-                        );
-                        expressionTape = expressionTapeOrdered;
-                        Marker marker = getMarker();
-                        marker.startIndex = scratchStartIndex;
-                        marker.endIndex = expressionTapeScratch.size();
-                        // This is a sentinel to denote that the expression is in the scratch tape.
-                        marker.typeId = IonTypeID.ALWAYS_INVALID_TYPE_ID;
-                        variableMap[invocationOrdinal] = marker;
-                        numberOfOutOfOrderVariables++;
-                    } else {
-                        // This is a variable that has already been encountered.
-                        Marker marker = variableMap[variableOrdinal];
-                        if (marker == null) {
-                            throw new IllegalStateException("Every variable ordinal must be recorded as it is encountered.");
-                        }
-                        numberOfDuplicatedVariables++;
-                        ExpressionTape source = marker.typeId == IonTypeID.ALWAYS_INVALID_TYPE_ID ? expressionTapeScratch : expressionTape;
-                        // The argument for this variable has already been read. Copy it from the tape.
-                        expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
-                        break;
-                    }
-                    invocationOrdinal++;
-                }
-            }
-            //--markerMapPoolIndex;
+            macroBodyTapeIndex = collectAndFlattenComplexEExpression(numberOfParameters, macroBodyTape, signature, presenceBitmap);
         }
         // Copy everything after the last parameter.
         expressionTape.copyFromRange(macroBodyTape, macroBodyTapeIndex, macroBodyTape.size());

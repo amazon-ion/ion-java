@@ -262,6 +262,10 @@ enum class SystemMacro(
     ),
     ;
 
+    override val isSimple by lazy {
+        bodyTape.numberOfVariables == signature.size && bodyTape.areVariablesOrdered()
+    }
+
     val systemSymbol: SystemSymbols_1_1
         get() = _systemSymbol ?: throw IllegalStateException("Attempted to get name for unaddressable macro $name")
 

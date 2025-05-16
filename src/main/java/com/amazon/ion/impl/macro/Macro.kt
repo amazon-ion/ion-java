@@ -13,6 +13,7 @@ sealed interface Macro {
     val body: List<Expression.TemplateBodyExpression>?
     val dependencies: Iterable<Macro>
     val bodyTape: ExpressionTape.Core
+    val isSimple: Boolean
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"

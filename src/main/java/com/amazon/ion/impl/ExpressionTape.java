@@ -164,6 +164,18 @@ public class ExpressionTape { // TODO make internal
             return numberOfVariables;
         }
 
+        public boolean areVariablesOrdered() {
+            int previousVariableOrdinal = -1;
+            for (int i = 0; i < numberOfVariables; i++) {
+                int currentVariableOrdinal = (int) contexts[variableStarts[i]];
+                if (currentVariableOrdinal < previousVariableOrdinal) {
+                    return false;
+                }
+                previousVariableOrdinal = currentVariableOrdinal;
+            }
+            return true;
+        }
+
         /**
          * Given a variable index, which refers to the order that variables are used in this expression tape, returns
          * the ordinal of that variable, i.e. the order in which that variable occurs in the invocation.

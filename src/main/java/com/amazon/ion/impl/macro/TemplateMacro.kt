@@ -14,6 +14,10 @@ class TemplateMacro @JvmOverloads constructor(
     override val bodyTape: ExpressionTape.Core = ExpressionTape.inlineNestedInvocations(ExpressionTape.from(body))
 ) : Macro {
 
+    override val isSimple by lazy {
+        bodyTape.numberOfVariables == signature.size && bodyTape.areVariablesOrdered()
+    }
+
     // TODO: Consider rewriting the body of the macro if we discover that there are any macros invoked using only
     //       constants as arguments—either at compile time or lazily.
     //       For example, the body of: (macro foo (x)  (values (make_string "foo" "bar") x))
