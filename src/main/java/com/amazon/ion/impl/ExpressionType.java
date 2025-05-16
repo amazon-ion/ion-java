@@ -28,6 +28,12 @@ public enum ExpressionType {
     public static final byte VARIABLE_ORDINAL = 11; //(byte) VARIABLE.ordinal();
 
 
+    private static final ExpressionType[] VALUES = ExpressionType.values();
+
+    public static ExpressionType forOrdinal(int ordinal) {
+        return VALUES[ordinal];
+    }
+
     public static boolean isEnd(byte ordinal) {
         return ordinal == E_EXPRESSION_END_ORDINAL || ordinal == EXPRESSION_GROUP_END_ORDINAL || ordinal == DATA_MODEL_CONTAINER_END_ORDINAL;
     }

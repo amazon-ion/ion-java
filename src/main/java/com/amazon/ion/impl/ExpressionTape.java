@@ -151,11 +151,38 @@ public class ExpressionTape { // TODO make internal
             }
             return i;
         }
+
+        public int copyToVariable(int startIndex, int variableIndex, ExpressionTape other) {
+            int endIndex = variableStarts[variableIndex];
+            for (int i = startIndex; i < endIndex; i++) {
+                other.copyFrom(this, i); // TODO batch this
+            }
+            return endIndex + 1;
+        }
+
+        public int getNumberOfVariables() {
+            return numberOfVariables;
+        }
+
+        /**
+         * Given a variable index, which refers to the order that variables are used in this expression tape, returns
+         * the ordinal of that variable, i.e. the order in which that variable occurs in the invocation.
+         * For example, the IfNone system macro may have the tape (VARIABLE(0) VARIABLE(1) VARIABLE(0)). The variable
+         * indices for that tape are (0 1 2) and the variable ordinals are (0 1 0).
+         * @param variableIndex a variable index, which the caller ensures is less than `numberOfVariables`.
+         * @return the ordinal of the variable at the given index.
+         */
+        public int getVariableOrdinal(int variableIndex) {
+            return (int) contexts[variableStarts[variableIndex]];
+        }
+
+        public int size() {
+            return size;
+        }
     }
 
     private Core core;
     private final IonReaderContinuableCoreBinary reader; // If null, then the values are materialized
-    private boolean backedByReader;
     private int i = 0;
     private int iNext = 0;
     private int depth = 0;
@@ -166,16 +193,18 @@ public class ExpressionTape { // TODO make internal
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
-        backedByReader = reader != null;
         core = new Core(initialSize);
         Arrays.fill(eExpressionActiveAtDepth, -1);
     }
 
     public ExpressionTape(Core core) {
         reader = null;
-        backedByReader = false;
         this.core = core;
         Arrays.fill(eExpressionActiveAtDepth, -1);
+    }
+
+    public Core core() {
+        return core;
     }
 
     public void reset(Core core) {
@@ -312,6 +341,12 @@ public class ExpressionTape { // TODO make internal
         setExpressionStart(type);
         i++;
         core.size++;
+    }
+
+    public void copyFromRange(Core other, int startIndex, int endIndex) {
+        for (int i = startIndex; i < endIndex; i++) {
+            copyFrom(other, i); // TODO batch this
+        }
     }
 
     private void copyFrom(Core other, int otherIndex) {
@@ -467,7 +502,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public boolean readBoolean() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return (boolean) core.values[i];
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
@@ -482,7 +517,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public long readLong() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             if (core.values[i] instanceof BigInteger) {
                 return ((BigInteger) core.values[i]).longValue();
             }
@@ -500,7 +535,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public BigInteger readBigInteger() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             if (core.values[i] instanceof BigInteger) {
                 return (BigInteger) core.values[i];
             }
@@ -518,7 +553,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public IntegerSize readIntegerSize() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             if (core.values[i] instanceof BigInteger) {
                 return IntegerSize.BIG_INTEGER;
             }
@@ -542,7 +577,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public BigDecimal readBigDecimal() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return (BigDecimal) core.values[i];
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
@@ -561,7 +596,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public String readText() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             if (core.values[i] instanceof SymbolToken) {
                 return ((SymbolToken) core.values[i]).assumeText();
             }
@@ -583,7 +618,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public SymbolToken readSymbol() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             if (core.values[i] instanceof SymbolToken) {
                 return (SymbolToken) core.values[i];
             }
@@ -610,7 +645,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public int lobSize() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return ((byte[]) core.values[i]).length;
         }
         IonTypeID typeId = (IonTypeID) core.contexts[i];
@@ -621,7 +656,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public byte[] readLob() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return (byte[]) core.values[i];
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
@@ -640,7 +675,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public double readFloat() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return (double) core.values[i];
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
@@ -655,7 +690,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public Timestamp readTimestamp() {
-        if (!backedByReader) {
+        if (core.starts[i] < 0) {
             return (Timestamp) core.values[i];
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
@@ -732,7 +767,6 @@ public class ExpressionTape { // TODO make internal
     }
 
     public void addDataModelValue(Expression.DataModelValue value) {
-        backedByReader = false;
         List<SymbolToken> annotations = value.getAnnotations();
         if (!annotations.isEmpty()) {
             add(annotations, ExpressionType.ANNOTATION_ORDINAL, null);

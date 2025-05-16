@@ -1896,7 +1896,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 event = super.nextValue();
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
-                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader);
+                expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader, true);
                 macroEvaluatorIonReader.transcodeArgumentsTo(macroAwareTranscoder);
                 isEvaluatingEExpression = true;
                 if (evaluateNext()) {
@@ -1997,7 +1997,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             }
             if (valueTid != null && valueTid.isMacroInvocation) {
                 if (evaluateUserMacroInvocations() || isSystemInvocation()) {
-                    expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader);
+                    expressionArgsReader.beginEvaluatingMacroInvocation(macroEvaluatorIonReader, false);
                     isEvaluatingEExpression = true;
                     if (evaluateNext()) {
                         continue;

@@ -137,7 +137,7 @@ class LazyMacroEvaluator : IonReader {
             }
         }
 
-        fun reset(arguments: ExpressionTape) {
+        fun reset(fieldName: SymbolToken?, arguments: ExpressionTape) {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
             tapePoolIndex = 0
@@ -145,7 +145,7 @@ class LazyMacroEvaluator : IonReader {
             sideEffectExpander = getExpander(ExpansionKind.EMPTY, this.environment.sideEffectContext)
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
-            currentFieldName = null
+            currentFieldName = fieldName
             currentAnnotations = null
         }
     }
@@ -891,8 +891,8 @@ class LazyMacroEvaluator : IonReader {
     /**
      * Initialize the macro evaluator with an E-Expression.
      */
-    fun initExpansion(encodingExpressions: ExpressionTape) {
-        session.reset(encodingExpressions)
+    fun initExpansion(fieldName: SymbolToken?, encodingExpressions: ExpressionTape) {
+        session.reset(fieldName, encodingExpressions)
         val ci = containerStack.push { _ -> }
         ci.type = ContainerInfo.Type.TopLevel
 

@@ -77,7 +77,7 @@ final class IonTypeID {
     };
 
     // Singleton invalid type ID.
-    private static final IonTypeID ALWAYS_INVALID_TYPE_ID = new IonTypeID((byte) 0xFF, 0);
+    static final IonTypeID ALWAYS_INVALID_TYPE_ID = new IonTypeID((byte) 0xFF, 0);
 
     // Pre-compute all possible type ID bytes.
     static final IonTypeID[] TYPE_IDS_NO_IVM;

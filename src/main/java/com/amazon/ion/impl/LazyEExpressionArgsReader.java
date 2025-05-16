@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl.bin.PresenceBitmap;
@@ -12,9 +13,11 @@ import com.amazon.ion.impl.macro.MacroEvaluator;
 import com.amazon.ion.impl.macro.ReaderAdapter;
 import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
+import com.amazon.ion.impl.macro.SystemMacro;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An {@link LazyEExpressionArgsReader} reads an E-Expression from a {@link ReaderAdapter}, constructs
@@ -35,11 +38,20 @@ abstract class LazyEExpressionArgsReader {
 
     private final IonReaderContinuableCoreBinary reader;
 
+    // The active expression tape into which expressions are read. Either `expressionTapeOrdered` or 'expressionTapeScratch'.
+    protected ExpressionTape expressionTape;
+
     // Reusable tape for recording value boundaries for lazy parsing.
-    protected final ExpressionTape expressionTape;
+    protected final ExpressionTape expressionTapeOrdered;
+
+    // Reusable scratch tape for storing out-of-order expression arguments.
+    private final ExpressionTape expressionTapeScratch;
 
     // Pool for presence bitmap instances.
     protected final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
+
+    // Whether to produce a tape that preserves the invocation verbatim.
+    private boolean verbatimTranscode = false;
 
     /**
      * Constructor.
@@ -49,8 +61,13 @@ abstract class LazyEExpressionArgsReader {
      */
     LazyEExpressionArgsReader(IonReaderContinuableCoreBinary reader) {
         this.reader = reader;
-        expressionTape = new ExpressionTape(reader, 256);
-        this.reader.setLeftShiftHandler(expressionTape::shiftIndicesLeft);
+        expressionTapeOrdered = new ExpressionTape(reader, 256);
+        expressionTapeScratch = new ExpressionTape(reader, 64);
+        expressionTape = expressionTapeOrdered;
+        this.reader.setLeftShiftHandler(shiftAmount -> {
+            expressionTapeOrdered.shiftIndicesLeft(shiftAmount);
+            expressionTapeScratch.shiftIndicesLeft(shiftAmount);
+        });
     }
 
     /**
@@ -177,7 +194,7 @@ abstract class LazyEExpressionArgsReader {
             readStreamAsExpressionGroup();
             return;
         } else if (isMacroInvocation()) {
-            collectEExpressionArgs(); // TODO avoid recursion
+            collectEExpressionArgs(false); // TODO avoid recursion
             return;
         }
         IonType type = reader.getEncodingType();
@@ -192,14 +209,82 @@ abstract class LazyEExpressionArgsReader {
         }
     }
 
-    /**
-     * Collects the expressions that compose the current macro invocation.
-     */
-    private void collectEExpressionArgs() {
-        Macro macro = loadMacro();
-        stepIntoEExpression();
-        List<Macro.Parameter> signature = macro.getSignature();
-        PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
+    private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+        ExpressionTape.Core macroBodyTape = macro.getBodyTape();
+        // TODO avoid eagerly stepping through prefixed expressions
+        int numberOfParameters = signature.size();
+        int macroBodyTapeIndex = 0;
+        if (numberOfParameters == 0) {
+            if (isTopLevel) {
+                // This avoids copying and reuses the macro body tape core as-is.
+                ExpressionTape constantTape = new ExpressionTape(macroBodyTape); // TODO pool?
+                stepOutOfEExpression();
+                return constantTape;
+            }
+        } else {
+            // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
+            // TODO pool the map
+            Map<Integer, Marker> variableMap = new HashMap<>(8); // Key: signature index. Value: Marker for the location of the argument in the stream or tape.
+            int numberOfVariables = macroBodyTape.getNumberOfVariables();
+            int numberOfDuplicatedVariables = 0;
+            int numberOfOutOfOrderVariables = 0;
+            for (int i = 0; i < numberOfVariables; i++) {
+                // Now, materialize and insert the argument from the invocation.
+                // Copy everything up to the next variable.
+                macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
+                int variableOrdinal = macroBodyTape.getVariableOrdinal(i);
+                int invocationOrdinal = i - numberOfDuplicatedVariables + numberOfOutOfOrderVariables;
+                while (true) {
+                    if (invocationOrdinal == variableOrdinal) {
+                        // This is the common case: the parameter that is about to be read matches the ordinal of the next
+                        // variable in the signature. This means it can be copied into the tape without using scratch space.
+                        int startIndexInTape = expressionTape.size();
+                        readParameter(
+                            signature.get(invocationOrdinal),
+                            presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
+                            invocationOrdinal == (numberOfParameters - 1)
+                        );
+                        // TODO avoid allocating new markers for this common case. NOTE: could compile in whether or not the signature has out-of-order or duplicate variable ordinals.
+                        variableMap.put(variableOrdinal, new Marker(startIndexInTape, expressionTape.size()));
+                        break;
+                    } else if (invocationOrdinal < variableOrdinal) {
+                        // The variable for this ordinal cannot have been read yet.
+                        int scratchStartIndex = expressionTapeScratch.size();
+                        expressionTape = expressionTapeScratch;
+                        readParameter(
+                            signature.get(invocationOrdinal),
+                            presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
+                            invocationOrdinal == (numberOfParameters - 1)
+                        );
+                        expressionTape = expressionTapeOrdered;
+                        Marker marker = new Marker(scratchStartIndex, expressionTapeScratch.size());
+                        // This is a sentinel to denote that the expression is in the scratch tape.
+                        marker.typeId = IonTypeID.ALWAYS_INVALID_TYPE_ID;
+                        variableMap.put(invocationOrdinal, marker);
+                        numberOfOutOfOrderVariables++;
+                    } else {
+                        // This is a variable that has already been encountered.
+                        Marker marker = variableMap.get(variableOrdinal);
+                        if (marker == null) {
+                            throw new IllegalStateException("Every variable ordinal must be recorded as it is encountered.");
+                        }
+                        numberOfDuplicatedVariables++;
+                        ExpressionTape source = marker.typeId == IonTypeID.ALWAYS_INVALID_TYPE_ID ? expressionTapeScratch : expressionTape;
+                        // The argument for this variable has already been read. Copy it from the tape.
+                        expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
+                        break;
+                    }
+                    invocationOrdinal++;
+                }
+            }
+        }
+        // Copy everything after the last parameter.
+        expressionTape.copyFromRange(macroBodyTape, macroBodyTapeIndex, macroBodyTape.size());
+        stepOutOfEExpression();
+        return expressionTape;
+    }
+
+    private void collectVerbatimEExpressionArgs(Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
         // TODO avoid eagerly stepping through prefixed expressions
         expressionTape.add(macro, ExpressionType.E_EXPRESSION_ORDINAL, -1, -1);
         int numberOfParameters = signature.size();
@@ -215,17 +300,37 @@ abstract class LazyEExpressionArgsReader {
     }
 
     /**
+     * Collects the expressions that compose the current macro invocation.
+     */
+    private ExpressionTape collectEExpressionArgs(boolean isTopLevel) {
+        // TODO if it's a system macro don't eagerly expand
+        Macro macro = loadMacro();
+        stepIntoEExpression();
+        List<Macro.Parameter> signature = macro.getSignature();
+        PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
+        if (verbatimTranscode || (macro instanceof SystemMacro && macro.getBodyTape().size() == 0)) {
+            collectVerbatimEExpressionArgs(macro, signature, presenceBitmap);
+            return expressionTape;
+        }
+        return collectAndFlattenUserEExpressionArgs(isTopLevel, macro, signature, presenceBitmap);
+    }
+
+    /**
      * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
      * them to the macro evaluator.
      */
-    public void beginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator) {
+    public void beginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator, boolean verbatimTranscode) {
+        this.verbatimTranscode = verbatimTranscode;
         reader.pinBytesInCurrentValue();
+        SymbolToken fieldName = null;
         if (reader.isInStruct()) {
             // TODO avoid having to create SymbolToken every time
-            expressionTape.add(reader.getFieldNameSymbol(), ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
+            fieldName = reader.getFieldNameSymbol();
+            if (verbatimTranscode) { // TODO see if this special case can be avoided
+                expressionTape.add(fieldName, ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
+            }
         }
-        collectEExpressionArgs();
-        macroEvaluator.initExpansion(expressionTape);
+        macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(true));
     }
 
     /**
@@ -235,6 +340,9 @@ abstract class LazyEExpressionArgsReader {
         presenceBitmapPool.clear();
         reader.unpinBytes();
         reader.returnToCheckpoint();
-        expressionTape.clear();
+        expressionTapeOrdered.clear();
+        expressionTapeScratch.clear();
+        expressionTape = expressionTapeOrdered;
+        verbatimTranscode = false;
     }
 }
