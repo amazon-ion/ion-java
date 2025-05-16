@@ -15,6 +15,7 @@ import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
 import com.amazon.ion.impl.macro.SystemMacro;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,12 @@ abstract class LazyEExpressionArgsReader {
     // Whether to produce a tape that preserves the invocation verbatim.
     private boolean verbatimTranscode = false;
 
+    //private Marker[][] markerMapPool = new Marker[4][];
+    //private int markerMapPoolIndex = -1;
+
+    private Marker[] markerPool = new Marker[16];
+    private int markerPoolIndex = -1;
+
     /**
      * Constructor.
      * @param reader the {@link ReaderAdapter} from which to read {@link Expression}s.
@@ -69,6 +76,37 @@ abstract class LazyEExpressionArgsReader {
             expressionTapeScratch.shiftIndicesLeft(shiftAmount);
         });
     }
+
+    private Marker getMarker() {
+        int index = ++markerPoolIndex;
+        if (index == markerPool.length) {
+            markerPool = Arrays.copyOf(markerPool, markerPool.length * 2);
+        }
+        Marker marker = markerPool[index];
+        if (marker == null) {
+            marker = new Marker(-1, -1);
+            markerPool[index] = marker;
+        }
+        return marker;
+    }
+
+    /* NOTE: pooling the marker map cuts allocation rate by a lot, but is slower because of the need to Arrays.fill
+    private Marker[] getMarkerMap(int minimumSize) {
+        int index = ++markerMapPoolIndex;
+        if (index == markerMapPool.length) {
+            markerMapPool = Arrays.copyOf(markerMapPool, markerMapPool.length * 2);
+        }
+        Marker[] markerMap = markerMapPool[index];
+        if (markerMap == null || markerMap.length < minimumSize) {
+            markerMap = new Marker[minimumSize];
+            markerMapPool[index] = markerMap;
+        } else {
+            Arrays.fill(markerMap, null);
+        }
+        return markerMap;
+    }
+
+     */
 
     /**
      * @return true if the value upon which the reader is positioned represents a macro invocation; otherwise, false.
@@ -224,8 +262,9 @@ abstract class LazyEExpressionArgsReader {
         } else {
             // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
             // TODO pool the map
-            Map<Integer, Marker> variableMap = new HashMap<>(8); // Key: signature index. Value: Marker for the location of the argument in the stream or tape.
             int numberOfVariables = macroBodyTape.getNumberOfVariables();
+            // Key: signature index. Value: Marker for the location of the argument in the stream or tape.
+            Marker[] variableMap = new Marker[numberOfVariables]; //getMarkerMap(numberOfVariables); //new Marker[numberOfVariables];
             int numberOfDuplicatedVariables = 0;
             int numberOfOutOfOrderVariables = 0;
             for (int i = 0; i < numberOfVariables; i++) {
@@ -244,8 +283,12 @@ abstract class LazyEExpressionArgsReader {
                             presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
                             invocationOrdinal == (numberOfParameters - 1)
                         );
-                        // TODO avoid allocating new markers for this common case. NOTE: could compile in whether or not the signature has out-of-order or duplicate variable ordinals.
-                        variableMap.put(variableOrdinal, new Marker(startIndexInTape, expressionTape.size()));
+                        // TODO could compile in whether or not the signature has out-of-order or duplicate variable ordinals.
+                        Marker marker = getMarker();
+                        marker.typeId = null;
+                        marker.startIndex = startIndexInTape;
+                        marker.endIndex = expressionTape.size();
+                        variableMap[variableOrdinal] = marker;
                         break;
                     } else if (invocationOrdinal < variableOrdinal) {
                         // The variable for this ordinal cannot have been read yet.
@@ -257,14 +300,16 @@ abstract class LazyEExpressionArgsReader {
                             invocationOrdinal == (numberOfParameters - 1)
                         );
                         expressionTape = expressionTapeOrdered;
-                        Marker marker = new Marker(scratchStartIndex, expressionTapeScratch.size());
+                        Marker marker = getMarker();
+                        marker.startIndex = scratchStartIndex;
+                        marker.endIndex = expressionTapeScratch.size();
                         // This is a sentinel to denote that the expression is in the scratch tape.
                         marker.typeId = IonTypeID.ALWAYS_INVALID_TYPE_ID;
-                        variableMap.put(invocationOrdinal, marker);
+                        variableMap[invocationOrdinal] = marker;
                         numberOfOutOfOrderVariables++;
                     } else {
                         // This is a variable that has already been encountered.
-                        Marker marker = variableMap.get(variableOrdinal);
+                        Marker marker = variableMap[variableOrdinal];
                         if (marker == null) {
                             throw new IllegalStateException("Every variable ordinal must be recorded as it is encountered.");
                         }
@@ -277,6 +322,7 @@ abstract class LazyEExpressionArgsReader {
                     invocationOrdinal++;
                 }
             }
+            //--markerMapPoolIndex;
         }
         // Copy everything after the last parameter.
         expressionTape.copyFromRange(macroBodyTape, macroBodyTapeIndex, macroBodyTape.size());
@@ -344,5 +390,6 @@ abstract class LazyEExpressionArgsReader {
         expressionTapeScratch.clear();
         expressionTape = expressionTapeOrdered;
         verbatimTranscode = false;
+        markerPoolIndex = -1;
     }
 }
