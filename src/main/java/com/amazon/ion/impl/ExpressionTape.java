@@ -154,9 +154,7 @@ public class ExpressionTape { // TODO make internal
 
         public int copyToVariable(int startIndex, int variableIndex, ExpressionTape other) {
             int endIndex = variableStarts[variableIndex];
-            for (int i = startIndex; i < endIndex; i++) {
-                other.copyFrom(this, i); // TODO batch this
-            }
+            other.copyFromRange(this, startIndex, endIndex);
             return endIndex + 1;
         }
 
@@ -355,10 +353,22 @@ public class ExpressionTape { // TODO make internal
         core.size++;
     }
 
-    public void copyFromRange(Core other, int startIndex, int endIndex) {
-        for (int i = startIndex; i < endIndex; i++) {
-            copyFrom(other, i); // TODO batch this
+    void copyFromRange(Core other, int startIndex, int endIndex) {
+        int copyLength = endIndex - startIndex;
+        int destinationEnd = i + copyLength;
+        while (destinationEnd >= core.contexts.length) {
+            core.grow();
         }
+        // TODO store one array of an object type that contains all of these as fields...
+        System.arraycopy(other.contexts, startIndex, core.contexts, i, copyLength);
+        System.arraycopy(other.types, startIndex, core.types, i, copyLength);
+        System.arraycopy(other.values, startIndex, core.values, i, copyLength);
+        System.arraycopy(other.starts, startIndex, core.starts, i, copyLength);
+        System.arraycopy(other.ends, startIndex, core.ends, i, copyLength);
+        for (; i < destinationEnd; i++) {
+            setExpressionStart(core.types[i]); // TODO see if this can somehow be batched or simplified? Or removed once the evaluator is simplified?
+        }
+        core.size += copyLength;
     }
 
     private void copyFrom(Core other, int otherIndex) {
