@@ -26,11 +26,11 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION}}
           java-version: ${{ env.JAVA_VERSION}}
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326
         with:
           validate-wrappers: true
       - run: ./gradlew build
-      - uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+      - uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
         with:
           files: build/reports/jacoco/test/jacocoTestReport.xml
       - uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
@@ -57,7 +57,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION}}
           java-version: ${{ env.JAVA_VERSION}}
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326
         with:
           cache-read-only: true
           validate-wrappers: true
