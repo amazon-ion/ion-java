@@ -792,14 +792,13 @@ class LazyMacroEvaluator : IonReader {
             currentExpr = session.produceNext()
             when {
                 ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander!!.tape!!.ionType()
-                currentExpr == ExpressionType.END_OF_EXPANSION_ORDINAL -> { // TODO should this go in ExpansionInfo.produceNext?
+                currentExpr == ExpressionType.END_OF_EXPANSION_ORDINAL -> { // TODO should this go in produceNext?
                     val currentExpander = session.currentExpander!!
                     if (currentExpander.parentExpansion != null) {
                         session.currentExpander = currentExpander.parentExpansion
                         if (session.currentExpander!!.expansionKind != DELTA) {
                             session.currentExpander!!.childExpansion = null // TODO temporary. Fix Delta so this is not necessary.
                         }
-                        // TODO reset field name and annotations here?
                         continue
                     }
                     if (containerStack.peek().type == Type.TopLevel) {
@@ -829,9 +828,7 @@ class LazyMacroEvaluator : IonReader {
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
         session.currentExpander = currentContainer.expansion.top()
-        popped.expansion.tape!!.advanceToAfterEndContainer() // TODO what if this is a logical container?
-        // TODO removing the following line makes no functional difference; ensure removing it does
-        //  not result in a memory leak, then remove.
+        popped.expansion.tape!!.advanceToAfterEndContainer()
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
