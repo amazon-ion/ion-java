@@ -6692,6 +6692,36 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void deltaUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x06, // System macro 6 (delta)
+            0x00        // AEB byte: zero-or-more argument is absent
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertNull(reader.next());
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void deltaWithOneArgumentUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[] {
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x06, // System macro 6 (delta)
+            0x01,       // AEB byte: single expression follows
+            0x61, 0x01  // Int 1
+        };
+        try (IonReader reader = readerFor(constructFromBytes,data)) {
+            assertEquals(IonType.INT, reader.next());
+            assertEquals(0, reader.getTypeAnnotations().length);
+            assertEquals(1, reader.intValue());
+            assertNull(reader.next());
+        }
+    }
+
     @Disabled
     @Test
     public void rewriteAllTypes() throws Exception {

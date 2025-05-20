@@ -2,6 +2,7 @@ package com.amazon.ion.impl.macro
 
 import com.amazon.ion.*
 import com.amazon.ion.impl.*
+import com.amazon.ion.impl.macro.ExpansionKinds.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.LazyMacroEvaluator.*
 import com.amazon.ion.impl.macro.LazyMacroEvaluator.ContainerInfo.*
@@ -121,7 +122,7 @@ class LazyMacroEvaluator : IonReader {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
             expressionTape = arguments
-            sideEffectExpander = getExpander(ExpansionKind.EMPTY, sideEffects)
+            sideEffectExpander = getExpander(EMPTY, sideEffects)
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
             currentFieldName = fieldName
@@ -157,61 +158,6 @@ class LazyMacroEvaluator : IonReader {
     // TODO(PERF): It might be possible to optimize this by changing it to an enum without any methods (or even a set of
     //             integer constants) and converting all their implementations to static methods.
     internal object ExpansionKind {
-        const val UNINITIALIZED: Byte = 0
-        const val EMPTY: Byte = 1
-        const val STREAM: Byte = 2
-        const val VARIABLE: Byte = 3
-        const val TEMPLATE_BODY: Byte = 4
-        const val EXPR_GROUP: Byte = 5
-        const val EXACTLY_ONE_VALUE_STREAM: Byte = 6
-        const val IF_NONE: Byte = 7
-        const val IF_SOME: Byte = 8
-        const val IF_SINGLE: Byte = 9
-        const val IF_MULTI: Byte = 10
-        const val ANNOTATE: Byte = 11
-        const val MAKE_STRING: Byte = 12
-        const val MAKE_SYMBOL: Byte = 13
-        const val MAKE_BLOB: Byte = 14
-        const val MAKE_DECIMAL: Byte = 15
-        const val MAKE_TIMESTAMP: Byte = 16
-        const val PRIVATE_MAKE_FIELD_NAME_AND_VALUE: Byte = 17
-        const val PRIVATE_FLATTEN_STRUCT: Byte = 18
-        const val FLATTEN: Byte = 19
-        const val SUM: Byte = 20
-        const val DELTA: Byte = 21
-        const val REPEAT: Byte = 22
-
-        /**
-         * Gets the [ExpansionKind] for the given [macro].
-         */
-        @JvmStatic
-        fun forMacro(macro: Macro): Byte {
-            return when (macro as SystemMacro) {
-                SystemMacro.Values -> STREAM
-                SystemMacro.IfNone -> IF_NONE
-                SystemMacro.IfSome -> IF_SOME
-                SystemMacro.IfSingle -> IF_SINGLE
-                SystemMacro.IfMulti -> IF_MULTI
-                SystemMacro.Annotate -> ANNOTATE
-                SystemMacro.MakeString -> MAKE_STRING
-                SystemMacro.MakeSymbol -> MAKE_SYMBOL
-                SystemMacro.MakeDecimal -> MAKE_DECIMAL
-                SystemMacro.MakeTimestamp -> MAKE_TIMESTAMP
-                SystemMacro.MakeBlob -> MAKE_BLOB
-                SystemMacro.Repeat -> REPEAT
-                SystemMacro.Sum -> SUM
-                SystemMacro.Delta -> DELTA
-                SystemMacro.Flatten -> FLATTEN
-                SystemMacro._Private_FlattenStruct -> PRIVATE_FLATTEN_STRUCT
-                SystemMacro._Private_MakeFieldNameAndValue -> PRIVATE_MAKE_FIELD_NAME_AND_VALUE
-                else -> {
-                    if (macro.body != null) {
-                        throw IllegalStateException("Macros with bodies should have been flattened pre-evaluation.")
-                    }
-                    TODO("Not implemented yet: ${macro.name}")
-                }
-            }
-        }
 
         fun produceNext(kind: Byte, thisExpansion: ExpansionInfo): Byte {
             return when (kind) {
@@ -411,7 +357,7 @@ class LazyMacroEvaluator : IonReader {
             if (delegate == null) {
                 thisExpansion.readArgument(0)
                 delegate = thisExpansion.session.getExpander(
-                    expansionKind = ExpansionKind.VARIABLE,
+                    expansionKind = VARIABLE,
                     tape = thisExpansion.session.expressionTape,
                 )
                 thisExpansion.childExpansion = delegate
@@ -423,7 +369,7 @@ class LazyMacroEvaluator : IonReader {
                 ExpressionType.isDataModelValue(nextExpandedArg) -> {
                     val nextDelta = asBigInteger(delegate)
                     val nextOutput = runningTotal + nextDelta
-                    delegate.childExpansion!!.produceValueSideEffect(IonType.INT, nextOutput)
+                    delegate./*childExpansion!!*/produceValueSideEffect(IonType.INT, nextOutput)
                     thisExpansion.session.currentExpander!!.parentExpansion = thisExpansion
                     thisExpansion.additionalState = nextOutput
                     return nextExpandedArg
@@ -597,9 +543,8 @@ class LazyMacroEvaluator : IonReader {
                     expressionTape.prepareNext()
                     expressionTape.next()
                     expressionTape.setNextAfterEndOfEExpression() // TODO expressionStarts[] can be changed to include the index of the e_expression_end
-                    val expansionKind = forMacro(macro)
                     thisExpansion.childExpansion = thisExpansion.session.getExpander(
-                        expansionKind = expansionKind,
+                        expansionKind = macro.expansionKind,
                         tape = thisExpansion.session.expressionTape,
                     )
                     thisExpansion.childExpansion!!.parentExpansion = thisExpansion
@@ -610,7 +555,7 @@ class LazyMacroEvaluator : IonReader {
                 ExpressionType.EXPRESSION_GROUP_ORDINAL -> {
                     expressionTape.prepareNext()
                     thisExpansion.childExpansion = thisExpansion.session.getExpander(
-                        expansionKind = ExpansionKind.EXPR_GROUP,
+                        expansionKind = EXPR_GROUP,
                         tape = thisExpansion.session.expressionTape,
                     )
                     thisExpansion.childExpansion!!.parentExpansion = thisExpansion
@@ -641,7 +586,7 @@ class LazyMacroEvaluator : IonReader {
         fun ExpansionInfo.readArgument(variableRef: Int): ExpansionInfo {
             tape!!.seekToArgument(session.eExpressionIndex, variableRef)
                 ?: return session.getExpander( // TODO can empty expander be a constant?
-                    ExpansionKind.EMPTY,
+                    EMPTY,
                     null
                 ) // Argument was elided.
             return this
@@ -725,7 +670,7 @@ class LazyMacroEvaluator : IonReader {
             // TODO possible to detect ahead of time whether this argument can return more than one value? It can't
             //  unless it's an invocation of certain system macros or it's an expression group
             val argExpansion = session.getExpander(
-                expansionKind = ExpansionKind.VARIABLE,
+                expansionKind = VARIABLE,
                 tape = session.expressionTape
             )
             var argValue: T? = null
@@ -771,7 +716,7 @@ class LazyMacroEvaluator : IonReader {
     internal class ExpansionInfo(@JvmField val session: Session) {
 
         /** The expansion kind as a byte constant. */
-        @JvmField var expansionKind: Byte = ExpansionKind.UNINITIALIZED
+        @JvmField var expansionKind: Byte = UNINITIALIZED
         /**
          * The evaluation [Environment]—i.e. variable bindings.
          */
@@ -814,7 +759,7 @@ class LazyMacroEvaluator : IonReader {
          */
         fun close() {
             if (!keepAlive) {
-                expansionKind = ExpansionKind.UNINITIALIZED
+                expansionKind = UNINITIALIZED
                 additionalState?.let { if (it is ExpansionInfo) it.close() }
                 additionalState = null
                 childExpansion?.close()
@@ -847,7 +792,7 @@ class LazyMacroEvaluator : IonReader {
         val ci = containerStack.push { _ -> }
         ci.type = ContainerInfo.Type.TopLevel
 
-        ci.expansion = session.getExpander(ExpansionKind.STREAM, session.expressionTape)
+        ci.expansion = session.getExpander(STREAM, session.expressionTape)
     }
 
     override fun next(): IonType? {
@@ -860,7 +805,7 @@ class LazyMacroEvaluator : IonReader {
                     val currentExpander = session.currentExpander!!
                     if (currentExpander.parentExpansion != null) {
                         session.currentExpander = currentExpander.parentExpansion
-                        if (session.currentExpander!!.expansionKind != ExpansionKind.DELTA) {
+                        if (session.currentExpander!!.expansionKind != DELTA) {
                             session.currentExpander!!.childExpansion = null // TODO temporary. Fix Delta so this is not necessary.
                         }
                         // TODO reset field name and annotations here?
@@ -920,7 +865,7 @@ class LazyMacroEvaluator : IonReader {
                 else -> unreachable()
             }
             ci.expansion = session.getExpander(
-                expansionKind = ExpansionKind.STREAM,
+                expansionKind = STREAM,
                 tape = session.expressionTape
             )
             ci.currentFieldName = null

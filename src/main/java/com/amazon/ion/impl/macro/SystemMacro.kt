@@ -15,6 +15,7 @@ import com.amazon.ion.impl.macro.ParameterFactory.zeroToManyTagged
  */
 enum class SystemMacro(
     val id: Byte,
+    val expansionKind: Byte,
     private val _systemSymbol: SystemSymbols_1_1?,
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>? = null,
@@ -22,37 +23,37 @@ enum class SystemMacro(
 ) : Macro {
     // Technically not system macros, but special forms. However, it's easier to model them as if they are macros in TDL.
     // We give them an ID of -1 to distinguish that they are not addressable outside TDL.
-    IfNone(-1, IF_NONE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSome(-1, IF_SOME, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfSingle(-1, IF_SINGLE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
-    IfMulti(-1, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfNone(-1, ExpansionKinds.IF_NONE, IF_NONE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSome(-1, ExpansionKinds.IF_SOME, IF_SOME, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfSingle(-1, ExpansionKinds.IF_SINGLE, IF_SINGLE, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
+    IfMulti(-1, ExpansionKinds.IF_MULTI, IF_MULTI, listOf(zeroToManyTagged("stream"), zeroToManyTagged("true_branch"), zeroToManyTagged("false_branch"))),
 
     // Unnameable, unaddressable macros used for the internals of certain other system macros
     // TODO: See if we can move these somewhere else so that they are not visible
-    _Private_FlattenStruct(-1, _systemSymbol = null, listOf(zeroToManyTagged("structs"))),
-    _Private_MakeFieldNameAndValue(-1, _systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
+    _Private_FlattenStruct(-1, ExpansionKinds.PRIVATE_FLATTEN_STRUCT, _systemSymbol = null, listOf(zeroToManyTagged("structs"))),
+    _Private_MakeFieldNameAndValue(-1, ExpansionKinds.PRIVATE_MAKE_FIELD_NAME_AND_VALUE, _systemSymbol = null, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value"))),
 
     // The real macros
-    Values(1, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
-    None(0, NONE, emptyList(), templateBody { macro(Values) { expressionGroup { } } }),
+    Values(1, ExpansionKinds.STREAM, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
+    None(0, ExpansionKinds.EMPTY, NONE, emptyList(), templateBody { macro(Values) { expressionGroup { } } }),
     Default(
-        2, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
+        2, ExpansionKinds.UNINITIALIZED, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
         templateBody {
             macro(IfNone) { variable(0); variable(1); variable(0) }
         }
     ),
-    Meta(3, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
-    Repeat(4, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
-    Flatten(5, FLATTEN, listOf(zeroToManyTagged("values"))),
-    Delta(6, DELTA, listOf(zeroToManyTagged("deltas"))),
-    Sum(7, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
+    Meta(3, ExpansionKinds.UNINITIALIZED, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
+    Repeat(4, ExpansionKinds.REPEAT, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),
+    Flatten(5, ExpansionKinds.FLATTEN, FLATTEN, listOf(zeroToManyTagged("values"))),
+    Delta(6, ExpansionKinds.DELTA, DELTA, listOf(zeroToManyTagged("deltas"))),
+    Sum(7, ExpansionKinds.SUM, SUM, listOf(exactlyOneTagged("a"), exactlyOneTagged("b"))),
 
-    Annotate(8, ANNOTATE, listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
-    MakeString(9, MAKE_STRING, listOf(zeroToManyTagged("text"))),
-    MakeSymbol(10, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
-    MakeDecimal(11, MAKE_DECIMAL, listOf(exactlyOneTagged("coefficient"), exactlyOneTagged("exponent"))),
+    Annotate(8, ExpansionKinds.ANNOTATE, ANNOTATE, listOf(zeroToManyTagged("ann"), exactlyOneTagged("value"))),
+    MakeString(9, ExpansionKinds.MAKE_STRING, MAKE_STRING, listOf(zeroToManyTagged("text"))),
+    MakeSymbol(10, ExpansionKinds.MAKE_SYMBOL, MAKE_SYMBOL, listOf(zeroToManyTagged("text"))),
+    MakeDecimal(11, ExpansionKinds.MAKE_DECIMAL, MAKE_DECIMAL, listOf(exactlyOneTagged("coefficient"), exactlyOneTagged("exponent"))),
     MakeTimestamp(
-        12, MAKE_TIMESTAMP,
+        12, ExpansionKinds.MAKE_TIMESTAMP, MAKE_TIMESTAMP,
         listOf(
             exactlyOneTagged("year"),
             zeroOrOneTagged("month"),
@@ -63,9 +64,9 @@ enum class SystemMacro(
             zeroOrOneTagged("offset_minutes"),
         )
     ),
-    MakeBlob(13, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
+    MakeBlob(13, ExpansionKinds.MAKE_BLOB, MAKE_BLOB, listOf(zeroToManyTagged("bytes"))),
     MakeList(
-        14, MAKE_LIST, listOf(zeroToManyTagged("sequences")),
+        14, ExpansionKinds.FLATTEN, MAKE_LIST, listOf(zeroToManyTagged("sequences")),
         templateBody {
             list {
                 macro(Flatten) {
@@ -75,7 +76,7 @@ enum class SystemMacro(
         }
     ),
     MakeSExp(
-        15, MAKE_SEXP, listOf(zeroToManyTagged("sequences")),
+        15, ExpansionKinds.FLATTEN, MAKE_SEXP, listOf(zeroToManyTagged("sequences")),
         templateBody {
             sexp {
                 macro(Flatten) {
@@ -86,7 +87,7 @@ enum class SystemMacro(
     ),
 
     MakeField(
-        16, MAKE_FIELD, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value")),
+        16, ExpansionKinds.PRIVATE_MAKE_FIELD_NAME_AND_VALUE, MAKE_FIELD, listOf(exactlyOneTagged("fieldName"), exactlyOneTagged("value")),
         templateBody {
             struct {
                 macro(_Private_MakeFieldNameAndValue) {
@@ -98,7 +99,7 @@ enum class SystemMacro(
     ),
 
     MakeStruct(
-        17, MAKE_STRUCT, listOf(zeroToManyTagged("structs")),
+        17, ExpansionKinds.PRIVATE_FLATTEN_STRUCT, MAKE_STRUCT, listOf(zeroToManyTagged("structs")),
         templateBody {
             struct {
                 macro(_Private_FlattenStruct) {
@@ -107,7 +108,7 @@ enum class SystemMacro(
             }
         }
     ),
-    ParseIon(18, PARSE_ION, listOf(zeroToManyTagged("data"))), // TODO: parse_ion
+    ParseIon(18, ExpansionKinds.UNINITIALIZED, PARSE_ION, listOf(zeroToManyTagged("data"))), // TODO: parse_ion
 
     /**
      * ```ion
@@ -119,7 +120,7 @@ enum class SystemMacro(
      * ```
      */
     SetSymbols(
-        19, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
+        19, ExpansionKinds.UNINITIALIZED, SET_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -146,7 +147,7 @@ enum class SystemMacro(
      * ```
      */
     AddSymbols(
-        20, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
+        20, ExpansionKinds.UNINITIALIZED, ADD_SYMBOLS, listOf(zeroToManyTagged("symbols")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -174,7 +175,7 @@ enum class SystemMacro(
      * ```
      */
     SetMacros(
-        21, SET_MACROS, listOf(zeroToManyTagged("macros")),
+        21, ExpansionKinds.UNINITIALIZED, SET_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -201,7 +202,7 @@ enum class SystemMacro(
      * ```
      */
     AddMacros(
-        22, ADD_MACROS, listOf(zeroToManyTagged("macros")),
+        22, ExpansionKinds.UNINITIALIZED, ADD_MACROS, listOf(zeroToManyTagged("macros")),
         templateBody {
             annotated(ION, ::sexp) {
                 symbol(MODULE)
@@ -230,7 +231,7 @@ enum class SystemMacro(
      * ```
      */
     Use(
-        23, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
+        23, ExpansionKinds.UNINITIALIZED, USE, listOf(exactlyOneTagged("catalog_key"), zeroOrOneTagged("version")),
         templateBody {
             val theModule = _Private_Utils.newSymbolToken("the_module")
             annotated(ION, ::sexp) {
