@@ -26,18 +26,14 @@ class LazyEnvironment { // TODO can this be replaced entirely by giving Expressi
     val sideEffects: ExpressionTape = ExpressionTape(null, 4)
     val sideEffectContext: NestedContext = NestedContext(sideEffects, null)
     var currentContext: NestedContext = NestedContext(null, null) // TODO this is throwaway
-    private var nestedContexts: Array<NestedContext?> = Array(16) {
-        NestedContext(null, null)
-    }
-    private var nestedContextIndex = 0
 
     fun reset(arguments: ExpressionTape) {
         this.arguments = arguments
-        nestedContextIndex = 0
-        currentContext = nestedContexts[0]!!
         currentContext.tape = arguments
         currentContext.arguments = null
     }
+
+    // TODO get rid of NestedContext
 
     data class NestedContext(var tape: ExpressionTape?, var arguments: ExpressionTape?) {
 
@@ -100,45 +96,6 @@ class LazyEnvironment { // TODO can this be replaced entirely by giving Expressi
         fun booleanValue(): Boolean {
             return tape!!.readBoolean()
         }
-    }
-
-    private fun growContextStack() {
-        nestedContexts = nestedContexts.copyOf(nestedContexts.size * 2)
-        for (i in (nestedContexts.size / 2) until nestedContexts.size) {
-            if (nestedContexts[i] == null) {
-                nestedContexts[i] = NestedContext(null, null)
-            }
-        }
-    }
-
-    fun finishChildEnvironments(context: NestedContext) {
-        // TODO consider storing the index in the context so that this can be done without looping“
-        while (currentContext !== context) { // TODO verify this uses reference equality
-            finishChildEnvironment()
-        }
-    }
-
-    fun tailCall(): NestedContext {
-        // TODO do this earlier, so that 'currentContext' never needs to go on the stack
-        val context = currentContext
-        finishChildEnvironment()
-        currentContext.tape = context.tape
-        currentContext.arguments = context.arguments
-        return currentContext
-    }
-
-    fun startChildEnvironment(tape: ExpressionTape, arguments: ExpressionTape): NestedContext {
-        if (++nestedContextIndex >= nestedContexts.size) {
-            growContextStack()
-        }
-        currentContext = nestedContexts[nestedContextIndex]!!
-        currentContext.tape = tape
-        currentContext.arguments = arguments
-        return currentContext
-    }
-
-    fun finishChildEnvironment() {
-        currentContext = nestedContexts[--nestedContextIndex]!!
     }
 
     // TODO

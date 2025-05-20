@@ -4053,6 +4053,12 @@ class IonCursorBinary implements IonCursor {
         valueTid = typeId;
     }
 
+    protected void sliceAfterMacroInvocationHeader(int start, int end, IonTypeID typeId, long macroInvocationId, boolean isSystemInvocation) {
+        sliceAfterHeader(start, end, typeId);
+        this.macroInvocationId = macroInvocationId;
+        this.isSystemInvocation = isSystemInvocation;
+    }
+
     /**
      * @return the total number of bytes read since the stream began.
      */

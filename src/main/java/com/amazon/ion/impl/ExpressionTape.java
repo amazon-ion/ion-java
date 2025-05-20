@@ -4,6 +4,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.OpCodes;
@@ -12,6 +13,7 @@ import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -30,27 +32,6 @@ import static com.amazon.ion.impl.ExpressionType.FIELD_NAME_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 
 public class ExpressionTape { // TODO make internal
-
-    public static class ExpressionPointer {
-        ExpressionTape source = null;
-        int index = -1;
-        boolean isElided = false;
-
-        public ExpressionTape visit() {
-            source.i = index;
-            source.iNext = index;
-            return source;
-        }
-
-        public ExpressionTape visitIfForward() {
-            if (index >= source.i) {
-                source.i = index;
-                source.iNext = index;
-                return source;
-            }
-            return null;
-        }
-    }
 
     public static class Core {
         private Object[] contexts;
@@ -198,8 +179,6 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
-    private ExpressionPointer[] expressionPointers = new ExpressionPointer[8];
-    private int expressionPointersSize = 0;
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -219,7 +198,6 @@ public class ExpressionTape { // TODO make internal
 
     public void reset(Core core) {
         this.core = core;
-        expressionPointersSize = 0;
         rewindTo(0);
     }
 
@@ -436,7 +414,6 @@ public class ExpressionTape { // TODO make internal
         core.numberOfVariables = 0;
         depth = 0;
         numberOfEExpressions = 0;
-        expressionPointersSize = 0;
     }
 
     public int findIndexAfterEndEExpression() {
@@ -933,106 +910,73 @@ public class ExpressionTape { // TODO make internal
         return tape.core;
     }
 
-    private ExpressionPointer addExpressionPointer() {
-        if (expressionPointersSize >= expressionPointers.length) {
-            expressionPointers = Arrays.copyOf(expressionPointers, expressionPointers.length * 2);
-        }
-        ExpressionPointer pointer = expressionPointers[expressionPointersSize++];
-        if (pointer == null) {
-            pointer = new ExpressionPointer();
-            expressionPointers[expressionPointersSize - 1] = pointer;
-        }
-        return pointer;
-    }
-
-    private void addExpressionPointer(ExpressionTape source, int index) {
-        ExpressionPointer pointer = addExpressionPointer();
-        pointer.source = source;
-        pointer.index = index;
-        pointer.isElided = false;
-    }
-
-    private void addElidedExpressionPointer() {
-        ExpressionPointer pointer = addExpressionPointer();
-        pointer.source = null;
-        pointer.index = -1;
-        pointer.isElided = true;
-    }
-
-    public void cacheExpressionPointers(ExpressionTape arguments, int argumentsEExpressionStartIndex) {
-
-        Core argumentCore = arguments.core;
-        int targetEExpressionIndex = argumentCore.ends[argumentsEExpressionStartIndex];
-        int numberOfExpressions = argumentCore.numberOfExpressions[targetEExpressionIndex];
-        if (numberOfExpressions == 0) {
-            return;
-        }
-        for (int i = 0; i < numberOfExpressions; i++) {
-            int expressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
-            byte targetType = argumentCore.types[expressionIndex];
-            if (targetType == ExpressionType.VARIABLE_ORDINAL) {
-                int localVariableId = (int) argumentCore.contexts[expressionIndex];
-                if (localVariableId >= arguments.expressionPointersSize) {
-                    // The variable was elided.
-                    addElidedExpressionPointer();
-                } else {
-                    ExpressionPointer pointer = arguments.expressionPointers[localVariableId];
-                    int pointerIndex = pointer.index;
-                    ExpressionTape pointerSource = pointer.source;
-                    pointer.index = -1; // Mark this as a pass-through variable
-                    if (pointerIndex < 0) {
-                        // This localVariableId must have already been resolved, so it's somewhere in the list already.
-                        for (int j = 0; j < i; j++) {
-                            int previousExpressionIndex = argumentCore.expressionStarts[targetEExpressionIndex][i];
-                            byte previousTargetType = argumentCore.types[expressionIndex];
-                            if (previousTargetType == ExpressionType.VARIABLE_ORDINAL && localVariableId == (int) argumentCore.contexts[previousExpressionIndex]) {
-                                pointer = expressionPointers[j];
-                                pointerSource = pointer.source;
-                                pointerIndex = pointer.index;
-                                break;
-                            }
-                        }
-                    }
-                    addExpressionPointer(pointerSource, pointerIndex);
-                }
-            } else {
-                addExpressionPointer(arguments, expressionIndex);
-            }
-        }
-    }
-
-
-    public void seekPastExpression() {
-        // TODO we probably should cache the arguments found so far to avoid iterating from the start for each arg
-        // TODO OR, keep advancing the startIndex in the environment context. Go forward or backward
-        i = core.findEndOfExpression(i) + 1; // This positions the tape *after* the end of the expression that was located above.
-        iNext = i;
-    }
-
-    public ExpressionTape seekToArgument(int indexRelativeToStart) {
-        ExpressionPointer pointer = expressionPointers[indexRelativeToStart];
-        if (pointer.index < 0) { // TODO performance this might be able to be short-circuited more effectively. Right now we still create a child expander for elided variables, which should not be necessary.
+    public ExpressionTape seekToArgument(int eExpressionIndex, int indexRelativeToStart) {
+        if (core.numberOfExpressions[eExpressionIndex] <= indexRelativeToStart) {
             return null;
         }
-        return pointer.visit();
+        i = core.expressionStarts[eExpressionIndex][indexRelativeToStart];
+        iNext = i;
+        return this;
     }
 
-    public void seekPastFinalArgument() {
-        for (int i = 0; i < expressionPointersSize; i++) {
-            ExpressionPointer variablePointer = expressionPointers[i];
-            if (variablePointer.isElided) {
-                continue;
-            } else if (variablePointer.index < 0) {
-                if (variablePointer.source != null) {
-                    // This is a pass-through variable; step over it if that hasn't been done already.
-                    variablePointer.source.iNext = Math.max(variablePointer.source.i + 1, variablePointer.source.iNext);
-                }
+    /**
+     * Transcodes the e-expression argument expressions provided to this MacroEvaluator
+     * without evaluation.
+     * @param writer the writer to which the expressions will be transcoded.
+     */
+    void transcodeArgumentsTo(MacroAwareIonWriter writer) throws IOException {
+        int index = 0;
+        rewindTo(0);
+        while (index < size()) {
+            next();
+            prepareNext();
+            byte argument = type();
+            if (ExpressionType.isEnd(argument)) {
+                writer.stepOut();
+                index++;
                 continue;
             }
-            ExpressionTape sourceTape = variablePointer.visitIfForward();
-            if (sourceTape != null) {
-                sourceTape.seekPastExpression();
+            switch (argument) {
+                case ExpressionType.ANNOTATION_ORDINAL:
+                    writer.setTypeAnnotationSymbols(((List<SymbolToken>) context()).toArray(new SymbolToken[0]));
+                    break;
+                case ExpressionType.DATA_MODEL_CONTAINER_ORDINAL:
+                    writer.stepIn(ionType());
+                    break;
+                case ExpressionType.DATA_MODEL_SCALAR_ORDINAL:
+                    switch (ionType()) {
+                        case NULL: writer.writeNull(); break;
+                        case BOOL: writer.writeBool(readBoolean()); break;
+                        case INT:
+                            switch (readIntegerSize()) {
+                                case INT: writer.writeInt(readLong()); break;
+                                case LONG: writer.writeInt(readLong()); break;
+                                case BIG_INTEGER: writer.writeInt(readBigInteger()); break;
+                            }
+                            break;
+                        case FLOAT: writer.writeFloat(readFloat()); break;
+                        case DECIMAL: writer.writeDecimal(readBigDecimal()); break;
+                        case TIMESTAMP: writer.writeTimestamp(readTimestamp()); break;
+                        case SYMBOL: writer.writeSymbolToken(readSymbol()); break;
+                        case STRING: writer.writeString(readText()); break;
+                        case BLOB: writer.writeBlob(readLob()); break;
+                        case CLOB: writer.writeClob(readLob()); break;
+                        default: throw new IllegalStateException("Unexpected branch");
+                    }
+                    break;
+                case ExpressionType.FIELD_NAME_ORDINAL:
+                    writer.setFieldNameSymbol((SymbolToken) context());
+                    break;
+                case ExpressionType.E_EXPRESSION_ORDINAL:
+                    writer.startMacro((Macro) context());
+                    break;
+                case ExpressionType.EXPRESSION_GROUP_ORDINAL:
+                    writer.startExpressionGroup();
+                    break;
+                default: throw new IllegalStateException("Unexpected branch");
             }
+            index++;
         }
+        rewindTo(0);
     }
 }

@@ -4,6 +4,7 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonType;
+import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.impl.bin.PresenceBitmap;
 import com.amazon.ion.impl.macro.Expression;
@@ -15,6 +16,7 @@ import com.amazon.ion.impl.macro.ReaderAdapterContinuable;
 import com.amazon.ion.impl.macro.ReaderAdapterIonReader;
 import com.amazon.ion.impl.macro.SystemMacro;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +49,8 @@ abstract class LazyEExpressionArgsReader {
 
     // Reusable scratch tape for storing out-of-order expression arguments.
     private final ExpressionTape expressionTapeScratch;
+
+    private ExpressionTape verbatimExpressionTape = null;
 
     // Pool for presence bitmap instances.
     protected final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
@@ -389,18 +393,49 @@ abstract class LazyEExpressionArgsReader {
      * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
      * them to the macro evaluator.
      */
-    public void beginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator, boolean verbatimTranscode) {
-        this.verbatimTranscode = verbatimTranscode;
+    public void beginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator) {
         reader.pinBytesInCurrentValue();
         SymbolToken fieldName = null;
         if (reader.isInStruct()) {
             // TODO avoid having to create SymbolToken every time
             fieldName = reader.getFieldNameSymbol();
-            if (verbatimTranscode) { // TODO see if this special case can be avoided
-                expressionTape.add(fieldName, ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
-            }
         }
         macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(true));
+    }
+
+    public void transcodeAndBeginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator, MacroAwareIonWriter transcoder) throws IOException {
+        // Note: macro-aware transcoding is not considered performance-critical. Adopting this two-pass technique
+        //  allows us to use a single, simplified evaluator that relies on flattened invocations that are not
+        //  present in the verbatim tape. We could simply generate a non-flattened tape via an option to the above
+        //  method, but then we'd need another more general evaluator implementation, which adds significant complexity
+        //  to the code base.
+        this.verbatimTranscode = true;
+        if (verbatimExpressionTape == null) {
+            verbatimExpressionTape = new ExpressionTape(reader, 64);
+        }
+        reader.pinBytesInCurrentValue();
+        SymbolToken fieldName = null;
+        if (reader.isInStruct()) {
+            fieldName = reader.getFieldNameSymbol();
+            verbatimExpressionTape.add(fieldName, ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
+        }
+        expressionTape = verbatimExpressionTape;
+        int start = (int) reader.valueMarker.startIndex;
+        int end = (int) reader.valueMarker.endIndex;
+        IonTypeID typeID = reader.valueTid;
+        long macroAddress = reader.getMacroInvocationId();
+        boolean isSystemMacro = reader.isSystemInvocation();
+        Macro macro = loadMacro();
+        stepIntoEExpression();
+        List<Macro.Parameter> signature = macro.getSignature();
+        PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
+        collectVerbatimEExpressionArgs(macro, signature, presenceBitmap);
+        reader.sliceAfterMacroInvocationHeader(start, end, typeID, macroAddress, isSystemMacro); // Rewind, prepare to read again.
+        verbatimTranscode = false;
+        expressionTape = expressionTapeOrdered;
+        macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(true));
+        verbatimExpressionTape.transcodeArgumentsTo(transcoder);
+        verbatimExpressionTape.clear();
     }
 
     /**
