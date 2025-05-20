@@ -55,6 +55,7 @@ class LazyMacroEvaluator : IonReader {
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
         private var expanderPoolIndex = 0
 
+        val emptyExpansion: ExpansionInfo = ExpansionInfo(this)
         var expressionTape: ExpressionTape? = null
         val sideEffects: ExpressionTape = ExpressionTape(null, 4)
         var sideEffectExpander: ExpansionInfo? = null
@@ -63,6 +64,11 @@ class LazyMacroEvaluator : IonReader {
         var currentAnnotations: List<SymbolToken>? = null
 
         var eExpressionIndex = -1;
+
+        init {
+            emptyExpansion.expansionKind = EMPTY
+            emptyExpansion.tape = null
+        }
 
         /**
          * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
@@ -646,10 +652,7 @@ class LazyMacroEvaluator : IonReader {
          */
         fun readArgument(variableRef: Int): ExpansionInfo {
             tape!!.seekToArgument(session.eExpressionIndex, variableRef)
-                ?: return session.getExpander( // TODO can empty expander be a constant?
-                    EMPTY,
-                    null
-                ) // Argument was elided.
+                ?: return session.emptyExpansion // Argument was elided.
             return this
         }
 
