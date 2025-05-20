@@ -54,7 +54,8 @@ class LazyMacroEvaluator : IonReader {
         private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
         private var expanderPoolIndex = 0
 
-        val environment: LazyEnvironment = LazyEnvironment.create()
+        var expressionTape: ExpressionTape? = null
+        val sideEffects: ExpressionTape = ExpressionTape(null, 4)
         var sideEffectExpander: ExpansionInfo? = null
         var currentExpander: ExpansionInfo? = null
         var currentFieldName: SymbolToken? = null
@@ -79,10 +80,10 @@ class LazyMacroEvaluator : IonReader {
         }
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
-        fun getExpander(expansionKind: Byte, environmentContext: LazyEnvironment.NestedContext): ExpansionInfo {
+        fun getExpander(expansionKind: Byte, tape: ExpressionTape?): ExpansionInfo {
             val expansion = getExpansion()
             expansion.expansionKind = expansionKind
-            expansion.environmentContext = environmentContext
+            expansion.tape = tape
             expansion.additionalState = null
             expansion.childExpansion = null
             expansion.parentExpansion = null
@@ -93,7 +94,7 @@ class LazyMacroEvaluator : IonReader {
 
         fun produceNext(): Byte {
             while (true) {
-                currentExpander!!.environmentContext.tape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
+                expressionTape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
                 val next = ExpansionKind.produceNext(currentExpander!!.expansionKind, currentExpander!!)
                 if (next == ExpressionType.CONTINUE_EXPANSION_ORDINAL) continue
                 // This the only place where we count the expansion steps.
@@ -119,8 +120,8 @@ class LazyMacroEvaluator : IonReader {
         fun reset(fieldName: SymbolToken?, arguments: ExpressionTape) {
             numExpandedExpressions = 0
             expanderPoolIndex = 0
-            environment.reset(arguments)
-            sideEffectExpander = getExpander(ExpansionKind.EMPTY, this.environment.sideEffectContext)
+            expressionTape = arguments
+            sideEffectExpander = getExpander(ExpansionKind.EMPTY, sideEffects)
             sideEffectExpander!!.keepAlive = true
             currentExpander = null
             currentFieldName = fieldName
@@ -206,7 +207,6 @@ class LazyMacroEvaluator : IonReader {
                 else -> {
                     if (macro.body != null) {
                         throw IllegalStateException("Macros with bodies should have been flattened pre-evaluation.")
-                        //TEMPLATE_BODY // TODO illegal now?
                     }
                     TODO("Not implemented yet: ${macro.name}")
                 }
@@ -305,11 +305,11 @@ class LazyMacroEvaluator : IonReader {
             val sb = StringBuilder()
             thisExpansion.forEach(0) {
                 when {
-                    IonType.isText(it.type()) -> sb.append(it.textValue())
-                    else -> throw IonException("Invalid argument type for 'make_string': ${it.type()}")
+                    IonType.isText(it.ionType()) -> sb.append(it.readText())
+                    else -> throw IonException("Invalid argument type for 'make_string': ${it.ionType()}")
                 }
             }
-            thisExpansion.environmentContext.tape!!.advanceToAfterEndEExpression()
+            thisExpansion.tape!!.advanceToAfterEndEExpression()
             thisExpansion.expansionKind = EMPTY
             thisExpansion.produceValueSideEffect(IonType.STRING, sb.toString())
             return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
@@ -320,11 +320,11 @@ class LazyMacroEvaluator : IonReader {
             val sb = StringBuilder()
             thisExpansion.forEach(0) {
                 when {
-                    IonType.isText(it.type()) -> sb.append(it.textValue())
-                    else -> throw IonException("Invalid argument type for 'make_symbol': ${it.type()}")
+                    IonType.isText(it.ionType()) -> sb.append(it.readText())
+                    else -> throw IonException("Invalid argument type for 'make_symbol': ${it.ionType()}")
                 }
             }
-            thisExpansion.environmentContext.tape!!.advanceToAfterEndEExpression()
+            thisExpansion.tape!!.advanceToAfterEndEExpression()
             thisExpansion.expansionKind = EMPTY
             thisExpansion.produceValueSideEffect(IonType.SYMBOL, sb.toString())
             return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
@@ -334,7 +334,7 @@ class LazyMacroEvaluator : IonReader {
             thisExpansion.expansionKind = STREAM
             val baos = ByteArrayOutputStream()
             thisExpansion.forEach(0) {
-                baos.write(it.lobValue())
+                baos.write(it.readLob())
             }
             thisExpansion.expansionKind = EMPTY
             thisExpansion.produceValueSideEffect(IonType.BLOB, baos.toByteArray())
@@ -412,7 +412,7 @@ class LazyMacroEvaluator : IonReader {
                 thisExpansion.readArgument(0)
                 delegate = thisExpansion.session.getExpander(
                     expansionKind = ExpansionKind.VARIABLE,
-                    environmentContext = thisExpansion.session.environment.currentContext //.startChildEnvironment(argumentTape, argumentTape)
+                    tape = thisExpansion.session.expressionTape,
                 )
                 thisExpansion.childExpansion = delegate
                 delegate.parentExpansion = thisExpansion
@@ -489,7 +489,7 @@ class LazyMacroEvaluator : IonReader {
                     nextSequence == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = STREAM,
-                            environmentContext = thisExpansion.session.environment.currentContext, //argumentExpansion.top().environmentContext,
+                            tape = thisExpansion.session.expressionTape,
                         )
                         thisExpansion.childExpansion!!.parentExpansion = thisExpansion
                         ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -526,7 +526,7 @@ class LazyMacroEvaluator : IonReader {
                     nextSequence == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
                         thisExpansion.childExpansion = thisExpansion.session.getExpander(
                             expansionKind = STREAM,
-                            environmentContext = thisExpansion.session.environment.currentContext //argumentExpansion.top().environmentContext,
+                            tape = thisExpansion.session.expressionTape,
                         )
                         thisExpansion.childExpansion!!.parentExpansion = thisExpansion
                         ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -554,13 +554,13 @@ class LazyMacroEvaluator : IonReader {
                 n++
             }
             val branch = if (condition(n)) 1 else 2
-            thisExpansion.environmentContext.tape!!.setNextAfterEndOfEExpression()
+            thisExpansion.tape!!.setNextAfterEndOfEExpression()
             thisExpansion.readArgument(branch)
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
         private fun handleStream(thisExpansion: ExpansionInfo): Byte {
-            val expressionTape = thisExpansion.environmentContext.tape!!
+            val expressionTape = thisExpansion.tape!!
             if (expressionTape.isExhausted) {
                 return ExpressionType.END_OF_EXPANSION_ORDINAL
             }
@@ -600,7 +600,7 @@ class LazyMacroEvaluator : IonReader {
                     val expansionKind = forMacro(macro)
                     thisExpansion.childExpansion = thisExpansion.session.getExpander(
                         expansionKind = expansionKind,
-                        environmentContext = thisExpansion.session.environment.currentContext,
+                        tape = thisExpansion.session.expressionTape,
                     )
                     thisExpansion.childExpansion!!.parentExpansion = thisExpansion
                     ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -611,7 +611,7 @@ class LazyMacroEvaluator : IonReader {
                     expressionTape.prepareNext()
                     thisExpansion.childExpansion = thisExpansion.session.getExpander(
                         expansionKind = ExpansionKind.EXPR_GROUP,
-                        environmentContext = thisExpansion.environmentContext,
+                        tape = thisExpansion.session.expressionTape,
                     )
                     thisExpansion.childExpansion!!.parentExpansion = thisExpansion
                     ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -639,16 +639,16 @@ class LazyMacroEvaluator : IonReader {
          * Returns an expansion for the given variable.
          */
         fun ExpansionInfo.readArgument(variableRef: Int): ExpansionInfo {
-            environmentContext.tape!!.seekToArgument(session.eExpressionIndex, variableRef)
+            tape!!.seekToArgument(session.eExpressionIndex, variableRef)
                 ?: return session.getExpander( // TODO can empty expander be a constant?
                     ExpansionKind.EMPTY,
-                    LazyEnvironment.EMPTY.currentContext
+                    null
                 ) // Argument was elided.
             return this
         }
 
         fun ExpansionInfo.produceValueSideEffect(type: IonType, value: Any) {
-            val sideEffectTape = session.environment.sideEffects
+            val sideEffectTape = session.sideEffects
             sideEffectTape.clear()
             sideEffectTape.addScalar(type, value)
             sideEffectTape.rewindTo(0)
@@ -661,13 +661,13 @@ class LazyMacroEvaluator : IonReader {
         /**
          * Performs the given [action] for each value produced by the expansion of [variableRef].
          */
-        inline fun ExpansionInfo.forEach(variableRef: Int, action: (LazyEnvironment.NestedContext) -> Unit) {
+        inline fun ExpansionInfo.forEach(variableRef: Int, action: (ExpressionTape) -> Unit) {
             val variableExpansion = readArgument(variableRef)
             while (true) {
                 val next = session.produceNext()
                 when {
                     next == ExpressionType.END_OF_EXPANSION_ORDINAL -> return
-                    ExpressionType.isDataModelExpression(next) -> action(variableExpansion.environmentContext)
+                    ExpressionType.isDataModelExpression(next) -> action(variableExpansion.tape!!)
                 }
             }
         }
@@ -689,27 +689,27 @@ class LazyMacroEvaluator : IonReader {
         }
 
         fun asLong(expansion: ExpansionInfo): Long {
-            return expansion.environmentContext.longValue()
+            return expansion.tape!!.readLong()
         }
 
         fun asBigInteger(expansion: ExpansionInfo): BigInteger {
-            return expansion.environmentContext.bigIntegerValue()
+            return expansion.tape!!.readBigInteger()
         }
 
         fun asText(expansion: ExpansionInfo): String {
-            return expansion.environmentContext.textValue()
+            return expansion.tape!!.readText()
         }
 
         fun asSymbol(expansion: ExpansionInfo): SymbolToken {
-            return expansion.environmentContext.symbolValue()
+            return expansion.tape!!.readSymbol()
         }
 
         fun asBigDecimal(expansion: ExpansionInfo): BigDecimal {
-            return expansion.environmentContext.bigDecimalValue()
+            return expansion.tape!!.readBigDecimal()
         }
 
         fun asLob(expansion: ExpansionInfo): ByteArray {
-            return expansion.environmentContext.lobValue()
+            return expansion.tape!!.readLob()
         }
 
         /**
@@ -726,7 +726,7 @@ class LazyMacroEvaluator : IonReader {
             //  unless it's an invocation of certain system macros or it's an expression group
             val argExpansion = session.getExpander(
                 expansionKind = ExpansionKind.VARIABLE,
-                environmentContext = session.environment.currentContext
+                tape = session.expressionTape
             )
             var argValue: T? = null
             while (true) {
@@ -775,7 +775,7 @@ class LazyMacroEvaluator : IonReader {
         /**
          * The evaluation [Environment]—i.e. variable bindings.
          */
-        @JvmField var environmentContext: LazyEnvironment.NestedContext = LazyEnvironment.EMPTY.currentContext
+        @JvmField var tape: ExpressionTape? = null
 
         @JvmField var reachedEndOfExpression: Boolean = false
 
@@ -787,6 +787,8 @@ class LazyMacroEvaluator : IonReader {
 
         @JvmField
         var keepAlive: Boolean = false
+
+        // TODO remove child and parent expansion?
 
         /**
          * Additional state in the form of a child [ExpansionInfo].
@@ -845,7 +847,7 @@ class LazyMacroEvaluator : IonReader {
         val ci = containerStack.push { _ -> }
         ci.type = ContainerInfo.Type.TopLevel
 
-        ci.expansion = session.getExpander(ExpansionKind.STREAM, session.environment.currentContext)
+        ci.expansion = session.getExpander(ExpansionKind.STREAM, session.expressionTape)
     }
 
     override fun next(): IonType? {
@@ -853,7 +855,7 @@ class LazyMacroEvaluator : IonReader {
         while (currentValueType == null) {
             currentExpr = session.produceNext()
             when {
-                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander!!.environmentContext.type()
+                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander!!.tape!!.ionType()
                 currentExpr == ExpressionType.END_OF_EXPANSION_ORDINAL -> { // TODO should this go in ExpansionInfo.produceNext?
                     val currentExpander = session.currentExpander!!
                     if (currentExpander.parentExpansion != null) {
@@ -891,7 +893,7 @@ class LazyMacroEvaluator : IonReader {
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
         session.currentExpander = currentContainer.expansion.top()
-        popped.expansion.environmentContext.tape!!.advanceToAfterEndContainer() // TODO what if this is a logical container?
+        popped.expansion.tape!!.advanceToAfterEndContainer() // TODO what if this is a logical container?
         // TODO removing the following line makes no functional difference; ensure removing it does
         //  not result in a memory leak, then remove.
         popped.close()
@@ -919,7 +921,7 @@ class LazyMacroEvaluator : IonReader {
             }
             ci.expansion = session.getExpander(
                 expansionKind = ExpansionKind.STREAM,
-                environmentContext = session.currentExpander!!.environmentContext,
+                tape = session.expressionTape
             )
             ci.currentFieldName = null
             currentExpr = null
@@ -985,16 +987,16 @@ class LazyMacroEvaluator : IonReader {
     override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
         TODO("Not yet implemented")
     }
-    override fun longValue(): Long  = session.currentExpander!!.environmentContext.longValue()
-    override fun bigIntegerValue(): BigInteger = session.currentExpander!!.environmentContext.bigIntegerValue()
-    override fun getIntegerSize(): IntegerSize = session.currentExpander!!.environmentContext.integerSize()
-    override fun stringValue(): String = session.currentExpander!!.environmentContext.textValue()
-    override fun symbolValue(): SymbolToken = session.currentExpander!!.environmentContext.symbolValue()
-    override fun bigDecimalValue(): BigDecimal = session.currentExpander!!.environmentContext.bigDecimalValue()
-    override fun byteSize(): Int = session.currentExpander!!.environmentContext.lobSize()
-    override fun newBytes(): ByteArray = session.currentExpander!!.environmentContext.lobValue().copyOf()
-    override fun doubleValue(): Double = session.currentExpander!!.environmentContext.doubleValue()
-    override fun timestampValue(): Timestamp = session.currentExpander!!.environmentContext.timestampValue()
-    override fun isNullValue(): Boolean = session.currentExpander!!.environmentContext.isNullValue()
-    override fun booleanValue(): Boolean = session.currentExpander!!.environmentContext.booleanValue()
+    override fun longValue(): Long  = session.currentExpander!!.tape!!.readLong()
+    override fun bigIntegerValue(): BigInteger = session.currentExpander!!.tape!!.readBigInteger()
+    override fun getIntegerSize(): IntegerSize = session.currentExpander!!.tape!!.readIntegerSize()
+    override fun stringValue(): String = session.currentExpander!!.tape!!.readText()
+    override fun symbolValue(): SymbolToken = session.currentExpander!!.tape!!.readSymbol()
+    override fun bigDecimalValue(): BigDecimal = session.currentExpander!!.tape!!.readBigDecimal()
+    override fun byteSize(): Int = session.currentExpander!!.tape!!.lobSize()
+    override fun newBytes(): ByteArray = session.currentExpander!!.tape!!.readLob().copyOf()
+    override fun doubleValue(): Double = session.currentExpander!!.tape!!.readFloat()
+    override fun timestampValue(): Timestamp = session.currentExpander!!.tape!!.readTimestamp()
+    override fun isNullValue(): Boolean = session.currentExpander!!.tape!!.isNullValue
+    override fun booleanValue(): Boolean = session.currentExpander!!.tape!!.readBoolean()
 }
