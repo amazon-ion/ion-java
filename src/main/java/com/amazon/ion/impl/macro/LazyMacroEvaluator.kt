@@ -114,13 +114,13 @@ class LazyMacroEvaluator : IonReader {
                     IF_SINGLE -> handleIfSingle(currentExpander!!)
                     IF_MULTI -> handleIfMulti(currentExpander!!)
                     ANNOTATE -> handleAnnotate(currentExpander!!)
-                    MAKE_STRING -> handleMakeString(currentExpander!!)
-                    MAKE_SYMBOL -> handleMakeSymbol(currentExpander!!)
+                    MAKE_STRING -> handleMakeStringOrSymbol(IonType.STRING, currentExpander!!)
+                    MAKE_SYMBOL -> handleMakeStringOrSymbol(IonType.SYMBOL, currentExpander!!)
                     MAKE_BLOB -> handleMakeBlob(currentExpander!!)
                     MAKE_DECIMAL -> handleMakeDecimal(currentExpander!!)
                     MAKE_TIMESTAMP -> handleMakeTimestamp(currentExpander!!)
                     PRIVATE_MAKE_FIELD_NAME_AND_VALUE -> handlePrivateMakeFieldNameAndValue(currentExpander!!)
-                    PRIVATE_FLATTEN_STRUCT -> handlePrivateFlattenStruct(currentExpander!!)
+                    PRIVATE_FLATTEN_STRUCT -> handleFlatten(currentExpander!!)
                     FLATTEN -> handleFlatten(currentExpander!!)
                     SUM -> handleSum(currentExpander!!)
                     DELTA -> handleDelta(currentExpander!!)
@@ -207,7 +207,7 @@ class LazyMacroEvaluator : IonReader {
             return type
         }
 
-        private fun handleMakeString(thisExpansion: ExpansionInfo): Byte {
+        private fun handleMakeStringOrSymbol(ionType: IonType, thisExpansion: ExpansionInfo): Byte {
             thisExpansion.expansionKind = STREAM
             val sb = StringBuilder()
             thisExpansion.forEach(0) {
@@ -216,24 +216,9 @@ class LazyMacroEvaluator : IonReader {
                     else -> throw IonException("Invalid argument type for 'make_string': ${it.ionType()}")
                 }
             }
-            thisExpansion.tape!!.advanceToAfterEndEExpression()
+            thisExpansion.tape!!.advanceToAfterEndEExpression(thisExpansion.session.eExpressionIndex)
             thisExpansion.expansionKind = EMPTY
-            thisExpansion.produceValueSideEffect(IonType.STRING, sb.toString())
-            return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
-        }
-
-        private fun handleMakeSymbol(thisExpansion: ExpansionInfo): Byte {
-            thisExpansion.expansionKind = STREAM
-            val sb = StringBuilder()
-            thisExpansion.forEach(0) {
-                when {
-                    IonType.isText(it.ionType()) -> sb.append(it.readText())
-                    else -> throw IonException("Invalid argument type for 'make_symbol': ${it.ionType()}")
-                }
-            }
-            thisExpansion.tape!!.advanceToAfterEndEExpression()
-            thisExpansion.expansionKind = EMPTY
-            thisExpansion.produceValueSideEffect(IonType.SYMBOL, sb.toString())
+            thisExpansion.produceValueSideEffect(ionType, sb.toString())
             return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
         }
 
@@ -378,43 +363,6 @@ class LazyMacroEvaluator : IonReader {
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
-        private fun handlePrivateFlattenStruct(thisExpansion: ExpansionInfo): Byte {
-            thisExpansion.expansionKind = STREAM
-            var argumentExpansion: ExpansionInfo? = thisExpansion.additionalState as ExpansionInfo?
-            if (argumentExpansion == null) {
-                argumentExpansion = thisExpansion.readArgument(0)
-                thisExpansion.additionalState = argumentExpansion
-            }
-
-            val currentChildExpansion = thisExpansion.childExpansion
-            val next = currentChildExpansion?.session?.produceNext()
-            if (next == null) {
-                currentExpander = argumentExpansion
-                val nextSequence = produceNext()
-                currentExpander = thisExpansion
-                return when {
-                    nextSequence == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
-                        thisExpansion.childExpansion = getExpander(
-                            expansionKind = STREAM,
-                            tape = expressionTape,
-                        )
-                        thisExpansion.childExpansion!!.parentExpansion = thisExpansion
-                        ExpressionType.CONTINUE_EXPANSION_ORDINAL
-                    }
-
-                    nextSequence == ExpressionType.END_OF_EXPANSION_ORDINAL -> ExpressionType.END_OF_EXPANSION_ORDINAL
-                    ExpressionType.isDataModelExpression(nextSequence) -> throw IonException("invalid argument; make_struct expects structs")
-                    else -> unreachable()
-                }
-            }
-            currentExpander = thisExpansion
-            return when {
-                ExpressionType.isDataModelExpression(next) -> next
-                next == ExpressionType.END_OF_EXPANSION_ORDINAL -> ExpressionType.END_OF_EXPANSION_ORDINAL
-                else -> unreachable()
-            }
-        }
-
         private fun handleFlatten(thisExpansion: ExpansionInfo): Byte {
             thisExpansion.expansionKind = STREAM
             var argumentExpansion: ExpansionInfo? = thisExpansion.additionalState as ExpansionInfo?
@@ -461,7 +409,7 @@ class LazyMacroEvaluator : IonReader {
                 n++
             }
             val branch = if (condition(n)) 1 else 2
-            thisExpansion.tape!!.setNextAfterEndOfEExpression()
+            thisExpansion.tape!!.setNextAfterEndOfEExpression(thisExpansion.session.eExpressionIndex)
             thisExpansion.readArgument(branch)
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
@@ -503,7 +451,7 @@ class LazyMacroEvaluator : IonReader {
                     // TODO do these three in one step? OR, change setNextAfterEndOfEExpression to skip the eexp i currently points at and then remove the next two lines
                     expressionTape.prepareNext()
                     expressionTape.next()
-                    expressionTape.setNextAfterEndOfEExpression() // TODO expressionStarts[] can be changed to include the index of the e_expression_end
+                    expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
                     thisExpansion.childExpansion = getExpander(
                         expansionKind = macro.expansionKind,
                         tape = expressionTape,
@@ -852,6 +800,7 @@ class LazyMacroEvaluator : IonReader {
                 IonType.STRUCT -> ContainerInfo.Type.Struct
                 else -> unreachable()
             }
+            // TODO can this expander be eliminated?
             ci.expansion = session.getExpander(
                 expansionKind = STREAM,
                 tape = session.expressionTape

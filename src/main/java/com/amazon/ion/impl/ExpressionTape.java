@@ -44,6 +44,9 @@ public class ExpressionTape { // TODO make internal
         private int[] numberOfExpressions;
         private int numberOfVariables = 0;
         private int[] variableStarts;
+        private int[] containerStarts;
+        private int[] containerEnds;
+        private int[] eExpressionStarts;
 
         Core(int initialSize) {
             contexts = new Object[initialSize];
@@ -51,10 +54,13 @@ public class ExpressionTape { // TODO make internal
             types = new byte[initialSize];
             starts = new int[initialSize];
             ends = new int[initialSize];
-            expressionStarts = new int[1][];
+            expressionStarts = new int[1][]; // TODO figure out why this breaks when the first dimension is increased, then increase it
             expressionStarts[0] = new int[16];
             numberOfExpressions = new int[1];
             variableStarts = new int[8];
+            containerStarts = new int[initialSize];
+            containerEnds = new int[initialSize];
+            eExpressionStarts = new int[8];
         }
 
         void grow() {
@@ -63,6 +69,8 @@ public class ExpressionTape { // TODO make internal
             types = Arrays.copyOf(types, types.length * 2);
             starts = Arrays.copyOf(starts, starts.length * 2);
             ends = Arrays.copyOf(ends, ends.length * 2);
+            containerStarts = Arrays.copyOf(containerStarts, containerStarts.length * 2);
+            containerEnds = Arrays.copyOf(containerEnds, containerEnds.length * 2);
         }
 
         void growExpressionStartsForEExpression(int eExpressionIndex) {
@@ -74,6 +82,7 @@ public class ExpressionTape { // TODO make internal
             if (expressionStarts.length <= eExpressionIndex) {
                 expressionStarts = Arrays.copyOf(expressionStarts, expressionStarts.length + 1);
                 expressionStarts[expressionStarts.length - 1] = new int[16];
+                eExpressionStarts = Arrays.copyOf(eExpressionStarts, eExpressionStarts.length + 1);
                 numberOfExpressions = Arrays.copyOf(numberOfExpressions, numberOfExpressions.length + 1);
             }
         }
@@ -179,6 +188,7 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8]; // TODO consider generalizing this to a container type stack, and record container end indices for quick skip
+    private int currentContainerStart = 0;
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -214,25 +224,35 @@ public class ExpressionTape { // TODO make internal
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
+            core.eExpressionStarts[numberOfEExpressions] = i;
             core.ends[i] = numberOfEExpressions++;
             core.ensureEExpressionIndexAvailable(numberOfEExpressions);
+            core.containerStarts[i] = currentContainerStart;
+            currentContainerStart = i;
             increaseDepth(true);
         } else if (ExpressionType.isContainerStart(type)) {
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
+            core.containerStarts[i] = currentContainerStart;
+            currentContainerStart = i;
             increaseDepth(false);
         } else if (type == ExpressionType.DATA_MODEL_SCALAR_ORDINAL || type == ExpressionType.ANNOTATION_ORDINAL) { // TODO what about field names?
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
+            core.containerStarts[i] = currentContainerStart;
         } else if (type == ExpressionType.VARIABLE_ORDINAL) {
             if (eExpressionActiveAtDepth[depth] >= 0) {
                 core.setNextExpression(eExpressionActiveAtDepth[depth], i);
             }
             core.setNextVariable(i);
+            core.containerStarts[i] = currentContainerStart;
         } else if (ExpressionType.isEnd(type)) {
             depth--;
+            core.containerStarts[i] = currentContainerStart;
+            core.containerEnds[currentContainerStart] = i;
+            currentContainerStart = core.containerStarts[currentContainerStart];
         }
     }
 
@@ -414,48 +434,23 @@ public class ExpressionTape { // TODO make internal
         core.numberOfVariables = 0;
         depth = 0;
         numberOfEExpressions = 0;
+        currentContainerStart = 0;
     }
 
-    public int findIndexAfterEndEExpression() {
-        int relativeDepth = 0;
-        for (int index = i; index < core.size; index++) {
-            byte type = core.types[index];
-            if (type == ExpressionType.E_EXPRESSION_ORDINAL) {
-                relativeDepth++;
-            } else if (type == ExpressionType.E_EXPRESSION_END_ORDINAL) {
-                if (relativeDepth == 0) {
-                    return index + 1;
-                }
-                relativeDepth--;
-            }
-        }
-        return i;
-    }
-
-    public void setNextAfterEndOfEExpression() {
+    public void setNextAfterEndOfEExpression(int eExpressionIndex) {
         int iCurrent = i;
-        iNext = findIndexAfterEndEExpression();
+        iNext = core.containerEnds[core.eExpressionStarts[eExpressionIndex]];
         i = iCurrent;
     }
 
     // TODO deduplicate the following methods
-    public void advanceToAfterEndEExpression() {
-        int relativeDepth = 0;
-        while (i < core.size) {
-            byte type = core.types[i++];
-            if (type == ExpressionType.E_EXPRESSION_ORDINAL) {
-                relativeDepth++;
-            } else if (type == ExpressionType.E_EXPRESSION_END_ORDINAL) {
-                if (relativeDepth == 0) {
-                    break;
-                }
-                relativeDepth--;
-            }
-        }
+    public void advanceToAfterEndEExpression(int eExpressionIndex) {
+        i = core.containerEnds[core.eExpressionStarts[eExpressionIndex]];
         iNext = i;
     }
 
     public void advanceToAfterEndContainer() {
+
         int relativeDepth = 0;
         while (i < core.size) {
             byte type = core.types[i++];
@@ -468,6 +463,11 @@ public class ExpressionTape { // TODO make internal
                 relativeDepth--;
             }
         }
+
+
+        // TODO core.containerStarts should not include e-expressions. That way it will always point to the start
+        //  of the current data model container, the end of which can be located using core.containerEnds.
+        //i = core.containerEnds[core.containerStarts[i]] + 1; // TODO one failure: twoArgumentGroups
         iNext = i;
     }
 
