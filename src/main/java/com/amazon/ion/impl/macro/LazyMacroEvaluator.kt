@@ -414,6 +414,65 @@ class LazyMacroEvaluator : IonReader {
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
+        private fun fieldName(expressionTape: ExpressionTape): Byte {
+            currentFieldName = expressionTape.context() as SymbolToken
+            expressionTape.prepareNext()
+            return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+        }
+
+        private fun annotation(expressionTape: ExpressionTape): Byte {
+            currentAnnotations = expressionTape.annotations()
+            expressionTape.prepareNext()
+            return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+        }
+
+        private fun eExpression(expressionTape: ExpressionTape, thisExpansion: ExpansionInfo): Byte {
+            val macro = expressionTape.context() as SystemMacro
+            eExpressionIndex++
+            // TODO do these three in one step? OR, change setNextAfterEndOfEExpression to skip the eexp i currently points at and then remove the next two lines
+            expressionTape.prepareNext()
+            expressionTape.next()
+            expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
+            thisExpansion.childExpansion = getExpander(
+                expansionKind = macro.expansionKind,
+                tape = expressionTape,
+            )
+            thisExpansion.childExpansion!!.parentExpansion = thisExpansion
+            return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+        }
+
+        private fun expressionGroup(expressionTape: ExpressionTape, thisExpansion: ExpansionInfo): Byte {
+            expressionTape.prepareNext()
+            thisExpansion.childExpansion = getExpander(
+                expansionKind = EXPR_GROUP,
+                tape = expressionTape,
+            )
+            thisExpansion.childExpansion!!.parentExpansion = thisExpansion
+            return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+        }
+
+        private fun dataModelScalar(expressionTape: ExpressionTape): Byte {
+            expressionTape.prepareNext()
+            return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
+        }
+
+        private fun dataModelContainer(expressionTape: ExpressionTape): Byte {
+            expressionTape.prepareNext()
+            return ExpressionType.DATA_MODEL_CONTAINER_ORDINAL
+        }
+
+        private fun expressionEnd(nextType: Byte, expressionTape: ExpressionTape): Byte {
+            if (nextType == ExpressionType.EXPRESSION_GROUP_END_ORDINAL || nextType == ExpressionType.E_EXPRESSION_END_ORDINAL) {
+                // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
+                // here.
+                expressionTape.prepareNext()
+            }
+            if (nextType != ExpressionType.E_EXPRESSION_END_ORDINAL) { // TODO why the special case?
+                return ExpressionType.END_OF_EXPANSION_ORDINAL
+            }
+            return ExpressionType.CONTINUE_EXPANSION_ORDINAL // TODO should end of expansion be conveyed in any case here?
+        }
+
         private fun handleStream(thisExpansion: ExpansionInfo): Byte {
             val expressionTape = thisExpansion.tape!!
             if (expressionTape.isExhausted) {
@@ -421,70 +480,15 @@ class LazyMacroEvaluator : IonReader {
             }
             val nextType = expressionTape.type()
             if (ExpressionType.isEnd(nextType)) {
-                if (nextType == ExpressionType.EXPRESSION_GROUP_END_ORDINAL || nextType == ExpressionType.E_EXPRESSION_END_ORDINAL) {
-                    // Expressions and expression groups do not rely on stepIn/stepOut for navigation, so the tape must be advanced
-                    // here.
-                    expressionTape.prepareNext()
-                }
-                if (nextType != ExpressionType.E_EXPRESSION_END_ORDINAL) { // TODO why the special case?
-                    return ExpressionType.END_OF_EXPANSION_ORDINAL
-                }
-                return ExpressionType.CONTINUE_EXPANSION_ORDINAL // TODO should end of expansion be conveyed in any case here?
+                return expressionEnd(nextType, expressionTape)
             }
-
             return when (nextType) {
-                ExpressionType.FIELD_NAME_ORDINAL -> {
-                    currentFieldName = expressionTape.context() as SymbolToken
-                    expressionTape.prepareNext()
-                    ExpressionType.CONTINUE_EXPANSION_ORDINAL
-                }
-
-                ExpressionType.ANNOTATION_ORDINAL -> {
-                    currentAnnotations = expressionTape.annotations()
-                    expressionTape.prepareNext()
-                    ExpressionType.CONTINUE_EXPANSION_ORDINAL
-                }
-
-                ExpressionType.E_EXPRESSION_ORDINAL -> {
-                    val macro = expressionTape.context() as SystemMacro
-                    eExpressionIndex++
-                    // TODO do these three in one step? OR, change setNextAfterEndOfEExpression to skip the eexp i currently points at and then remove the next two lines
-                    expressionTape.prepareNext()
-                    expressionTape.next()
-                    expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
-                    thisExpansion.childExpansion = getExpander(
-                        expansionKind = macro.expansionKind,
-                        tape = expressionTape,
-                    )
-                    thisExpansion.childExpansion!!.parentExpansion = thisExpansion
-                    ExpressionType.CONTINUE_EXPANSION_ORDINAL
-                }
-
-                ExpressionType.E_EXPRESSION_END_ORDINAL -> unreachable()
-                ExpressionType.EXPRESSION_GROUP_ORDINAL -> {
-                    expressionTape.prepareNext()
-                    thisExpansion.childExpansion = getExpander(
-                        expansionKind = EXPR_GROUP,
-                        tape = expressionTape,
-                    )
-                    thisExpansion.childExpansion!!.parentExpansion = thisExpansion
-                    ExpressionType.CONTINUE_EXPANSION_ORDINAL
-                }
-
-                ExpressionType.EXPRESSION_GROUP_END_ORDINAL -> unreachable()
-                ExpressionType.DATA_MODEL_SCALAR_ORDINAL -> {
-                    expressionTape.prepareNext()
-                    ExpressionType.DATA_MODEL_SCALAR_ORDINAL
-                }
-
-                ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
-                    expressionTape.prepareNext()
-                    ExpressionType.DATA_MODEL_CONTAINER_ORDINAL
-                }
-
-                ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL -> unreachable()
-                ExpressionType.END_OF_EXPANSION_ORDINAL -> unreachable()
-                ExpressionType.CONTINUE_EXPANSION_ORDINAL -> unreachable()
+                ExpressionType.FIELD_NAME_ORDINAL -> fieldName(expressionTape)
+                ExpressionType.ANNOTATION_ORDINAL -> annotation(expressionTape)
+                ExpressionType.E_EXPRESSION_ORDINAL -> eExpression(expressionTape, thisExpansion)
+                ExpressionType.EXPRESSION_GROUP_ORDINAL -> expressionGroup(expressionTape, thisExpansion)
+                ExpressionType.DATA_MODEL_SCALAR_ORDINAL -> dataModelScalar(expressionTape)
+                ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> dataModelContainer(expressionTape)
                 else -> unreachable()
             }
         }
