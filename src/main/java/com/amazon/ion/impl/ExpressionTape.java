@@ -33,46 +33,38 @@ import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 
 public class ExpressionTape { // TODO make internal
 
+    public static class Element {
+        private Object context = null;
+        private Object value = null; // null for values that haven't yet been materialized
+        private byte type = -1;
+        private int start = -1;
+        private int end = -1;
+        private int containerStart = -1;
+        private int containerEnd = -1;
+    }
+
     public static class Core {
-        private Object[] contexts;
-        private Object[] values; // Elements are null for values that haven't yet been materialized
-        private byte[] types;
-        private int[] starts;
-        private int[] ends;
+        private Element[] elements;
         private int[][] expressionStarts;
         private int size = 0;
         private int[] numberOfExpressions;
         private int numberOfVariables = 0;
         private int[] variableStarts;
-        private int[] containerStarts;
-        private int[] containerEnds;
         private int[] eExpressionStarts;
         private int[] eExpressionEnds;
 
         Core(int initialSize) {
-            contexts = new Object[initialSize];
-            values = new Object[initialSize];
-            types = new byte[initialSize];
-            starts = new int[initialSize];
-            ends = new int[initialSize];
+            elements = new Element[initialSize];
             expressionStarts = new int[1][]; // TODO figure out why this breaks when the first dimension is increased, then increase it
             expressionStarts[0] = new int[16];
             numberOfExpressions = new int[1];
             variableStarts = new int[8];
-            containerStarts = new int[initialSize];
-            containerEnds = new int[initialSize];
             eExpressionStarts = new int[8];
             eExpressionEnds = new int[8];
         }
 
         void grow() {
-            contexts = Arrays.copyOf(contexts, contexts.length * 2);
-            values = Arrays.copyOf(values, values.length * 2);
-            types = Arrays.copyOf(types, types.length * 2);
-            starts = Arrays.copyOf(starts, starts.length * 2);
-            ends = Arrays.copyOf(ends, ends.length * 2);
-            containerStarts = Arrays.copyOf(containerStarts, containerStarts.length * 2);
-            containerEnds = Arrays.copyOf(containerEnds, containerEnds.length * 2);
+            elements = Arrays.copyOf(elements, elements.length * 2);
         }
 
         void growExpressionStartsForEExpression(int eExpressionIndex) {
@@ -109,7 +101,7 @@ public class ExpressionTape { // TODO make internal
             int relativeDepth = 0;
             int i = startIndex;
             loop: while (i < size) {
-                switch (types[i]) {
+                switch (elements[i].type) {
                     case FIELD_NAME_ORDINAL:
                     case ANNOTATION_ORDINAL:
                     case DATA_MODEL_SCALAR_ORDINAL:
@@ -158,7 +150,7 @@ public class ExpressionTape { // TODO make internal
         public boolean areVariablesOrdered() {
             int previousVariableOrdinal = -1;
             for (int i = 0; i < numberOfVariables; i++) {
-                int currentVariableOrdinal = (int) contexts[variableStarts[i]];
+                int currentVariableOrdinal = (int) elements[variableStarts[i]].context;
                 if (currentVariableOrdinal < previousVariableOrdinal) {
                     return false;
                 }
@@ -176,7 +168,7 @@ public class ExpressionTape { // TODO make internal
          * @return the ordinal of the variable at the given index.
          */
         public int getVariableOrdinal(int variableIndex) {
-            return (int) contexts[variableStarts[variableIndex]];
+            return (int) elements[variableStarts[variableIndex]].context;
         }
 
         public int size() {
@@ -224,7 +216,7 @@ public class ExpressionTape { // TODO make internal
 
     private void decreaseDepth() {
         depth--;
-        core.containerStarts[i] = currentDataModelContainerStart;
+        core.elements[i].containerStart = currentDataModelContainerStart;
     }
 
     private void setChildExpressionIndex() {
@@ -238,14 +230,14 @@ public class ExpressionTape { // TODO make internal
             case E_EXPRESSION_ORDINAL:
                 setChildExpressionIndex();
                 core.eExpressionStarts[numberOfEExpressions] = i;
-                core.ends[i] = numberOfEExpressions++;
+                core.elements[i].end = numberOfEExpressions++;
                 core.ensureEExpressionIndexAvailable(numberOfEExpressions);
-                core.containerStarts[i] = currentDataModelContainerStart;
+                core.elements[i].containerStart = currentDataModelContainerStart;
                 increaseDepth(true);
                 break;
             case DATA_MODEL_CONTAINER_ORDINAL:
                 setChildExpressionIndex();
-                core.containerStarts[i] = currentDataModelContainerStart;
+                core.elements[i].containerStart = currentDataModelContainerStart;
                 currentDataModelContainerStart = i;
                 increaseDepth(false);
                 break;
@@ -256,12 +248,12 @@ public class ExpressionTape { // TODO make internal
             case DATA_MODEL_SCALAR_ORDINAL:
             case ANNOTATION_ORDINAL:
                 setChildExpressionIndex();
-                core.containerStarts[i] = currentDataModelContainerStart;
+                core.elements[i].containerStart = currentDataModelContainerStart;
                 break;
             case VARIABLE_ORDINAL:
                 setChildExpressionIndex();
                 core.setNextVariable(i);
-                core.containerStarts[i] = currentDataModelContainerStart;
+                core.elements[i].containerStart = currentDataModelContainerStart;
                 break;
             case E_EXPRESSION_END_ORDINAL:
                 decreaseDepth();
@@ -269,8 +261,8 @@ public class ExpressionTape { // TODO make internal
                 break;
             case DATA_MODEL_CONTAINER_END_ORDINAL:
                 decreaseDepth();
-                core.containerEnds[currentDataModelContainerStart] = i;
-                currentDataModelContainerStart = core.containerStarts[currentDataModelContainerStart];
+                core.elements[currentDataModelContainerStart].containerEnd = i;
+                currentDataModelContainerStart = core.elements[currentDataModelContainerStart].containerStart;
                 break;
             case EXPRESSION_GROUP_END_ORDINAL:
                 decreaseDepth();
@@ -280,14 +272,19 @@ public class ExpressionTape { // TODO make internal
     }
 
     void add(Object context, byte type, int start, int end) {
-        if (i >= core.contexts.length) {
+        if (i >= core.elements.length) {
             core.grow();
         }
-        core.contexts[i] = context;
-        core.types[i] = type;
-        core.values[i] = null;
-        core.starts[i] = start;
-        core.ends[i] = end;
+        Element element = core.elements[i];
+        if (element == null) {
+            element = new Element();
+            core.elements[i] = element;
+        }
+        element.context = context;
+        element.type = type;
+        element.value = null;
+        element.start = start;
+        element.end = end;
         setExpressionStart(type);
         i++;
         core.size++;
@@ -295,17 +292,18 @@ public class ExpressionTape { // TODO make internal
 
     private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart) {
         for (int i = sourceStart; i < sourceEnd; i++) {
-            if (source.types[i] == ExpressionType.VARIABLE_ORDINAL) {
+            Element sourceElement = source.elements[i];
+            if (sourceElement.type == ExpressionType.VARIABLE_ORDINAL) {
                 if (arguments == null) {
                     // This is a top-level template body. There is no invocation yet, so there is nothing to substitute.
                     copyFrom(source, i);
                     continue;
                 }
-                int variableIndex = (int) source.contexts[i];
-                int eExpressionIndex = arguments.ends[argumentsStart];
+                int variableIndex = (int) sourceElement.context;
+                int eExpressionIndex = arguments.elements[argumentsStart].end;
                 if (variableIndex >= arguments.numberOfExpressions[eExpressionIndex]) {
                     // This argument is elided.
-                    if (core.contexts[core.size - 1] == SystemMacro.IfNone) {
+                    if (core.elements[core.size - 1].context == SystemMacro.IfNone) {
                         // Elide the IfNone invocation, substitute the second argument, skip the third.
                         core.size--;
                         this.i--;
@@ -322,10 +320,10 @@ public class ExpressionTape { // TODO make internal
                     int expressionEnd = arguments.findEndOfExpression(expressionStart);
                     inlineExpression(arguments, expressionStart, expressionEnd, null, -1);
                 }
-            } else if (source.types[i] == ExpressionType.E_EXPRESSION_ORDINAL) {
+            } else if (sourceElement.type == ExpressionType.E_EXPRESSION_ORDINAL) {
                 // Recursive inlining
                 // TODO have a limit on depth / size
-                Macro macro = (Macro) source.contexts[i];
+                Macro macro = (Macro) sourceElement.context;
                 Core expressionSource = null;
                 if (macro instanceof TemplateMacro) {
                     expressionSource = macro.getBodyTape();
@@ -348,7 +346,7 @@ public class ExpressionTape { // TODO make internal
                     inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
                     i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
                 }
-            } else if (ExpressionType.isContainerStart(source.types[i])) {
+            } else if (ExpressionType.isContainerStart(sourceElement.type)) {
                 int expressionEnd = source.findEndOfExpression(i);
                 copyFrom(source, i);
                 inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
@@ -361,47 +359,57 @@ public class ExpressionTape { // TODO make internal
     }
 
     private void add(Object context, byte type, Object value) {
-        if (i >= core.contexts.length) {
+        if (i >= core.elements.length) {
             core.grow();
         }
-        core.contexts[i] = context;
-        core.types[i] = type;
-        core.values[i] = value;
-        core.starts[i] = -1;
-        core.ends[i] = -1;
+        Element element = core.elements[i];
+        if (element == null) {
+            element = new Element();
+            core.elements[i] = element;
+        }
+        element.context = context;
+        element.type = type;
+        element.value = value;
+        element.start = -1;
+        element.end = -1;
         setExpressionStart(type);
         i++;
         core.size++;
     }
 
+    private void copyElement(Core other, int otherIndex) {
+        Element element = core.elements[i];
+        if (element == null) {
+            element = new Element();
+            core.elements[i] = element;
+        }
+        Element otherElement = other.elements[otherIndex];
+        element.context = otherElement.context;
+        element.type = otherElement.type;
+        element.value = otherElement.value;
+        element.start = otherElement.start;
+        element.end = otherElement.end;
+        setExpressionStart(element.type);
+    }
+
     void copyFromRange(Core other, int startIndex, int endIndex) {
         int copyLength = endIndex - startIndex;
         int destinationEnd = i + copyLength;
-        while (destinationEnd >= core.contexts.length) {
+        while (destinationEnd >= core.elements.length) {
             core.grow();
         }
-        // TODO store one array of an object type that contains all of these as fields...
-        System.arraycopy(other.contexts, startIndex, core.contexts, i, copyLength);
-        System.arraycopy(other.types, startIndex, core.types, i, copyLength);
-        System.arraycopy(other.values, startIndex, core.values, i, copyLength);
-        System.arraycopy(other.starts, startIndex, core.starts, i, copyLength);
-        System.arraycopy(other.ends, startIndex, core.ends, i, copyLength);
-        for (; i < destinationEnd; i++) {
-            setExpressionStart(core.types[i]); // TODO see if this can somehow be batched or simplified? Or removed once the evaluator is simplified?
+        for (int otherIndex = startIndex; otherIndex < endIndex; otherIndex++) {
+            copyElement(other, otherIndex);
+            i++;
         }
         core.size += copyLength;
     }
 
     private void copyFrom(Core other, int otherIndex) {
-        if (i >= core.contexts.length) {
+        if (i >= core.elements.length) {
             core.grow();
         }
-        core.contexts[i] = other.contexts[otherIndex];
-        core.types[i] = other.types[otherIndex];
-        core.values[i] = other.values[otherIndex];
-        core.starts[i] = other.starts[otherIndex];
-        core.ends[i] = other.ends[otherIndex];
-        setExpressionStart(core.types[i]);
+        copyElement(other, otherIndex);
         i++;
         core.size++;
     }
@@ -423,15 +431,15 @@ public class ExpressionTape { // TODO make internal
     }
 
     public byte type() {
-        return core.types[i];
+        return core.elements[i].type;
     }
 
     public IonType ionType() {
-        return ((IonTypeID) core.contexts[i]).type;
+        return ((IonTypeID) core.elements[i].context).type;
     }
 
     public Object context() {
-        return core.contexts[i];
+        return core.elements[i].context;
     }
 
     public int size() {
@@ -469,7 +477,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     public void advanceToAfterEndContainer() {
-        i = core.containerEnds[core.containerStarts[i]] + 1;
+        i = core.elements[core.elements[i].containerStart].containerEnd + 1;
         iNext = i;
     }
 
@@ -478,33 +486,36 @@ public class ExpressionTape { // TODO make internal
         //  the way out. Would need to test that the stored shift amount applied only when necessary and determine
         //  whether multiple shifts could be applied to the same index (I think not)
         for (int i = 0; i < core.size; i++) {
-            if (core.types[i] != ExpressionType.E_EXPRESSION_ORDINAL && core.starts[i] >= 0) {
-                core.starts[i] -= shiftAmount;
-                core.ends[i] -= shiftAmount;
+            Element element = core.elements[i];
+            if (element.type != ExpressionType.E_EXPRESSION_ORDINAL && element.start >= 0) {
+                element.start -= shiftAmount;
+                element.end -= shiftAmount;
             }
         }
     }
 
     private void prepareToRead(IonType expectedType) {
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        Element element = core.elements[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (expectedType != typeId.type) {
             throw new IonException(String.format("Expected type %s, but found %s.", expectedType, typeId.type));
         }
-        reader.sliceAfterHeader(core.starts[i], core.ends[i], typeId);
+        reader.sliceAfterHeader(element.start, element.end, typeId);
     }
 
     public List<SymbolToken> annotations() {
-        return (List<SymbolToken>) core.contexts[i];
+        return (List<SymbolToken>) core.elements[i].context;
     }
 
     public boolean isNullValue() {
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) core.elements[i].context;
         return typeId.isNull;
     }
 
     public boolean readBoolean() {
-        if (core.starts[i] < 0) {
-            return (boolean) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return (boolean) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
@@ -518,11 +529,12 @@ public class ExpressionTape { // TODO make internal
     }
 
     public long readLong() {
-        if (core.starts[i] < 0) {
-            if (core.values[i] instanceof BigInteger) {
-                return ((BigInteger) core.values[i]).longValue();
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            if (element.value instanceof BigInteger) {
+                return ((BigInteger) element.value).longValue();
             }
-            return (long) core.values[i]; // TODO add a nicer error if something is wrong
+            return (long) element.value; // TODO add a nicer error if something is wrong
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
@@ -536,11 +548,12 @@ public class ExpressionTape { // TODO make internal
     }
 
     public BigInteger readBigInteger() {
-        if (core.starts[i] < 0) {
-            if (core.values[i] instanceof BigInteger) {
-                return (BigInteger) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            if (element.value instanceof BigInteger) {
+                return (BigInteger) element.value;
             }
-            return BigInteger.valueOf((long) core.values[i]); // TODO add a nicer error if something is wrong
+            return BigInteger.valueOf((long) element.value); // TODO add a nicer error if something is wrong
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
@@ -554,11 +567,12 @@ public class ExpressionTape { // TODO make internal
     }
 
     public IntegerSize readIntegerSize() {
-        if (core.starts[i] < 0) {
-            if (core.values[i] instanceof BigInteger) {
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            if (element.value instanceof BigInteger) {
                 return IntegerSize.BIG_INTEGER;
             }
-            long longValue = (long) core.values[i];
+            long longValue = (long) element.value;
             if (longValue <= Integer.MAX_VALUE && longValue >= Integer.MIN_VALUE) {
                 return IntegerSize.INT;
             }
@@ -578,16 +592,17 @@ public class ExpressionTape { // TODO make internal
     }
 
     public BigDecimal readBigDecimal() {
-        if (core.starts[i] < 0) {
-            return (BigDecimal) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return (BigDecimal) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (typeId.type != IonType.INT && typeId.type != IonType.DECIMAL) {
             throw new IonException(String.format("Expected int or decimal, but found %s.", typeId.type));
         }
-        reader.sliceAfterHeader(core.starts[i], core.ends[i], typeId);
+        reader.sliceAfterHeader(element.start, element.end, typeId);
         if (reader.isNullValue()) {
             throw new IonException("Expected a non-null value.");
         }
@@ -597,19 +612,20 @@ public class ExpressionTape { // TODO make internal
     }
 
     public String readText() {
-        if (core.starts[i] < 0) {
-            if (core.values[i] instanceof SymbolToken) {
-                return ((SymbolToken) core.values[i]).assumeText();
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            if (element.value instanceof SymbolToken) {
+                return ((SymbolToken) element.value).assumeText();
             }
-            return (String) core.values[i];
+            return (String) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (!IonType.isText(typeId.type)) {
             throw new IonException(String.format("Expected string or symbol, but found %s.", typeId.type));
         }
-        reader.sliceAfterHeader(core.starts[i], core.ends[i], typeId);
+        reader.sliceAfterHeader(element.start, element.end, typeId);
         if (reader.isNullValue()) {
             throw new IonException("Expected a non-null value.");
         }
@@ -619,19 +635,20 @@ public class ExpressionTape { // TODO make internal
     }
 
     public SymbolToken readSymbol() {
-        if (core.starts[i] < 0) {
-            if (core.values[i] instanceof SymbolToken) {
-                return (SymbolToken) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            if (element.value instanceof SymbolToken) {
+                return (SymbolToken) element.value;
             }
-            return _Private_Utils.newSymbolToken((String) core.values[i]);
+            return _Private_Utils.newSymbolToken((String) element.value);
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (!IonType.isText(typeId.type)) {
             throw new IonException(String.format("Expected string or symbol, but found %s.", typeId.type));
         }
-        reader.sliceAfterHeader(core.starts[i], core.ends[i], typeId);
+        reader.sliceAfterHeader(element.start, element.end, typeId);
         if (reader.isNullValue()) {
             throw new IonException("Expected a non-null value.");
         }
@@ -646,27 +663,29 @@ public class ExpressionTape { // TODO make internal
     }
 
     public int lobSize() {
-        if (core.starts[i] < 0) {
-            return ((byte[]) core.values[i]).length;
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return ((byte[]) element.value).length;
         }
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (!IonType.isLob(typeId.type)) {
             throw new IonException(String.format("Expected blob or clob, but found %s.", typeId.type));
         }
-        return core.ends[i] - core.starts[i];
+        return element.end - element.start;
     }
 
     public byte[] readLob() {
-        if (core.starts[i] < 0) {
-            return (byte[]) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return (byte[]) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
-        IonTypeID typeId = (IonTypeID) core.contexts[i];
+        IonTypeID typeId = (IonTypeID) element.context;
         if (!IonType.isLob(typeId.type)) {
             throw new IonException(String.format("Expected blob or clob, but found %s.", typeId.type));
         }
-        reader.sliceAfterHeader(core.starts[i], core.ends[i], typeId);
+        reader.sliceAfterHeader(element.start, element.end, typeId);
         if (reader.isNullValue()) {
             throw new IonException("Expected a non-null value.");
         }
@@ -676,8 +695,9 @@ public class ExpressionTape { // TODO make internal
     }
 
     public double readFloat() {
-        if (core.starts[i] < 0) {
-            return (double) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return (double) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
@@ -691,8 +711,9 @@ public class ExpressionTape { // TODO make internal
     }
 
     public Timestamp readTimestamp() {
-        if (core.starts[i] < 0) {
-            return (Timestamp) core.values[i];
+        Element element = core.elements[i];
+        if (element.start < 0) {
+            return (Timestamp) element.value;
         }
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
