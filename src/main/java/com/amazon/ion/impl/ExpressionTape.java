@@ -34,13 +34,13 @@ import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 public class ExpressionTape { // TODO make internal
 
     public static class Element {
-        private Object context = null;
-        private Object value = null; // null for values that haven't yet been materialized
-        private byte type = -1;
-        private int start = -1;
-        private int end = -1;
-        private int containerStart = -1;
-        private int containerEnd = -1;
+        Object context = null;
+        Object value = null; // null for values that haven't yet been materialized
+        byte type = -1;
+        int start = -1;
+        int end = -1;
+        int containerStart = -1;
+        int containerEnd = -1;
     }
 
     public static class Core {
