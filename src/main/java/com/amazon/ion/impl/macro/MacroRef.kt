@@ -13,8 +13,11 @@ sealed interface MacroRef {
     // TODO: Since system macros have an independent address space, do we need to have a `SystemById` variant?
 
     companion object {
+
+        private val LOW_IDS = Array(128) { i -> ById(i) }
+
         @JvmStatic
-        fun byId(id: Int): MacroRef = ById(id)
+        fun byId(id: Int): MacroRef = if (id < 128) LOW_IDS[id] else ById(id)
 
         @JvmStatic
         fun byName(name: String): MacroRef = ByName(name)
