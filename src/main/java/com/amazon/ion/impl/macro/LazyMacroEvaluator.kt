@@ -523,7 +523,7 @@ class LazyMacroEvaluator : IonReader {
             expressionTape = arguments
             sideEffectExpander = getExpander(EMPTY, sideEffects)
             sideEffectExpander!!.keepAlive = true
-            currentExpander = null
+            currentExpander = getExpander(STREAM, expressionTape)
             currentFieldName = fieldName
             currentAnnotations = null
             eExpressionIndex = -1;
@@ -533,20 +533,15 @@ class LazyMacroEvaluator : IonReader {
     /**
      * A container in the macro evaluator's [containerStack].
      */
-    private data class ContainerInfo(var type: Type = Type.Uninitialized, private var _expansion: ExpansionInfo? = null) {
+    private data class ContainerInfo(var type: Type = Type.Uninitialized) {
         enum class Type { TopLevel, List, Sexp, Struct, Uninitialized }
 
         fun close() {
-            _expansion?.close()
-            _expansion = null
             currentFieldName = null
             container = null
             type = Type.Uninitialized
         }
 
-        var expansion: ExpansionInfo
-            get() = _expansion!!
-            set(value) { _expansion = value }
         @JvmField var currentFieldName: SymbolToken? = null
         @JvmField var container: IonType? = null
     }
@@ -593,11 +588,6 @@ class LazyMacroEvaluator : IonReader {
             }
 
         var parentExpansion: ExpansionInfo? = null
-
-        /**
-         * Gets the [ExpansionInfo] at the top of the stack of [childExpansion]s.
-         */
-        fun top(): ExpansionInfo = childExpansion?.top() ?: this
 
         /**
          * Returns an expansion for the given variable.
@@ -734,8 +724,6 @@ class LazyMacroEvaluator : IonReader {
         session.reset(fieldName, encodingExpressions)
         val ci = containerStack.push { _ -> }
         ci.type = ContainerInfo.Type.TopLevel
-
-        ci.expansion = session.getExpander(STREAM, session.expressionTape)
     }
 
     override fun next(): IonType? {
@@ -779,8 +767,7 @@ class LazyMacroEvaluator : IonReader {
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
-        session.currentExpander = currentContainer.expansion.top()
-        popped.expansion.tape!!.advanceToAfterEndContainer()
+        session.expressionTape!!.advanceToAfterEndContainer()
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
@@ -804,11 +791,6 @@ class LazyMacroEvaluator : IonReader {
                 IonType.STRUCT -> ContainerInfo.Type.Struct
                 else -> unreachable()
             }
-            // TODO can this expander be eliminated?
-            ci.expansion = session.getExpander(
-                expansionKind = STREAM,
-                tape = session.expressionTape
-            )
             ci.currentFieldName = null
             currentExpr = null
             session.currentFieldName = null

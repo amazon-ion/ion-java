@@ -1652,7 +1652,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         @Override
-        protected void readParameter(Macro.Parameter parameter, long parameterPresence, boolean isTrailing) {
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence) {
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {

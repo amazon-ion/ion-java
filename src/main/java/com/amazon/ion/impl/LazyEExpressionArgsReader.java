@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
-import com.amazon.ion.IonCursor;
-import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
 import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SymbolToken;
@@ -19,9 +17,7 @@ import com.amazon.ion.impl.macro.SystemMacro;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * An {@link LazyEExpressionArgsReader} reads an E-Expression from a {@link ReaderAdapter}, constructs
@@ -139,9 +135,8 @@ abstract class LazyEExpressionArgsReader {
      * Reads a single parameter to a macro invocation.
      * @param parameter information about the parameter from the macro signature.
      * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
-     * @param isTrailing true if this parameter is the last one in the signature; otherwise, false (unused in binary).
      */
-    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, boolean isTrailing);
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence);
 
     /**
      * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
@@ -231,7 +226,7 @@ abstract class LazyEExpressionArgsReader {
         }
     }
 
-    private int collectAndFlattenComplexEExpression(int numberOfParameters, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, int markerPoolStartIndex) {
+    private int collectAndFlattenComplexEExpression(ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, int markerPoolStartIndex) {
         // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
         int macroBodyTapeIndex = 0;
         int numberOfVariables = macroBodyTape.getNumberOfVariables();
@@ -250,8 +245,7 @@ abstract class LazyEExpressionArgsReader {
                     int startIndexInTape = expressionTape.size();
                     readParameter(
                         signature.get(invocationOrdinal),
-                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                        invocationOrdinal == (numberOfParameters - 1)
+                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal)
                     );
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
                     marker.typeId = null;
@@ -264,8 +258,7 @@ abstract class LazyEExpressionArgsReader {
                     expressionTape = expressionTapeScratch;
                     readParameter(
                         signature.get(invocationOrdinal),
-                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                        invocationOrdinal == (numberOfParameters - 1)
+                        presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal)
                     );
                     expressionTape = expressionTapeOrdered;
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
@@ -293,7 +286,7 @@ abstract class LazyEExpressionArgsReader {
         return macroBodyTapeIndex;
     }
 
-    private int collectAndFlattenSimpleEExpression(int numberOfParameters, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+    private int collectAndFlattenSimpleEExpression(ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
         // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
         int macroBodyTapeIndex = 0;
         int numberOfVariables = macroBodyTape.getNumberOfVariables();
@@ -304,8 +297,7 @@ abstract class LazyEExpressionArgsReader {
             // variable in the signature. This means it can be copied into the tape without using scratch space.
             readParameter(
                 signature.get(i),
-                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
-                i == (numberOfParameters - 1)
+                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i)
             );
         }
         return macroBodyTapeIndex;
@@ -324,9 +316,9 @@ abstract class LazyEExpressionArgsReader {
                 return constantTape;
             }
         } else if (macro.isSimple()) {
-            macroBodyTapeIndex = collectAndFlattenSimpleEExpression(numberOfParameters, macroBodyTape, signature, presenceBitmap);
+            macroBodyTapeIndex = collectAndFlattenSimpleEExpression(macroBodyTape, signature, presenceBitmap);
         } else {
-            macroBodyTapeIndex = collectAndFlattenComplexEExpression(numberOfParameters, macroBodyTape, signature, presenceBitmap, markerPoolIndex + 1);
+            macroBodyTapeIndex = collectAndFlattenComplexEExpression(macroBodyTape, signature, presenceBitmap, markerPoolIndex + 1);
         }
         // Copy everything after the last parameter.
         expressionTape.copyFromRange(macroBodyTape, macroBodyTapeIndex, macroBodyTape.size());
@@ -341,8 +333,7 @@ abstract class LazyEExpressionArgsReader {
         for (int i = 0; i < numberOfParameters; i++) {
             readParameter(
                 signature.get(i),
-                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
-                i == (numberOfParameters - 1)
+                presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i)
             );
         }
         stepOutOfEExpression();
