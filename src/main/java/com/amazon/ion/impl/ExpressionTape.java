@@ -176,6 +176,8 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
+    public static final ExpressionTape EMPTY = new ExpressionTape(new Core(0));
+
     private Core core;
     private final IonReaderContinuableCoreBinary reader; // If null, then the values are materialized
     private int i = 0;

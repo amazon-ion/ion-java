@@ -45,21 +45,19 @@ class LazyMacroEvaluator : IonReader {
      * This state pertains to a single "session" of the macro evaluator, and is reset every time [initExpansion] is called.
      * For now, this includes managing the pool of [ExpansionInfo] and tracking the expansion step limit.
      */
-    internal class Session(
+    internal class Session( // TODO eliminate; move internals into LazyMacroEvaluator?
         /** Number of expansion steps at which the evaluation session should be aborted. */
         private val expansionLimit: Int = 1_000_000
     ) {
         /** Internal state for tracking the number of expansion steps. */
         private var numExpandedExpressions = 0
-        /** Pool of [ExpansionInfo] to minimize allocation and garbage collection. */
-        private val expanderPool: ArrayList<ExpansionInfo> = ArrayList(64)
-        private var expanderPoolIndex = 0
 
         val emptyExpansion: ExpansionInfo = ExpansionInfo(this)
-        var expressionTape: ExpressionTape? = null
         val sideEffects: ExpressionTape = ExpressionTape(null, 4)
-        var sideEffectExpander: ExpansionInfo? = null
-        var currentExpander: ExpansionInfo? = null
+        val sideEffectExpander: ExpansionInfo = ExpansionInfo(this) // TODO remove this; make currentExpander constant. Only swap in side effect tape for expressionTape. Change scalar getters to access expressionTape
+        val invocationExpander: ExpansionInfo = ExpansionInfo(this)
+        var currentExpander: ExpansionInfo = invocationExpander
+        var expressionTape: ExpressionTape = invocationExpander.tape
         var currentFieldName: SymbolToken? = null
         var currentAnnotations: List<SymbolToken>? = null
 
@@ -67,65 +65,47 @@ class LazyMacroEvaluator : IonReader {
 
         init {
             emptyExpansion.expansionKind = EMPTY
-            emptyExpansion.tape = null
-        }
-
-        /**
-         * Gets an [ExpansionInfo] from the pool, or allocates a new one if necessary. The returned ExpansionInfo is
-         * valid until [reset] is called.
-         */
-        private fun getExpansion(): ExpansionInfo {
-            val expansion: ExpansionInfo
-            if (expanderPoolIndex >= expanderPool.size) {
-                expansion = ExpansionInfo(this)
-                expanderPool.add(expansion)
-            } else {
-                expansion = expanderPool[expanderPoolIndex]
-            }
-            expanderPoolIndex++
-            return expansion
         }
 
         /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
-        fun getExpander(expansionKind: Byte, tape: ExpressionTape?): ExpansionInfo {
-            val expansion = getExpansion()
+        private fun initializeExpander(expansion: ExpansionInfo, expansionKind: Byte, tape: ExpressionTape) {
             expansion.expansionKind = expansionKind
             expansion.tape = tape
             expansion.additionalState = null
-            expansion.childExpansion = null
-            expansion.parentExpansion = null
+            expansion.expansionKindStack[0] = expansionKind
+            expansion.expansionKindStackTop = 1
+            expansion.expansionKindStackIndex = 1
             expansion.reachedEndOfExpression = false
-            currentExpander = expansion
-            return expansion
         }
 
         fun produceNext(): Byte {
+            currentExpander = invocationExpander
             while (true) {
-                expressionTape?.next() // TODO if Empty doesn't exist and CONTINUE_EXPANSION isn't used with it, then this could be tape!!
-                val next = when (currentExpander!!.expansionKind) {
+                expressionTape.next()
+                val next = when (currentExpander.expansionKind) {
                     UNINITIALIZED -> throw IllegalStateException("ExpansionInfo not initialized.")
                     EMPTY -> ExpressionType.END_OF_EXPANSION_ORDINAL
-                    STREAM -> handleStream(currentExpander!!)
-                    VARIABLE -> handleVariable(currentExpander!!)
-                    EXPR_GROUP -> handleStream(currentExpander!!)
-                    EXACTLY_ONE_VALUE_STREAM -> handleExactlyOneValueStream(currentExpander!!)
-                    IF_NONE -> handleIfNone(currentExpander!!)
-                    IF_SOME -> handleIfSome(currentExpander!!)
-                    IF_SINGLE -> handleIfSingle(currentExpander!!)
-                    IF_MULTI -> handleIfMulti(currentExpander!!)
-                    ANNOTATE -> handleAnnotate(currentExpander!!)
-                    MAKE_STRING -> handleMakeStringOrSymbol(IonType.STRING, currentExpander!!)
-                    MAKE_SYMBOL -> handleMakeStringOrSymbol(IonType.SYMBOL, currentExpander!!)
-                    MAKE_BLOB -> handleMakeBlob(currentExpander!!)
-                    MAKE_DECIMAL -> handleMakeDecimal(currentExpander!!)
-                    MAKE_TIMESTAMP -> handleMakeTimestamp(currentExpander!!)
-                    PRIVATE_MAKE_FIELD_NAME_AND_VALUE -> handlePrivateMakeFieldNameAndValue(currentExpander!!)
-                    PRIVATE_FLATTEN_STRUCT -> handleFlatten(currentExpander!!)
-                    FLATTEN -> handleFlatten(currentExpander!!)
-                    SUM -> handleSum(currentExpander!!)
-                    DELTA -> handleDelta(currentExpander!!)
-                    REPEAT -> handleRepeat(currentExpander!!)
-                    else -> throw IllegalStateException("Unknown expansion kind: ${currentExpander!!.expansionKind}")
+                    STREAM -> handleStream(currentExpander)
+                    VARIABLE -> handleVariable(currentExpander)
+                    EXPR_GROUP -> handleStream(currentExpander)
+                    EXACTLY_ONE_VALUE_STREAM -> handleExactlyOneValueStream(currentExpander)
+                    IF_NONE -> handleIfNone(currentExpander)
+                    IF_SOME -> handleIfSome(currentExpander)
+                    IF_SINGLE -> handleIfSingle(currentExpander)
+                    IF_MULTI -> handleIfMulti(currentExpander)
+                    ANNOTATE -> handleAnnotate(currentExpander)
+                    MAKE_STRING -> handleMakeStringOrSymbol(IonType.STRING, currentExpander)
+                    MAKE_SYMBOL -> handleMakeStringOrSymbol(IonType.SYMBOL, currentExpander)
+                    MAKE_BLOB -> handleMakeBlob(currentExpander)
+                    MAKE_DECIMAL -> handleMakeDecimal(currentExpander)
+                    MAKE_TIMESTAMP -> handleMakeTimestamp(currentExpander)
+                    PRIVATE_MAKE_FIELD_NAME_AND_VALUE -> handlePrivateMakeFieldNameAndValue(currentExpander)
+                    PRIVATE_FLATTEN_STRUCT -> handleFlatten(currentExpander)
+                    FLATTEN -> handleFlatten(currentExpander)
+                    SUM -> handleSum(currentExpander)
+                    DELTA -> handleDelta(currentExpander)
+                    REPEAT -> handleRepeat(currentExpander)
+                    else -> throw IllegalStateException("Unknown expansion kind: ${currentExpander.expansionKind}")
                 }
                 if (next == ExpressionType.CONTINUE_EXPANSION_ORDINAL) continue
                 // This the only place where we count the expansion steps.
@@ -149,11 +129,12 @@ class LazyMacroEvaluator : IonReader {
         }
 
         private fun handleVariable(thisExpansion: ExpansionInfo): Byte {
-            if (thisExpansion.reachedEndOfExpression) {
+            if (thisExpansion.reachedEndOfExpression) { // TODO  remove reachedEndOfExpression, just pop immediately from the expansion stack when this would be set to true?
                 return ExpressionType.END_OF_EXPANSION_ORDINAL
             }
+            // TODO visit the child. Currently this isn't correct (though it may end up in the right spot in some tests) if the variable is an expression group (the child)
             val expression = handleStream(thisExpansion)
-            if (thisExpansion.childExpansion == null) {
+            if (!thisExpansion.hasChild()) {
                 if (expression == ExpressionType.DATA_MODEL_SCALAR_ORDINAL) {
                     thisExpansion.reachedEndOfExpression = true
                 }
@@ -216,7 +197,7 @@ class LazyMacroEvaluator : IonReader {
                     else -> throw IonException("Invalid argument type for 'make_string': ${it.ionType()}")
                 }
             }
-            thisExpansion.tape!!.advanceToAfterEndEExpression(thisExpansion.session.eExpressionIndex)
+            thisExpansion.tape.advanceToAfterEndEExpression(thisExpansion.session.eExpressionIndex)
             thisExpansion.expansionKind = EMPTY
             thisExpansion.produceValueSideEffect(ionType, sb.toString())
             return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
@@ -289,42 +270,33 @@ class LazyMacroEvaluator : IonReader {
         }
 
         private fun handleSum(thisExpansion: ExpansionInfo): Byte {
-            thisExpansion.expansionKind = STREAM
             val a = thisExpansion.readExactlyOneArgument(0, ::asBigInteger)
             val b = thisExpansion.readExactlyOneArgument(1, ::asBigInteger)
-            thisExpansion.expansionKind = EMPTY
             thisExpansion.produceValueSideEffect(IonType.INT, a + b)
+            thisExpansion.finishChildExpansion() // Finishes the sum expansion
             return ExpressionType.DATA_MODEL_SCALAR_ORDINAL
         }
 
         private fun handleDelta(thisExpansion: ExpansionInfo): Byte {
-            var delegate = thisExpansion.childExpansion
+            val expansionIndex = thisExpansion.expansionKindStackIndex
             val runningTotal = thisExpansion.additionalState as? BigInteger ?: BigInteger.ZERO
-            if (delegate == null) {
+            if (!thisExpansion.visitChild()) {
                 thisExpansion.readArgument(0)
-                delegate = getExpander(
-                    expansionKind = VARIABLE,
-                    tape = expressionTape,
-                )
-                thisExpansion.childExpansion = delegate
-                delegate.parentExpansion = thisExpansion
+                thisExpansion.expandChild(VARIABLE)
             }
-            currentExpander = delegate
             val nextExpandedArg = produceNext()
+            thisExpansion.returnToExpansion(expansionIndex)
             when {
                 ExpressionType.isDataModelValue(nextExpandedArg) -> {
-                    val nextDelta = asBigInteger(delegate)
+                    val nextDelta = asBigInteger(thisExpansion)
                     val nextOutput = runningTotal + nextDelta
-                    delegate.produceValueSideEffect(IonType.INT, nextOutput)
-                    currentExpander!!.parentExpansion = thisExpansion
+                    thisExpansion.produceValueSideEffect(IonType.INT, nextOutput)
                     thisExpansion.additionalState = nextOutput
                     return nextExpandedArg
                 }
 
                 nextExpandedArg == ExpressionType.END_OF_EXPANSION_ORDINAL -> {
-                    delegate.close()
-                    thisExpansion.childExpansion = null
-                    currentExpander = thisExpansion
+                    thisExpansion.dropChildren(expansionIndex)
                     return ExpressionType.END_OF_EXPANSION_ORDINAL
                 }
 
@@ -348,7 +320,6 @@ class LazyMacroEvaluator : IonReader {
                 return ExpressionType.END_OF_EXPANSION_ORDINAL
             }
             val maybeNext = produceNext()
-            thisExpansion.childExpansion = null
             return when {
                 ExpressionType.isDataModelExpression(maybeNext) -> maybeNext
                 maybeNext == ExpressionType.END_OF_EXPANSION_ORDINAL -> ExpressionType.END_OF_EXPANSION_ORDINAL
@@ -364,26 +335,18 @@ class LazyMacroEvaluator : IonReader {
         }
 
         private fun handleFlatten(thisExpansion: ExpansionInfo): Byte {
+            // TODO this needs more testing; probably needs corrections.
             thisExpansion.expansionKind = STREAM
-            var argumentExpansion: ExpansionInfo? = thisExpansion.additionalState as ExpansionInfo?
-            if (argumentExpansion == null) {
-                argumentExpansion = thisExpansion.readArgument(0)
-                thisExpansion.additionalState = argumentExpansion
+            if (thisExpansion.additionalState == null) {
+                thisExpansion.readArgument(0)
+                thisExpansion.additionalState = 1
             }
-
-            val currentChildExpansion = thisExpansion.childExpansion
-            val next = currentChildExpansion?.session?.produceNext()
-            if (next == null) {
-                currentExpander = argumentExpansion
+            var next: Byte?
+            if (!thisExpansion.hasChild()) {
                 val nextSequence = produceNext()
-                currentExpander = thisExpansion
                 return when {
                     nextSequence == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL -> {
-                        thisExpansion.childExpansion = getExpander(
-                            expansionKind = STREAM,
-                            tape = expressionTape,
-                        )
-                        thisExpansion.childExpansion!!.parentExpansion = thisExpansion
+                        thisExpansion.expandChild(STREAM)
                         ExpressionType.CONTINUE_EXPANSION_ORDINAL
                     }
 
@@ -391,8 +354,9 @@ class LazyMacroEvaluator : IonReader {
                     ExpressionType.isDataModelExpression(nextSequence) -> throw IonException("invalid argument; flatten expects sequences")
                     else -> unreachable()
                 }
+            } else {
+                next = produceNext()
             }
-            currentExpander = thisExpansion
             return when {
                 ExpressionType.isDataModelExpression(next) -> next
                 next == ExpressionType.END_OF_EXPANSION_ORDINAL -> ExpressionType.END_OF_EXPANSION_ORDINAL
@@ -401,16 +365,19 @@ class LazyMacroEvaluator : IonReader {
         }
 
         private fun handleBranchIf(thisExpansion: ExpansionInfo, condition: (Int) -> Boolean): Byte {
+            val expansionIndex = thisExpansion.expansionKindStackIndex
             thisExpansion.readArgument(0)
-            thisExpansion.expansionKind = STREAM
+            thisExpansion.expansionKind = STREAM // TODO should not have to do this, but makes tests pass. Probably need to push a child expansion
             var n = 0
             while (n < 2) {
                 if (produceNext() == ExpressionType.END_OF_EXPANSION_ORDINAL) break
                 n++
             }
             val branch = if (condition(n)) 1 else 2
-            thisExpansion.tape!!.setNextAfterEndOfEExpression(thisExpansion.session.eExpressionIndex)
+            thisExpansion.tape.setNextAfterEndOfEExpression(thisExpansion.session.eExpressionIndex)
             thisExpansion.readArgument(branch)
+            thisExpansion.dropChildren(expansionIndex)
+            thisExpansion.finishChildExpansion() // This finishes the IfNone
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
@@ -433,21 +400,14 @@ class LazyMacroEvaluator : IonReader {
             expressionTape.prepareNext()
             expressionTape.next()
             expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
-            thisExpansion.childExpansion = getExpander(
-                expansionKind = macro.expansionKind,
-                tape = expressionTape,
-            )
-            thisExpansion.childExpansion!!.parentExpansion = thisExpansion
+            currentExpander.expandChild(macro.expansionKind)
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
         private fun expressionGroup(expressionTape: ExpressionTape, thisExpansion: ExpansionInfo): Byte {
             expressionTape.prepareNext()
-            thisExpansion.childExpansion = getExpander(
-                expansionKind = EXPR_GROUP,
-                tape = expressionTape,
-            )
-            thisExpansion.childExpansion!!.parentExpansion = thisExpansion
+            // TODO short-circuit if empty?
+            currentExpander.expandChild(EXPR_GROUP)
             return ExpressionType.CONTINUE_EXPANSION_ORDINAL
         }
 
@@ -474,7 +434,7 @@ class LazyMacroEvaluator : IonReader {
         }
 
         private fun handleStream(thisExpansion: ExpansionInfo): Byte {
-            val expressionTape = thisExpansion.tape!!
+            val expressionTape = thisExpansion.tape
             if (expressionTape.isExhausted) {
                 return ExpressionType.END_OF_EXPANSION_ORDINAL
             }
@@ -493,43 +453,45 @@ class LazyMacroEvaluator : IonReader {
             }
         }
 
+        // TODO remove all the as* methods
         private fun asLong(expansion: ExpansionInfo): Long {
-            return expansion.tape!!.readLong()
+            return expansion.tape.readLong()
         }
 
         private fun asBigInteger(expansion: ExpansionInfo): BigInteger {
-            return expansion.tape!!.readBigInteger()
+            return expansion.tape.readBigInteger()
         }
 
         private fun asText(expansion: ExpansionInfo): String {
-            return expansion.tape!!.readText()
+            return expansion.tape.readText()
         }
 
         private fun asSymbol(expansion: ExpansionInfo): SymbolToken {
-            return expansion.tape!!.readSymbol()
+            return expansion.tape.readSymbol()
         }
 
         private fun asBigDecimal(expansion: ExpansionInfo): BigDecimal {
-            return expansion.tape!!.readBigDecimal()
+            return expansion.tape.readBigDecimal()
         }
 
         private fun asLob(expansion: ExpansionInfo): ByteArray {
-            return expansion.tape!!.readLob()
+            return expansion.tape.readLob()
         }
 
         fun reset(fieldName: SymbolToken?, arguments: ExpressionTape) {
             numExpandedExpressions = 0
-            expanderPoolIndex = 0
+            //expanderPoolIndex = 0
             expressionTape = arguments
-            sideEffectExpander = getExpander(EMPTY, sideEffects)
-            sideEffectExpander!!.keepAlive = true
-            currentExpander = getExpander(STREAM, expressionTape)
+            initializeExpander(sideEffectExpander, EMPTY, sideEffects)
+            sideEffectExpander.keepAlive = true // TODO remove?
+            initializeExpander(invocationExpander, STREAM, expressionTape)
             currentFieldName = fieldName
             currentAnnotations = null
             eExpressionIndex = -1;
         }
     }
 
+    // TODO possible to just access the parent reader's container stack rather than reproducing it here?
     /**
      * A container in the macro evaluator's [containerStack].
      */
@@ -554,14 +516,14 @@ class LazyMacroEvaluator : IonReader {
      *       Alternately, consider ExpansionOperator to reflect the fact that these are
      *       like operators in an expression tree.
      */
-    internal class ExpansionInfo(@JvmField val session: Session) {
+    internal class ExpansionInfo(@JvmField val session: Session) { // TODO eliminate; move to upper level?
 
         /** The expansion kind as a byte constant. */
         @JvmField var expansionKind: Byte = UNINITIALIZED
         /**
          * The evaluation [Environment]—i.e. variable bindings.
          */
-        @JvmField var tape: ExpressionTape? = null
+        @JvmField var tape: ExpressionTape = ExpressionTape.EMPTY
 
         @JvmField var reachedEndOfExpression: Boolean = false
 
@@ -572,28 +534,57 @@ class LazyMacroEvaluator : IonReader {
         var additionalState: Any? = null
 
         @JvmField
-        var keepAlive: Boolean = false
+        var keepAlive: Boolean = false // TODO no longer needed?
 
-        // TODO remove child and parent expansion?
+        @JvmField var expansionKindStack: ByteArray = ByteArray(16)
+        @JvmField var expansionKindStackTop: Int = 0 // The index where the next child expansion would be stored
+        @JvmField var expansionKindStackIndex: Int = 0 // The index after the expansion currently being evaluated
 
-        /**
-         * Additional state in the form of a child [ExpansionInfo].
-         */
-        var childExpansion: ExpansionInfo? = null
-            // TODO: if childExpansion == this, it will cause an infinite loop or stack overflow somewhere.
-            // In practice, it should never happen, so we may wish to remove the custom setter to avoid any performance impact.
-            set(value) {
-                check(value != this)
-                field = value
+        fun expandChild(expansionKind: Byte) {
+            if (expansionKindStackTop == expansionKindStack.size) {
+                expansionKindStack = expansionKindStack.copyOf(expansionKindStack.size * 2)
             }
+            expansionKindStack[expansionKindStackTop++] = expansionKind //this.expansionKind
+            expansionKindStackIndex++
+            this.expansionKind = expansionKind
+        }
 
-        var parentExpansion: ExpansionInfo? = null
+        fun hasChild(): Boolean {
+            return expansionKindStackIndex < expansionKindStackTop
+        }
+
+        fun visitChild(): Boolean {
+            if (expansionKindStackIndex < expansionKindStackTop) {
+                expansionKind = expansionKindStack[expansionKindStackIndex++]
+                return true
+            }
+            return false
+        }
+
+        fun dropChildren(index: Int) {
+            expansionKindStackIndex = index
+            expansionKindStackTop = index
+            expansionKind = expansionKindStack[index - 1]
+        }
+
+        fun returnToExpansion(index: Int) {
+            expansionKindStackIndex = index
+            expansionKind = expansionKindStack[index - 1]
+        }
+
+        fun finishChildExpansion() {
+            if (expansionKindStackTop == 1) {
+                return
+            }
+            this.expansionKind = expansionKindStack[--expansionKindStackTop - 1]
+            expansionKindStackIndex = Math.min(expansionKindStackIndex, expansionKindStackTop)
+        }
 
         /**
          * Returns an expansion for the given variable.
          */
         fun readArgument(variableRef: Int): ExpansionInfo {
-            tape!!.seekToArgument(session.eExpressionIndex, variableRef)
+            tape.seekToArgument(session.eExpressionIndex, variableRef)
                 ?: return session.emptyExpansion // Argument was elided.
             return this
         }
@@ -603,24 +594,23 @@ class LazyMacroEvaluator : IonReader {
             sideEffectTape.clear()
             sideEffectTape.addScalar(type, value)
             sideEffectTape.rewindTo(0)
-            // The first child expansion is the expression group; add another child to that.
-            childExpansion = session.sideEffectExpander
-            childExpansion!!.parentExpansion = this
-            session.currentExpander = childExpansion
+            session.currentExpander = session.sideEffectExpander
         }
 
         /**
          * Performs the given [action] for each value produced by the expansion of [variableRef].
          */
         inline fun forEach(variableRef: Int, action: (ExpressionTape) -> Unit) {
+            val expansionIndex = session.currentExpander.expansionKindStackIndex
             val variableExpansion = readArgument(variableRef)
             while (true) {
                 val next = session.produceNext()
                 when {
-                    next == ExpressionType.END_OF_EXPANSION_ORDINAL -> return
-                    ExpressionType.isDataModelExpression(next) -> action(variableExpansion.tape!!)
+                    next == ExpressionType.END_OF_EXPANSION_ORDINAL -> break
+                    ExpressionType.isDataModelExpression(next) -> action(variableExpansion.tape)
                 }
             }
+            session.currentExpander.dropChildren(expansionIndex)
         }
 
         /**
@@ -648,20 +638,18 @@ class LazyMacroEvaluator : IonReader {
             variableRef: Int,
             converter: (ExpansionInfo) -> T
         ): T? {
+            val expansionIndex = session.currentExpander.expansionKindStackIndex
             readArgument(variableRef)
             // TODO possible to detect ahead of time whether this argument can return more than one value? It can't
             //  unless it's an invocation of certain system macros or it's an expression group
-            val argExpansion = session.getExpander(
-                expansionKind = VARIABLE,
-                tape = session.expressionTape
-            )
+            session.currentExpander.expandChild(VARIABLE)
             var argValue: T? = null
             while (true) {
-                val it = argExpansion.session.produceNext()
+                val it = session.produceNext()
                 when {
                     ExpressionType.isDataModelValue(it) -> {
                         if (argValue == null) {
-                            argValue = converter(argExpansion)
+                            argValue = converter(session.currentExpander)
                         } else {
                             throw IonException("invalid argument; too many values")
                         }
@@ -671,8 +659,8 @@ class LazyMacroEvaluator : IonReader {
                     it == ExpressionType.FIELD_NAME_ORDINAL -> unreachable("Unreachable without stepping into a container")
                 }
             }
-            argExpansion.close()
-            session.currentExpander = this
+            session.currentExpander.dropChildren(expansionIndex)
+            session.currentExpander.reachedEndOfExpression = false
             return argValue
         }
 
@@ -695,9 +683,8 @@ class LazyMacroEvaluator : IonReader {
                 expansionKind = UNINITIALIZED
                 additionalState?.let { if (it is ExpansionInfo) it.close() }
                 additionalState = null
-                childExpansion?.close()
-                childExpansion = null
-                parentExpansion = null
+                expansionKindStackTop = 0
+                expansionKindStackIndex = 0
                 reachedEndOfExpression = false
             }
         }
@@ -706,7 +693,6 @@ class LazyMacroEvaluator : IonReader {
         override fun toString() = """
         |ExpansionInfo(
         |    expansionKind: $expansionKind,
-        |    child: ${childExpansion?.expansionKind}
         |    additionalState: $additionalState,
         |)
         """.trimMargin()
@@ -731,14 +717,10 @@ class LazyMacroEvaluator : IonReader {
         while (currentValueType == null) {
             currentExpr = session.produceNext()
             when {
-                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander!!.tape!!.ionType()
+                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander.tape.ionType()
                 currentExpr == ExpressionType.END_OF_EXPANSION_ORDINAL -> { // TODO should this go in produceNext?
-                    val currentExpander = session.currentExpander!!
-                    if (currentExpander.parentExpansion != null) {
-                        session.currentExpander = currentExpander.parentExpansion
-                        if (session.currentExpander!!.expansionKind != DELTA) {
-                            session.currentExpander!!.childExpansion = null // TODO temporary. Fix Delta so this is not necessary.
-                        }
+                    if (session.currentExpander.expansionKindStackTop > 1) {
+                        session.currentExpander.finishChildExpansion()
                         continue
                     }
                     if (containerStack.peek().type == Type.TopLevel) {
@@ -767,7 +749,7 @@ class LazyMacroEvaluator : IonReader {
         if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
         val popped = containerStack.pop()
         val currentContainer = containerStack.peek()
-        session.expressionTape!!.advanceToAfterEndContainer()
+        session.expressionTape.advanceToAfterEndContainer()
         popped.close()
         session.currentFieldName = currentContainer.currentFieldName
         currentValueType = null // Must call `next()` to get the next value
@@ -855,16 +837,16 @@ class LazyMacroEvaluator : IonReader {
     override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
         TODO("Not yet implemented")
     }
-    override fun longValue(): Long  = session.currentExpander!!.tape!!.readLong()
-    override fun bigIntegerValue(): BigInteger = session.currentExpander!!.tape!!.readBigInteger()
-    override fun getIntegerSize(): IntegerSize = session.currentExpander!!.tape!!.readIntegerSize()
-    override fun stringValue(): String = session.currentExpander!!.tape!!.readText()
-    override fun symbolValue(): SymbolToken = session.currentExpander!!.tape!!.readSymbol()
-    override fun bigDecimalValue(): BigDecimal = session.currentExpander!!.tape!!.readBigDecimal()
-    override fun byteSize(): Int = session.currentExpander!!.tape!!.lobSize()
-    override fun newBytes(): ByteArray = session.currentExpander!!.tape!!.readLob().copyOf()
-    override fun doubleValue(): Double = session.currentExpander!!.tape!!.readFloat()
-    override fun timestampValue(): Timestamp = session.currentExpander!!.tape!!.readTimestamp()
-    override fun isNullValue(): Boolean = session.currentExpander!!.tape!!.isNullValue
-    override fun booleanValue(): Boolean = session.currentExpander!!.tape!!.readBoolean()
+    override fun longValue(): Long  = session.currentExpander.tape.readLong()
+    override fun bigIntegerValue(): BigInteger = session.currentExpander.tape.readBigInteger()
+    override fun getIntegerSize(): IntegerSize = session.currentExpander.tape.readIntegerSize()
+    override fun stringValue(): String = session.currentExpander.tape.readText()
+    override fun symbolValue(): SymbolToken = session.currentExpander.tape.readSymbol()
+    override fun bigDecimalValue(): BigDecimal = session.currentExpander.tape.readBigDecimal()
+    override fun byteSize(): Int = session.currentExpander.tape.lobSize()
+    override fun newBytes(): ByteArray = session.currentExpander.tape.readLob().copyOf()
+    override fun doubleValue(): Double = session.currentExpander.tape.readFloat()
+    override fun timestampValue(): Timestamp = session.currentExpander.tape.readTimestamp()
+    override fun isNullValue(): Boolean = session.currentExpander.tape.isNullValue
+    override fun booleanValue(): Boolean = session.currentExpander.tape.readBoolean()
 }
