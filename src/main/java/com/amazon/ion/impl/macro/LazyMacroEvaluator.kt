@@ -489,12 +489,6 @@ class LazyMacroEvaluator : IonReader {
         }
     }
 
-    // TODO possible to just access the parent reader's container stack rather than reproducing it here?
-    /**
-     * A container in the macro evaluator's [containerStack].
-     */
-    private data class ContainerInfo(var container: IonType? = null)
-
     /**
      * Represents a frame in the expansion stack for a particular container.
      *
@@ -668,7 +662,8 @@ class LazyMacroEvaluator : IonReader {
     }
 
     private val session = Session(expansionLimit = 1_000_000)
-    private val containerStack = _Private_RecyclingStack(8) { ContainerInfo() }
+    private val containerStack = Array<IonType?>(8) { null }
+    private var depth = 0
     private var currentExpr: Byte? = null
     private var currentValueType: IonType? = null
 
@@ -710,8 +705,8 @@ class LazyMacroEvaluator : IonReader {
      */
     override fun stepOut() {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
-        if (containerStack.size() <= 0) throw IonException("Nothing to step out of.")
-        containerStack.pop()
+        if (depth <= 0) throw IonException("Nothing to step out of.")
+        depth--
         session.expressionTape.advanceToAfterEndContainer()
         session.currentFieldName = null
         currentValueType = null // Must call `next()` to get the next value
@@ -725,8 +720,10 @@ class LazyMacroEvaluator : IonReader {
     override fun stepIn() {
         val expressionType = requireNotNull(currentExpr) { "Not positioned on a value" }
         if (expressionType == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL) {
-            val ci = containerStack.push { _ -> }
-            ci.container = currentValueType
+            if (++depth >= containerStack.size) {
+                containerStack.copyOf(containerStack.size * 2)
+            }
+            containerStack[depth] = currentValueType
             currentExpr = null
             session.currentFieldName = null
             currentValueType = null
@@ -738,7 +735,7 @@ class LazyMacroEvaluator : IonReader {
 
     override fun close() { /* Nothing to do (yet) */ }
     override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing? = null
-    override fun getDepth(): Int = containerStack.size()
+    override fun getDepth(): Int = depth
     override fun getSymbolTable(): SymbolTable? = null
 
     override fun getType(): IonType? = currentValueType
@@ -776,7 +773,7 @@ class LazyMacroEvaluator : IonReader {
         }
     }
 
-    override fun isInStruct(): Boolean = containerStack.peek()?.container == IonType.STRUCT
+    override fun isInStruct(): Boolean = containerStack[depth] == IonType.STRUCT
 
     override fun getFieldId(): Int = session.currentFieldName?.sid ?: 0
     override fun getFieldName(): String? = session.currentFieldName?.text
