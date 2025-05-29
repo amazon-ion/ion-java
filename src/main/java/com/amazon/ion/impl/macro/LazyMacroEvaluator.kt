@@ -51,34 +51,16 @@ class LazyMacroEvaluator : IonReader {
         /** Internal state for tracking the number of expansion steps. */
         private var numExpandedExpressions = 0
 
-        val emptyExpansion: ExpansionInfo = ExpansionInfo(this)
         val sideEffects: ExpressionTape = ExpressionTape(null, 4)
-        val sideEffectExpander: ExpansionInfo = ExpansionInfo(this) // TODO remove this; make currentExpander constant. Only swap in side effect tape for expressionTape. Change scalar getters to access expressionTape
-        val invocationExpander: ExpansionInfo = ExpansionInfo(this)
-        var currentExpander: ExpansionInfo = invocationExpander
-        var expressionTape: ExpressionTape = invocationExpander.tape
+        var currentExpander: ExpansionInfo = ExpansionInfo(this)
+        var expressionTape: ExpressionTape = currentExpander.tape
         var currentFieldName: SymbolToken? = null
         var currentAnnotations: List<SymbolToken>? = null
 
         var eExpressionIndex = -1;
 
-        init {
-            emptyExpansion.expansionKind = EMPTY
-        }
-
-        /** Gets an [ExpansionInfo] from the pool (or allocates a new one if necessary), initializing it with the provided values. */
-        private fun initializeExpander(expansion: ExpansionInfo, expansionKind: Byte, tape: ExpressionTape) {
-            expansion.expansionKind = expansionKind
-            expansion.tape = tape
-            expansion.additionalState = null
-            expansion.expansionKindStack[0] = expansionKind
-            expansion.expansionKindStackTop = 1
-            expansion.expansionKindStackIndex = 1
-            expansion.reachedEndOfExpression = false
-        }
-
         fun produceNext(): Byte {
-            currentExpander = invocationExpander
+            expressionTape = currentExpander.tape
             while (true) {
                 expressionTape.next()
                 val next = when (currentExpander.expansionKind) {
@@ -479,10 +461,14 @@ class LazyMacroEvaluator : IonReader {
 
         fun reset(fieldName: SymbolToken?, arguments: ExpressionTape) {
             numExpandedExpressions = 0
-            //expanderPoolIndex = 0
             expressionTape = arguments
-            initializeExpander(sideEffectExpander, EMPTY, sideEffects)
-            initializeExpander(invocationExpander, STREAM, expressionTape)
+            currentExpander.expansionKind = STREAM
+            currentExpander.tape = expressionTape
+            currentExpander.additionalState = null
+            currentExpander.expansionKindStack[0] = STREAM
+            currentExpander.expansionKindStackTop = 1
+            currentExpander.expansionKindStackIndex = 1
+            currentExpander.reachedEndOfExpression = false
             currentFieldName = fieldName
             currentAnnotations = null
             eExpressionIndex = -1;
@@ -522,7 +508,7 @@ class LazyMacroEvaluator : IonReader {
             if (expansionKindStackTop == expansionKindStack.size) {
                 expansionKindStack = expansionKindStack.copyOf(expansionKindStack.size * 2)
             }
-            expansionKindStack[expansionKindStackTop++] = expansionKind //this.expansionKind
+            expansionKindStack[expansionKindStackTop++] = expansionKind
             expansionKindStackIndex++
             this.expansionKind = expansionKind
         }
@@ -561,10 +547,8 @@ class LazyMacroEvaluator : IonReader {
         /**
          * Returns an expansion for the given variable.
          */
-        fun readArgument(variableRef: Int): ExpansionInfo {
+        fun readArgument(variableRef: Int) {
             tape.seekToArgument(session.eExpressionIndex, variableRef)
-                ?: return session.emptyExpansion // Argument was elided.
-            return this
         }
 
         fun produceValueSideEffect(type: IonType, value: Any) {
@@ -572,7 +556,7 @@ class LazyMacroEvaluator : IonReader {
             sideEffectTape.clear()
             sideEffectTape.addScalar(type, value)
             sideEffectTape.rewindTo(0)
-            session.currentExpander = session.sideEffectExpander
+            session.expressionTape = sideEffectTape
         }
 
         /**
@@ -580,12 +564,12 @@ class LazyMacroEvaluator : IonReader {
          */
         inline fun forEach(variableRef: Int, action: (ExpressionTape) -> Unit) {
             val expansionIndex = session.currentExpander.expansionKindStackIndex
-            val variableExpansion = readArgument(variableRef)
+            readArgument(variableRef)
             while (true) {
                 val next = session.produceNext()
                 when {
                     next == ExpressionType.END_OF_EXPANSION_ORDINAL -> break
-                    ExpressionType.isDataModelExpression(next) -> action(variableExpansion.tape)
+                    ExpressionType.isDataModelExpression(next) -> action(tape)
                 }
             }
             session.currentExpander.dropChildren(expansionIndex)
@@ -596,10 +580,10 @@ class LazyMacroEvaluator : IonReader {
          * of the results.
          */
         inline fun <T> map(variableRef: Int, transform: (Byte) -> T): List<T> {
-            val variableExpansion = readArgument(variableRef)
+            readArgument(variableRef)
             val result = mutableListOf<T>()
             while (true) {
-                val next = variableExpansion.session.produceNext()
+                val next = session.produceNext()
                 when {
                     next == ExpressionType.END_OF_EXPANSION_ORDINAL -> return result
                     ExpressionType.isDataModelExpression(next) -> result.add(transform(next))
@@ -679,7 +663,7 @@ class LazyMacroEvaluator : IonReader {
         while (currentValueType == null) {
             currentExpr = session.produceNext()
             when {
-                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.currentExpander.tape.ionType()
+                ExpressionType.isDataModelValue(currentExpr!!) -> currentValueType = session.expressionTape.ionType()
                 currentExpr == ExpressionType.END_OF_EXPANSION_ORDINAL -> { // TODO should this go in produceNext?
                     if (session.currentExpander.expansionKindStackTop > 1) {
                         session.currentExpander.finishChildExpansion()
@@ -787,16 +771,16 @@ class LazyMacroEvaluator : IonReader {
     override fun getBytes(buffer: ByteArray?, offset: Int, len: Int): Int {
         TODO("Not yet implemented")
     }
-    override fun longValue(): Long  = session.currentExpander.tape.readLong()
-    override fun bigIntegerValue(): BigInteger = session.currentExpander.tape.readBigInteger()
-    override fun getIntegerSize(): IntegerSize = session.currentExpander.tape.readIntegerSize()
-    override fun stringValue(): String = session.currentExpander.tape.readText()
-    override fun symbolValue(): SymbolToken = session.currentExpander.tape.readSymbol()
-    override fun bigDecimalValue(): BigDecimal = session.currentExpander.tape.readBigDecimal()
-    override fun byteSize(): Int = session.currentExpander.tape.lobSize()
-    override fun newBytes(): ByteArray = session.currentExpander.tape.readLob().copyOf()
-    override fun doubleValue(): Double = session.currentExpander.tape.readFloat()
-    override fun timestampValue(): Timestamp = session.currentExpander.tape.readTimestamp()
-    override fun isNullValue(): Boolean = session.currentExpander.tape.isNullValue
-    override fun booleanValue(): Boolean = session.currentExpander.tape.readBoolean()
+    override fun longValue(): Long  = session.expressionTape.readLong()
+    override fun bigIntegerValue(): BigInteger = session.expressionTape.readBigInteger()
+    override fun getIntegerSize(): IntegerSize = session.expressionTape.readIntegerSize()
+    override fun stringValue(): String = session.expressionTape.readText()
+    override fun symbolValue(): SymbolToken = session.expressionTape.readSymbol()
+    override fun bigDecimalValue(): BigDecimal = session.expressionTape.readBigDecimal()
+    override fun byteSize(): Int = session.expressionTape.lobSize()
+    override fun newBytes(): ByteArray = session.expressionTape.readLob().copyOf()
+    override fun doubleValue(): Double = session.expressionTape.readFloat()
+    override fun timestampValue(): Timestamp = session.expressionTape.readTimestamp()
+    override fun isNullValue(): Boolean = session.expressionTape.isNullValue
+    override fun booleanValue(): Boolean = session.expressionTape.readBoolean()
 }
