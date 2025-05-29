@@ -483,7 +483,6 @@ class LazyMacroEvaluator : IonReader {
             //expanderPoolIndex = 0
             expressionTape = arguments
             initializeExpander(sideEffectExpander, EMPTY, sideEffects)
-            sideEffectExpander.keepAlive = true // TODO remove?
             initializeExpander(invocationExpander, STREAM, expressionTape)
             currentFieldName = fieldName
             currentAnnotations = null
@@ -532,9 +531,6 @@ class LazyMacroEvaluator : IonReader {
          */
         @JvmField
         var additionalState: Any? = null
-
-        @JvmField
-        var keepAlive: Boolean = false // TODO no longer needed?
 
         @JvmField var expansionKindStack: ByteArray = ByteArray(16)
         @JvmField var expansionKindStackTop: Int = 0 // The index where the next child expansion would be stored
@@ -672,21 +668,6 @@ class LazyMacroEvaluator : IonReader {
         inline fun <T> readExactlyOneArgument(variableRef: Int, converter: (ExpansionInfo) -> T): T {
             return readZeroOrOneArgument(variableRef, converter)
                 ?: throw IonException("invalid argument; no value when one is expected")
-        }
-
-        /**
-         * Returns this [ExpansionInfo] to the expander pool, recursively closing [childExpansion]s in the process.
-         * Could also be thought of as a `free` function.
-         */
-        fun close() {
-            if (!keepAlive) {
-                expansionKind = UNINITIALIZED
-                additionalState?.let { if (it is ExpansionInfo) it.close() }
-                additionalState = null
-                expansionKindStackTop = 0
-                expansionKindStackIndex = 0
-                reachedEndOfExpression = false
-            }
         }
 
         // TODO
