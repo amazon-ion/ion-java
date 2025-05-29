@@ -5,7 +5,6 @@ import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.ExpansionKinds.*
 import com.amazon.ion.impl.macro.Expression.*
 import com.amazon.ion.impl.macro.LazyMacroEvaluator.*
-import com.amazon.ion.impl.macro.LazyMacroEvaluator.ContainerInfo.*
 import com.amazon.ion.util.*
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
@@ -494,18 +493,7 @@ class LazyMacroEvaluator : IonReader {
     /**
      * A container in the macro evaluator's [containerStack].
      */
-    private data class ContainerInfo(var type: Type = Type.Uninitialized) {
-        enum class Type { TopLevel, List, Sexp, Struct, Uninitialized }
-
-        fun close() {
-            currentFieldName = null
-            container = null
-            type = Type.Uninitialized
-        }
-
-        @JvmField var currentFieldName: SymbolToken? = null
-        @JvmField var container: IonType? = null
-    }
+    private data class ContainerInfo(var container: IonType? = null)
 
     /**
      * Represents a frame in the expansion stack for a particular container.
@@ -689,8 +677,6 @@ class LazyMacroEvaluator : IonReader {
      */
     fun initExpansion(fieldName: SymbolToken?, encodingExpressions: ExpressionTape) {
         session.reset(fieldName, encodingExpressions)
-        val ci = containerStack.push { _ -> }
-        ci.type = ContainerInfo.Type.TopLevel
     }
 
     override fun next(): IonType? {
@@ -703,9 +689,6 @@ class LazyMacroEvaluator : IonReader {
                     if (session.currentExpander.expansionKindStackTop > 1) {
                         session.currentExpander.finishChildExpansion()
                         continue
-                    }
-                    if (containerStack.peek().type == Type.TopLevel) {
-                        containerStack.pop().close()
                     }
                     session.currentFieldName = null
                     session.currentAnnotations = null
@@ -727,12 +710,10 @@ class LazyMacroEvaluator : IonReader {
      */
     override fun stepOut() {
         // TODO: We should be able to step out of a "TopLevel" container and/or we need some way to close the evaluation early.
-        if (containerStack.size() <= 1) throw IonException("Nothing to step out of.")
-        val popped = containerStack.pop()
-        val currentContainer = containerStack.peek()
+        if (containerStack.size() <= 0) throw IonException("Nothing to step out of.")
+        containerStack.pop()
         session.expressionTape.advanceToAfterEndContainer()
-        popped.close()
-        session.currentFieldName = currentContainer.currentFieldName
+        session.currentFieldName = null
         currentValueType = null // Must call `next()` to get the next value
         session.currentAnnotations = null
     }
@@ -744,17 +725,8 @@ class LazyMacroEvaluator : IonReader {
     override fun stepIn() {
         val expressionType = requireNotNull(currentExpr) { "Not positioned on a value" }
         if (expressionType == ExpressionType.DATA_MODEL_CONTAINER_ORDINAL) {
-            val currentContainer = containerStack.peek()
-            currentContainer.currentFieldName = session.currentFieldName
             val ci = containerStack.push { _ -> }
             ci.container = currentValueType
-            ci.type = when (currentValueType) {
-                IonType.LIST -> ContainerInfo.Type.List
-                IonType.SEXP -> ContainerInfo.Type.Sexp
-                IonType.STRUCT -> ContainerInfo.Type.Struct
-                else -> unreachable()
-            }
-            ci.currentFieldName = null
             currentExpr = null
             session.currentFieldName = null
             currentValueType = null
@@ -766,7 +738,7 @@ class LazyMacroEvaluator : IonReader {
 
     override fun close() { /* Nothing to do (yet) */ }
     override fun <T : Any?> asFacet(facetType: Class<T>?): Nothing? = null
-    override fun getDepth(): Int = containerStack.size() - 1 // Note: the top-level pseudo-container is included in the stack.
+    override fun getDepth(): Int = containerStack.size()
     override fun getSymbolTable(): SymbolTable? = null
 
     override fun getType(): IonType? = currentValueType
