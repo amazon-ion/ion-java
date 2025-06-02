@@ -28,7 +28,6 @@ import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_ORDINAL;
-import static com.amazon.ion.impl.ExpressionType.FIELD_NAME_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 
 public class ExpressionTape { // TODO make internal
@@ -41,6 +40,7 @@ public class ExpressionTape { // TODO make internal
         int end = -1;
         int containerStart = -1;
         int containerEnd = -1;
+        SymbolToken fieldName = null;
     }
 
     public static class Core {
@@ -102,7 +102,6 @@ public class ExpressionTape { // TODO make internal
             int i = startIndex;
             loop: while (i < size) {
                 switch (elements[i].type) {
-                    case FIELD_NAME_ORDINAL:
                     case ANNOTATION_ORDINAL:
                     case DATA_MODEL_SCALAR_ORDINAL:
                     case VARIABLE_ORDINAL:
@@ -141,6 +140,10 @@ public class ExpressionTape { // TODO make internal
             int endIndex = variableStarts[variableIndex];
             other.copyFromRange(this, startIndex, endIndex);
             return endIndex + 1;
+        }
+
+        public SymbolToken fieldNameForVariable(int variableIndex) {
+            return elements[variableStarts[variableIndex]].fieldName;
         }
 
         public int getNumberOfVariables() {
@@ -269,11 +272,11 @@ public class ExpressionTape { // TODO make internal
             case EXPRESSION_GROUP_END_ORDINAL:
                 decreaseDepth();
                 break;
-            default: break; // TODO field names ignored?
+            default: break;
         }
     }
 
-    void add(Object context, byte type, int start, int end) {
+    void add(Object context, byte type, int start, int end, SymbolToken fieldName) {
         if (i >= core.elements.length) {
             core.grow();
         }
@@ -287,12 +290,14 @@ public class ExpressionTape { // TODO make internal
         element.value = null;
         element.start = start;
         element.end = end;
+        element.fieldName = fieldName;
         setExpressionStart(type);
         i++;
         core.size++;
     }
 
-    private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart) {
+    private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart, SymbolToken fieldName) {
+        int startIndex = core.size;
         for (int i = sourceStart; i < sourceEnd; i++) {
             Element sourceElement = source.elements[i];
             if (sourceElement.type == ExpressionType.VARIABLE_ORDINAL) {
@@ -310,17 +315,18 @@ public class ExpressionTape { // TODO make internal
                         core.size--;
                         this.i--;
                         int expressionEnd = source.findEndOfExpression(++i);
-                        inlineExpression(source, i, expressionEnd, null, -1);
+                        // Note: keep the existing field name.
+                        inlineExpression(source, i, expressionEnd, null, -1, fieldName());
                         i = sourceEnd;
                     } else {
                         // TODO does this ever occur in a position where it could simply be elided?
-                        add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null);
-                        add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, null);
+                        add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null, sourceElement.fieldName);
+                        add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, null, null);
                     }
                 } else {
                     int expressionStart = arguments.expressionStarts[eExpressionIndex][variableIndex];
                     int expressionEnd = arguments.findEndOfExpression(expressionStart);
-                    inlineExpression(arguments, expressionStart, expressionEnd, null, -1);
+                    inlineExpression(arguments, expressionStart, expressionEnd, null, -1, sourceElement.fieldName);
                 }
             } else if (sourceElement.type == ExpressionType.E_EXPRESSION_ORDINAL) {
                 // Recursive inlining
@@ -338,29 +344,32 @@ public class ExpressionTape { // TODO make internal
                     }
                 }
                 if (expressionSource != null) {
-                    inlineExpression(expressionSource, 0, expressionSource.size, source, i);
+                    inlineExpression(expressionSource, 0, expressionSource.size, source, i, sourceElement.fieldName);
                     i = source.findEndOfExpression(i) - 1; // TODO this passed with and without -1; missing coverage?
                 } else {
                     // This invocation cannot be inlined.
                     // TODO de-duplicate with the branch below
                     int expressionEnd = source.findEndOfExpression(i);
                     copyFrom(source, i);
-                    inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
+                    inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart, null);
                     i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
                 }
             } else if (ExpressionType.isContainerStart(sourceElement.type)) {
                 int expressionEnd = source.findEndOfExpression(i);
                 copyFrom(source, i);
-                inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart);
+                inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart, null);
                 i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
             } else {
-                // Scalar, field name, or container end
+                // Scalar or container end
                 copyFrom(source, i);
             }
         }
+        if (fieldName != null) {
+            setFieldNameAt(startIndex, fieldName);
+        }
     }
 
-    private void add(Object context, byte type, Object value) {
+    private void add(Object context, byte type, Object value, SymbolToken fieldName) {
         if (i >= core.elements.length) {
             core.grow();
         }
@@ -374,6 +383,7 @@ public class ExpressionTape { // TODO make internal
         element.value = value;
         element.start = -1;
         element.end = -1;
+        element.fieldName = fieldName;
         setExpressionStart(type);
         i++;
         core.size++;
@@ -391,6 +401,7 @@ public class ExpressionTape { // TODO make internal
         element.value = otherElement.value;
         element.start = otherElement.start;
         element.end = otherElement.end;
+        element.fieldName = otherElement.fieldName;
         setExpressionStart(element.type);
     }
 
@@ -416,8 +427,8 @@ public class ExpressionTape { // TODO make internal
         core.size++;
     }
 
-    public void addScalar(IonType type, Object value) {
-        add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, value);
+    public void addScalar(IonType type, Object value, SymbolToken fieldName) {
+        add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, value, fieldName);
     }
 
     public void next() {
@@ -446,6 +457,10 @@ public class ExpressionTape { // TODO make internal
 
     public int size() {
         return core.size;
+    }
+
+    public void setFieldNameAt(int index, SymbolToken fieldName) {
+        core.elements[index].fieldName = fieldName;
     }
 
     public void rewindTo(int index) { // TODO make this just rewind(), always called with 0
@@ -507,6 +522,10 @@ public class ExpressionTape { // TODO make internal
 
     public List<SymbolToken> annotations() {
         return (List<SymbolToken>) core.elements[i].context;
+    }
+
+    public SymbolToken fieldName() {
+        return core.elements[i].fieldName;
     }
 
     public boolean isNullValue() {
@@ -790,47 +809,47 @@ public class ExpressionTape { // TODO make internal
 
     }
 
-    public void addDataModelValue(Expression.DataModelValue value) {
+    public void addDataModelValue(Expression.DataModelValue value, SymbolToken fieldName) {
         List<SymbolToken> annotations = value.getAnnotations();
         if (!annotations.isEmpty()) {
-            add(annotations, ExpressionType.ANNOTATION_ORDINAL, null);
+            add(annotations, ExpressionType.ANNOTATION_ORDINAL, null, fieldName);
         }
         IonType type = value.getType();
         if (value instanceof Expression.NullValue) {
-            add(NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, null);
+            add(NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, null, fieldName);
         } else {
             IonTypeID typeID = NON_NULL_SCALAR_TYPE_IDS[type.ordinal()];
             switch (type) {
                 case BOOL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BoolValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BoolValue) value).getValue(), fieldName);
                     break;
                 case INT:
                     if (value instanceof Expression.LongIntValue) {
-                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.LongIntValue) value).getValue());
+                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.LongIntValue) value).getValue(), fieldName);
                     } else {
-                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BigIntValue) value).getValue());
+                        add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BigIntValue) value).getValue(), fieldName);
                     }
                     break;
                 case FLOAT:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.FloatValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.FloatValue) value).getValue(), fieldName);
                     break;
                 case DECIMAL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.DecimalValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.DecimalValue) value).getValue(), fieldName);
                     break;
                 case TIMESTAMP:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.TimestampValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.TimestampValue) value).getValue(), fieldName);
                     break;
                 case SYMBOL:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.SymbolValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.SymbolValue) value).getValue(), fieldName);
                     break;
                 case STRING:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.StringValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.StringValue) value).getValue(), fieldName);
                     break;
                 case CLOB:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.ClobValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.ClobValue) value).getValue(), fieldName);
                     break;
                 case BLOB:
-                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BlobValue) value).getValue());
+                    add(typeID, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, ((Expression.BlobValue) value).getValue(), fieldName);
                     break;
                 default:
                     throw new IllegalStateException();
@@ -840,7 +859,7 @@ public class ExpressionTape { // TODO make internal
 
     public static ExpressionTape.Core inlineNestedInvocations(ExpressionTape.Core tape) {
         ExpressionTape newTape = new ExpressionTape(null, tape.size + 64); // TODO arbitrary, adding some room in anticipation of inlining some invocations. Consider being more accurate
-        newTape.inlineExpression(tape, 0, tape.size, null, -1);
+        newTape.inlineExpression(tape, 0, tape.size, null, -1, null);
         return newTape.core;
     }
 
@@ -861,19 +880,22 @@ public class ExpressionTape { // TODO make internal
 
         ExpressionTape tape = new ExpressionTape(null, tapeSize);
         List<Byte>[] ends = new List[expressions.size() + 1];
+        SymbolToken fieldName = null;
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
             List<Byte> endsAtExpressionIndex = ends[i];
             if (endsAtExpressionIndex != null) {
                 for (int j = endsAtExpressionIndex.size() - 1; j >= 0; j--) {
-                    tape.add(null, endsAtExpressionIndex.get(j), null);
+                    tape.add(null, endsAtExpressionIndex.get(j), null, null);
                 }
             }
             if (expression instanceof Expression.FieldName) {
-                tape.add(((Expression.FieldName) expression).getValue(), ExpressionType.FIELD_NAME_ORDINAL, null);
+                //tape.add(((Expression.FieldName) expression).getValue(), ExpressionType.FIELD_NAME_ORDINAL, null);
+                fieldName = ((Expression.FieldName) expression).getValue();
+                continue;
             } else if (expression instanceof Expression.EExpression) {
                 Expression.EExpression eExpression = (Expression.EExpression) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null);
+                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null, fieldName);
                 List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -882,7 +904,7 @@ public class ExpressionTape { // TODO make internal
                 ends[eExpression.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.MacroInvocation) {
                 Expression.MacroInvocation eExpression = (Expression.MacroInvocation) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null);
+                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null, fieldName);
                 List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -891,7 +913,7 @@ public class ExpressionTape { // TODO make internal
                 ends[eExpression.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.ExpressionGroup) {
                 Expression.ExpressionGroup group = (Expression.ExpressionGroup) expression;
-                tape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null); // TODO could pass along the endIndex as context?
+                tape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null, fieldName); // TODO could pass along the endIndex as context?
                 List<Byte> endsAtEndIndex = ends[group.getEndExclusive()];
                 if (endsAtEndIndex == null) {
                     endsAtEndIndex = new ArrayList<>();
@@ -902,12 +924,12 @@ public class ExpressionTape { // TODO make internal
                 Expression.DataModelContainer container = ((Expression.DataModelContainer) expression);
                 List<SymbolToken> annotations = container.getAnnotations();
                 if (!annotations.isEmpty()) {
-                    tape.add(annotations, ExpressionType.ANNOTATION_ORDINAL, null);
+                    tape.add(annotations, ExpressionType.ANNOTATION_ORDINAL, null, fieldName);
                 }
-                tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER_ORDINAL, null); // TODO could pass along the endIndex as context?
+                tape.add(NON_NULL_SCALAR_TYPE_IDS[container.getType().ordinal()], ExpressionType.DATA_MODEL_CONTAINER_ORDINAL, null, fieldName); // TODO could pass along the endIndex as context?
                 if (container.getEndExclusive() == i) {
                     // This is an empty container
-                    tape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL, null);
+                    tape.add(null, ExpressionType.DATA_MODEL_CONTAINER_END_ORDINAL, null, fieldName);
                 } else {
                     List<Byte> endsAtEndIndex = ends[container.getEndExclusive()];
                     if (endsAtEndIndex == null) {
@@ -918,17 +940,18 @@ public class ExpressionTape { // TODO make internal
                 }
             } else if (expression instanceof Expression.DataModelValue) {
                 Expression.DataModelValue value = ((Expression.DataModelValue) expression);
-                tape.addDataModelValue(value);
+                tape.addDataModelValue(value, fieldName);
             } else if (expression instanceof Expression.VariableRef) {
-                tape.add(((Expression.VariableRef) expression).getSignatureIndex(), ExpressionType.VARIABLE_ORDINAL, null);
+                tape.add(((Expression.VariableRef) expression).getSignatureIndex(), ExpressionType.VARIABLE_ORDINAL, null, fieldName);
             } else {
                 throw new IllegalStateException();
             }
+            fieldName = null;
         }
         List<Byte> endsAtExpressionIndex = ends[expressions.size()];
         if (endsAtExpressionIndex != null) {
             for (int j = endsAtExpressionIndex.size() - 1; j >= 0; j--) {
-                tape.add(null, endsAtExpressionIndex.get(j), null);
+                tape.add(null, endsAtExpressionIndex.get(j), null, null);
             }
         }
         tape.rewindTo(0);
@@ -961,6 +984,10 @@ public class ExpressionTape { // TODO make internal
                 index++;
                 continue;
             }
+            SymbolToken fieldName = fieldName();
+            if (fieldName != null) {
+                writer.setFieldNameSymbol(fieldName);
+            }
             switch (argument) {
                 case ExpressionType.ANNOTATION_ORDINAL:
                     writer.setTypeAnnotationSymbols(((List<SymbolToken>) context()).toArray(new SymbolToken[0]));
@@ -988,9 +1015,6 @@ public class ExpressionTape { // TODO make internal
                         case CLOB: writer.writeClob(readLob()); break;
                         default: throw new IllegalStateException("Unexpected branch");
                     }
-                    break;
-                case ExpressionType.FIELD_NAME_ORDINAL:
-                    writer.setFieldNameSymbol((SymbolToken) context());
                     break;
                 case ExpressionType.E_EXPRESSION_ORDINAL:
                     writer.startMacro((Macro) context());

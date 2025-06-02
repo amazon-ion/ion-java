@@ -31,6 +31,7 @@ class LazyMacroEvaluator : IonReader {
     private val sideEffects: ExpressionTape = ExpressionTape(null, 4)
     private var invocationTape: ExpressionTape = ExpressionTape.EMPTY
     private var expressionTape: ExpressionTape = ExpressionTape.EMPTY
+    private var initialFieldName: SymbolToken? = null
     private var currentFieldName: SymbolToken? = null
     private var currentAnnotations: List<SymbolToken>? = null
 
@@ -68,7 +69,8 @@ class LazyMacroEvaluator : IonReader {
         expansionKindStackTop = 1
         expansionKindStackIndex = 1
         reachedEndOfExpression = false
-        currentFieldName = fieldName
+        initialFieldName = fieldName
+        currentFieldName = null
         currentAnnotations = null
         eExpressionIndex = -1;
     }
@@ -326,12 +328,6 @@ class LazyMacroEvaluator : IonReader {
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
     }
 
-    private fun fieldName(): Byte {
-        currentFieldName = expressionTape.context() as SymbolToken
-        expressionTape.prepareNext()
-        return ExpressionType.CONTINUE_EXPANSION_ORDINAL
-    }
-
     private fun annotation(): Byte {
         currentAnnotations = expressionTape.annotations()
         expressionTape.prepareNext()
@@ -386,8 +382,9 @@ class LazyMacroEvaluator : IonReader {
         if (ExpressionType.isEnd(nextType)) {
             return expressionEnd(nextType)
         }
+        currentFieldName = initialFieldName ?: expressionTape.fieldName() ?: currentFieldName
+        initialFieldName = null
         return when (nextType) {
-            ExpressionType.FIELD_NAME_ORDINAL -> fieldName()
             ExpressionType.ANNOTATION_ORDINAL -> annotation()
             ExpressionType.E_EXPRESSION_ORDINAL -> eExpression()
             ExpressionType.EXPRESSION_GROUP_ORDINAL -> expressionGroup()
@@ -446,7 +443,8 @@ class LazyMacroEvaluator : IonReader {
 
     private fun produceValueSideEffect(type: IonType, value: Any) {
         sideEffects.clear()
-        sideEffects.addScalar(type, value)
+        // TODO try something lighter-weight than this
+        sideEffects.addScalar(type, value, currentFieldName)
         sideEffects.rewindTo(0)
         expressionTape = sideEffects
     }
@@ -510,7 +508,6 @@ class LazyMacroEvaluator : IonReader {
                 }
 
                 it == ExpressionType.END_OF_EXPANSION_ORDINAL -> break
-                it == ExpressionType.FIELD_NAME_ORDINAL -> unreachable("Unreachable without stepping into a container")
             }
         }
         dropChildren(expansionIndex)

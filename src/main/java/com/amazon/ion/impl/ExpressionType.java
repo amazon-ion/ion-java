@@ -1,7 +1,6 @@
 package com.amazon.ion.impl;
 
 public enum ExpressionType {
-    FIELD_NAME,
     ANNOTATION,
     E_EXPRESSION, // TODO might need a way to denote delimited vs prefixed logical containers, once we make it possible to not add the contents of prefixed containers to the tape
     E_EXPRESSION_END,
@@ -14,18 +13,17 @@ public enum ExpressionType {
     END_OF_EXPANSION,
     VARIABLE;
 
-    public static final byte FIELD_NAME_ORDINAL = 0; //(byte) FIELD_NAME.ordinal();
-    public static final byte ANNOTATION_ORDINAL = 1; //(byte) ANNOTATION.ordinal();
-    public static final byte E_EXPRESSION_ORDINAL = 2; // (byte) E_EXPRESSION.ordinal();
-    public static final byte E_EXPRESSION_END_ORDINAL = 3; //(byte) E_EXPRESSION_END.ordinal();
-    public static final byte EXPRESSION_GROUP_ORDINAL = 4; //(byte) EXPRESSION_GROUP.ordinal();
-    public static final byte EXPRESSION_GROUP_END_ORDINAL = 5; //(byte) EXPRESSION_GROUP_END.ordinal();
-    public static final byte DATA_MODEL_SCALAR_ORDINAL = 6; //(byte) DATA_MODEL_SCALAR.ordinal();
-    public static final byte DATA_MODEL_CONTAINER_ORDINAL = 7; //(byte) DATA_MODEL_CONTAINER.ordinal();
-    public static final byte DATA_MODEL_CONTAINER_END_ORDINAL = 8; //(byte) DATA_MODEL_CONTAINER_END.ordinal();
-    public static final byte CONTINUE_EXPANSION_ORDINAL = 9; //(byte) CONTINUE_EXPANSION.ordinal();
-    public static final byte END_OF_EXPANSION_ORDINAL = 10; //(byte) END_OF_EXPANSION.ordinal();
-    public static final byte VARIABLE_ORDINAL = 11; //(byte) VARIABLE.ordinal();
+    public static final byte ANNOTATION_ORDINAL = 0; //(byte) ANNOTATION.ordinal();
+    public static final byte E_EXPRESSION_ORDINAL = 1; // (byte) E_EXPRESSION.ordinal();
+    public static final byte E_EXPRESSION_END_ORDINAL = 2; //(byte) E_EXPRESSION_END.ordinal();
+    public static final byte EXPRESSION_GROUP_ORDINAL = 3; //(byte) EXPRESSION_GROUP.ordinal();
+    public static final byte EXPRESSION_GROUP_END_ORDINAL = 4; //(byte) EXPRESSION_GROUP_END.ordinal();
+    public static final byte DATA_MODEL_SCALAR_ORDINAL = 5; //(byte) DATA_MODEL_SCALAR.ordinal();
+    public static final byte DATA_MODEL_CONTAINER_ORDINAL = 6; //(byte) DATA_MODEL_CONTAINER.ordinal();
+    public static final byte DATA_MODEL_CONTAINER_END_ORDINAL = 7; //(byte) DATA_MODEL_CONTAINER_END.ordinal();
+    public static final byte CONTINUE_EXPANSION_ORDINAL = 8; //(byte) CONTINUE_EXPANSION.ordinal();
+    public static final byte END_OF_EXPANSION_ORDINAL = 9; //(byte) END_OF_EXPANSION.ordinal();
+    public static final byte VARIABLE_ORDINAL = 10; //(byte) VARIABLE.ordinal();
 
 
     private static final ExpressionType[] VALUES = ExpressionType.values();
@@ -43,7 +41,7 @@ public enum ExpressionType {
     }
 
     public static boolean isDataModelExpression(byte ordinal) {
-        return ordinal == DATA_MODEL_CONTAINER_ORDINAL || ordinal == DATA_MODEL_SCALAR_ORDINAL || ordinal == ANNOTATION_ORDINAL || ordinal == FIELD_NAME_ORDINAL;
+        return ordinal == DATA_MODEL_CONTAINER_ORDINAL || ordinal == DATA_MODEL_SCALAR_ORDINAL || ordinal == ANNOTATION_ORDINAL;
     }
 
     public static boolean isDataModelValue(byte ordinal) {

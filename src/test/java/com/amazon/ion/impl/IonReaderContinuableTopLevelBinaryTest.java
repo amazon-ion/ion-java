@@ -6722,6 +6722,18 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void nonetUsingSystemMacroAddress(boolean constructFromBytes) throws Exception {
+        int[] data = new int[]{
+            0xE0, 0x01, 0x01, 0xEA, // Ion 1.1 IVM
+            0xEF, 0x00
+        };
+        try (IonReader reader = readerFor(constructFromBytes, data)) {
+            assertNull(reader.next());
+        }
+    }
+
     @Disabled
     @Test
     public void rewriteAllTypes() throws Exception {
