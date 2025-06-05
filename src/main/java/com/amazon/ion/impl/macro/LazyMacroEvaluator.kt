@@ -328,6 +328,11 @@ class LazyMacroEvaluator : IonReader {
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
     }
 
+    private fun skipTombstone(): Byte {
+        expressionTape.skipTombstone()
+        return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+    }
+
     private fun annotation(): Byte {
         currentAnnotations = expressionTape.annotations()
         expressionTape.prepareNext()
@@ -385,6 +390,7 @@ class LazyMacroEvaluator : IonReader {
         currentFieldName = initialFieldName ?: expressionTape.fieldName() ?: currentFieldName
         initialFieldName = null
         return when (nextType) {
+            ExpressionType.TOMBSTONE_ORDINAL -> skipTombstone()
             ExpressionType.ANNOTATION_ORDINAL -> annotation()
             ExpressionType.E_EXPRESSION_ORDINAL -> eExpression()
             ExpressionType.EXPRESSION_GROUP_ORDINAL -> expressionGroup()

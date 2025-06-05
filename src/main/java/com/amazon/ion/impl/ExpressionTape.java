@@ -28,6 +28,7 @@ import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.TOMBSTONE_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 
 public class ExpressionTape { // TODO make internal
@@ -52,6 +53,7 @@ public class ExpressionTape { // TODO make internal
         private int[] variableStarts;
         private int[] eExpressionStarts;
         private int[] eExpressionEnds;
+        private int numberOfEExpressions = 0;
 
         Core(int initialSize) {
             elements = new Element[initialSize];
@@ -128,6 +130,9 @@ public class ExpressionTape { // TODO make internal
                             break loop;
                         }
                         break;
+                    case TOMBSTONE_ORDINAL:
+                        i = elements[i].containerEnd;
+                        continue;
                     default:
                         throw new IllegalStateException();
                 }
@@ -174,6 +179,40 @@ public class ExpressionTape { // TODO make internal
             return (int) elements[variableStarts[variableIndex]].context;
         }
 
+        public int getExpressionStartIndex(int eExpressionIndex, int expressionOrdinal) {
+            return expressionStarts[eExpressionIndex][expressionOrdinal];
+        }
+
+        public int findEndOfTombstoneSequence(int index) {
+            if (index >= size) {
+                return size;
+            }
+            while (elements[index].type == TOMBSTONE_ORDINAL) {
+                index = elements[index].containerEnd;
+            }
+            return index;
+        }
+
+        public int getVariableStartIndex(int variableIndex) {
+            return variableStarts[variableIndex];
+        }
+
+        public int getEExpressionStartIndex(int eExpressionIndex) {
+            return eExpressionStarts[eExpressionIndex];
+        }
+
+        public int getEExpressionEndIndex(int eExpressionIndex) {
+            return eExpressionEnds[eExpressionIndex];
+        }
+
+        public int getNumberOfEExpressions() {
+            return numberOfEExpressions;
+        }
+
+        public Element elementAt(int index) {
+            return elements[index];
+        }
+
         public int size() {
             return size;
         }
@@ -186,7 +225,6 @@ public class ExpressionTape { // TODO make internal
     private int i = 0;
     private int iNext = 0;
     private int depth = 0;
-    private int numberOfEExpressions = 0;
     private int[] eExpressionActiveAtDepth = new int[8];
     private int currentDataModelContainerStart = 0;
 
@@ -216,7 +254,7 @@ public class ExpressionTape { // TODO make internal
         if (depth >= eExpressionActiveAtDepth.length) {
             eExpressionActiveAtDepth = Arrays.copyOf(eExpressionActiveAtDepth, eExpressionActiveAtDepth.length * 2);
         }
-        eExpressionActiveAtDepth[depth] = isEExpression ? numberOfEExpressions - 1 : -1;
+        eExpressionActiveAtDepth[depth] = isEExpression ? core.numberOfEExpressions - 1 : -1;
     }
 
     private void decreaseDepth() {
@@ -234,9 +272,9 @@ public class ExpressionTape { // TODO make internal
         switch (type) {
             case E_EXPRESSION_ORDINAL:
                 setChildExpressionIndex();
-                core.eExpressionStarts[numberOfEExpressions] = i;
-                core.elements[i].end = numberOfEExpressions++;
-                core.ensureEExpressionIndexAvailable(numberOfEExpressions);
+                core.eExpressionStarts[core.numberOfEExpressions] = i;
+                core.elements[i].end = core.numberOfEExpressions++;
+                core.ensureEExpressionIndexAvailable(core.numberOfEExpressions);
                 core.elements[i].containerStart = currentDataModelContainerStart;
                 increaseDepth(true);
                 break;
@@ -439,6 +477,10 @@ public class ExpressionTape { // TODO make internal
         iNext = i + 1;
     }
 
+    public void skipTombstone() {
+        iNext = core.elements[i].containerEnd; // When the type is TOMBSTONE, the end of the tombstone sequence is at containerEnd.
+    }
+
     public int currentIndex() {
         return i;
     }
@@ -481,7 +523,7 @@ public class ExpressionTape { // TODO make internal
         Arrays.fill(eExpressionActiveAtDepth, -1);
         core.numberOfVariables = 0;
         depth = 0;
-        numberOfEExpressions = 0;
+        core.numberOfEExpressions = 0;
     }
 
     public void setNextAfterEndOfEExpression(int eExpressionIndex) {
