@@ -37,12 +37,9 @@ enum class SystemMacro(
 
     // The real macros
     Values(1, ExpansionKinds.STREAM, VALUES, listOf(zeroToManyTagged("values")), templateBody { variable(0) }),
-    None(0, ExpansionKinds.EMPTY, NONE, emptyList(), templateBody { macro(Values) { expressionGroup { } } }),
+    None(0, ExpansionKinds.UNINITIALIZED, NONE, emptyList()),
     Default(
-        2, ExpansionKinds.UNINITIALIZED, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr")),
-        templateBody {
-            macro(IfNone) { variable(0); variable(1); variable(0) }
-        }
+        2, ExpansionKinds.DEFAULT, DEFAULT, listOf(zeroToManyTagged("expr"), zeroToManyTagged("default_expr"))
     ),
     Meta(3, ExpansionKinds.UNINITIALIZED, META, listOf(zeroToManyTagged("values")), templateBody { macro(None) {} }),
     Repeat(4, ExpansionKinds.REPEAT, REPEAT, listOf(exactlyOneTagged("n"), zeroToManyTagged("value"))),

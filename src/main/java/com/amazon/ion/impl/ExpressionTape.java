@@ -28,6 +28,7 @@ import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.EXPRESSION_GROUP_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_END_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.E_EXPRESSION_ORDINAL;
+import static com.amazon.ion.impl.ExpressionType.NONE_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.TOMBSTONE_ORDINAL;
 import static com.amazon.ion.impl.ExpressionType.VARIABLE_ORDINAL;
 
@@ -107,6 +108,7 @@ public class ExpressionTape { // TODO make internal
                     case ANNOTATION_ORDINAL:
                     case DATA_MODEL_SCALAR_ORDINAL:
                     case VARIABLE_ORDINAL:
+                    case NONE_ORDINAL:
                         if (relativeDepth == 0) {
                             if (i > startIndex) {
                                 break loop;
@@ -290,6 +292,7 @@ public class ExpressionTape { // TODO make internal
                 break;
             case DATA_MODEL_SCALAR_ORDINAL:
             case ANNOTATION_ORDINAL:
+            case NONE_ORDINAL:
                 setChildExpressionIndex();
                 core.elements[i].containerStart = currentDataModelContainerStart;
                 break;
@@ -348,8 +351,9 @@ public class ExpressionTape { // TODO make internal
                 int eExpressionIndex = arguments.elements[argumentsStart].end;
                 if (variableIndex >= arguments.numberOfExpressions[eExpressionIndex]) {
                     // This argument is elided.
-                    if (core.elements[core.size - 1].context == SystemMacro.IfNone) {
-                        // Elide the IfNone invocation, substitute the second argument, skip the third.
+                    Object previousContext = core.elements[core.size - 1].context;
+                    if (previousContext == SystemMacro.Default || previousContext == SystemMacro.IfNone) {
+                        // Elide the invocation, substitute the second argument, then skip to the end of the invocation.
                         core.size--;
                         this.i--;
                         int expressionEnd = source.findEndOfExpression(++i);
@@ -358,8 +362,7 @@ public class ExpressionTape { // TODO make internal
                         i = sourceEnd;
                     } else {
                         // TODO does this ever occur in a position where it could simply be elided?
-                        add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null, sourceElement.fieldName);
-                        add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, null, null);
+                        add(null, NONE_ORDINAL, null, sourceElement.fieldName);
                     }
                 } else {
                     int expressionStart = arguments.expressionStarts[eExpressionIndex][variableIndex];
@@ -398,7 +401,7 @@ public class ExpressionTape { // TODO make internal
                 inlineExpression(source, i + 1, expressionEnd, arguments, argumentsStart, null);
                 i = expressionEnd - 1; // Note: the for loop increments i // TODO consider just using a while loop
             } else {
-                // Scalar or container end
+                // Scalar, container end, or None
                 copyFrom(source, i);
             }
         }
@@ -911,7 +914,13 @@ public class ExpressionTape { // TODO make internal
         // start and one end. Everything else requires one tape expression.
         int tapeSize = 0;
         for (Expression expression : expressions) {
-            tapeSize += (expression instanceof Expression.HasStartAndEnd) ? 2 : 1;
+            if (expression instanceof Expression.InvokableExpression && ((Expression.InvokableExpression) expression).getMacro() == SystemMacro.None) {
+                tapeSize += 1; // In the tape, None is represented as a special type, not as an invocation with a start/end.
+            } else if (expression instanceof Expression.HasStartAndEnd) {
+                tapeSize += 2;
+            } else {
+                tapeSize += 1;
+            }
             if (expression instanceof Expression.DataModelValue) {
                 Expression.DataModelValue value = (Expression.DataModelValue) expression;
                 if (!value.getAnnotations().isEmpty()) {
@@ -932,27 +941,23 @@ public class ExpressionTape { // TODO make internal
                 }
             }
             if (expression instanceof Expression.FieldName) {
-                //tape.add(((Expression.FieldName) expression).getValue(), ExpressionType.FIELD_NAME_ORDINAL, null);
                 fieldName = ((Expression.FieldName) expression).getValue();
                 continue;
-            } else if (expression instanceof Expression.EExpression) {
-                Expression.EExpression eExpression = (Expression.EExpression) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null, fieldName);
-                List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
-                if (endsAtEndIndex == null) {
-                    endsAtEndIndex = new ArrayList<>();
+            } else if (expression instanceof Expression.InvokableExpression) {
+                Expression.InvokableExpression eExpression = (Expression.InvokableExpression) expression;
+                Macro macro = eExpression.getMacro();
+                if (macro == SystemMacro.None) {
+                    // Note: the fieldName is ignored, but it is not harmful and can aid debugging.
+                    tape.add(null, NONE_ORDINAL, null, fieldName);
+                } else {
+                    tape.add(macro, ExpressionType.E_EXPRESSION_ORDINAL, null, fieldName);
+                    List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
+                    if (endsAtEndIndex == null) {
+                        endsAtEndIndex = new ArrayList<>();
+                    }
+                    endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END_ORDINAL);
+                    ends[eExpression.getEndExclusive()] = endsAtEndIndex;
                 }
-                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END_ORDINAL);
-                ends[eExpression.getEndExclusive()] = endsAtEndIndex;
-            } else if (expression instanceof Expression.MacroInvocation) {
-                Expression.MacroInvocation eExpression = (Expression.MacroInvocation) expression;
-                tape.add(eExpression.getMacro(), ExpressionType.E_EXPRESSION_ORDINAL, null, fieldName);
-                List<Byte> endsAtEndIndex = ends[eExpression.getEndExclusive()];
-                if (endsAtEndIndex == null) {
-                    endsAtEndIndex = new ArrayList<>();
-                }
-                endsAtEndIndex.add(ExpressionType.E_EXPRESSION_END_ORDINAL);
-                ends[eExpression.getEndExclusive()] = endsAtEndIndex;
             } else if (expression instanceof Expression.ExpressionGroup) {
                 Expression.ExpressionGroup group = (Expression.ExpressionGroup) expression;
                 tape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, null, fieldName); // TODO could pass along the endIndex as context?
@@ -1063,6 +1068,10 @@ public class ExpressionTape { // TODO make internal
                     break;
                 case ExpressionType.EXPRESSION_GROUP_ORDINAL:
                     writer.startExpressionGroup();
+                    break;
+                case NONE_ORDINAL:
+                    writer.startMacro(SystemMacro.None);
+                    writer.endMacro();
                     break;
                 default: throw new IllegalStateException("Unexpected branch");
             }

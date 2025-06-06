@@ -1647,8 +1647,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Adds an expression that conveys that the parameter was not present (void).
          */
         private void addVoidExpression(SymbolToken fieldName) {
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1, fieldName);
-            expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1, null);
+            expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, fieldName);
         }
 
         @Override

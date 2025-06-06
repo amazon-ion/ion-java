@@ -113,6 +113,25 @@ class LazyMacroEvaluator : IonReader {
         }
     }
 
+    private fun handleDefault(): Byte {
+        // TODO not tested; previously, Default compiled down to IfNone. Invocation flattening optimizes away most
+        //  Default invocations. The ones that make it here will have an un-flattenable system macro or non-empty
+        //  expression group as the first argument.
+        val expansionIndex = expansionKindStackIndex
+        readArgument(0)
+        expansionKind = STREAM // TODO should not have to do this, but makes tests pass. Probably need to push a child expansion
+        var n = 0
+        while (n < 1) {
+            if (produceNext() == ExpressionType.END_OF_EXPANSION_ORDINAL) break
+            n++
+        }
+        expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
+        if (n == 0) readArgument(1) else readArgument(0)
+        dropChildren(expansionIndex)
+        finishChildExpansion() // This finishes the Default
+        return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+    }
+
     private fun handleIfNone(): Byte = handleBranchIf() { it == 0 }
     private fun handleIfSome(): Byte = handleBranchIf() { it > 0 }
     private fun handleIfSingle(): Byte = handleBranchIf() { it == 1 }
@@ -328,6 +347,11 @@ class LazyMacroEvaluator : IonReader {
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
     }
 
+    private fun handleNone(): Byte {
+        expressionTape.prepareNext()
+        return ExpressionType.CONTINUE_EXPANSION_ORDINAL;
+    }
+
     private fun skipTombstone(): Byte {
         expressionTape.skipTombstone()
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -390,6 +414,7 @@ class LazyMacroEvaluator : IonReader {
         currentFieldName = initialFieldName ?: expressionTape.fieldName() ?: currentFieldName
         initialFieldName = null
         return when (nextType) {
+            ExpressionType.NONE_ORDINAL -> handleNone()
             ExpressionType.TOMBSTONE_ORDINAL -> skipTombstone()
             ExpressionType.ANNOTATION_ORDINAL -> annotation()
             ExpressionType.E_EXPRESSION_ORDINAL -> eExpression()
@@ -542,6 +567,7 @@ class LazyMacroEvaluator : IonReader {
                 VARIABLE -> handleVariable()
                 EXPR_GROUP -> handleStream()
                 EXACTLY_ONE_VALUE_STREAM -> handleExactlyOneValueStream()
+                DEFAULT -> handleDefault()
                 IF_NONE -> handleIfNone()
                 IF_SOME -> handleIfSome()
                 IF_SINGLE -> handleIfSingle()

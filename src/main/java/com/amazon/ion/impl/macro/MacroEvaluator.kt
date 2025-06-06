@@ -587,6 +587,25 @@ class MacroEvaluator {
                 }
             }
         },
+        Default {
+            override fun produceNext(thisExpansion: ExpansionInfo): ExpansionOutputExpressionOrContinue {
+                val argToTest = VariableRef(0)
+                val defaultBranch = VariableRef(1)
+
+                val testArg = thisExpansion.readArgument(argToTest)
+                var n = 0
+                while (n < 1) {
+                    if (testArg.produceNext() is EndOfExpansion) break
+                    n++
+                }
+                testArg.close()
+
+                val branch = if (n == 0) defaultBranch else argToTest
+
+                thisExpansion.tailCall(thisExpansion.readArgument(branch))
+                return ContinueExpansion
+            }
+        }
         ;
 
         /**
@@ -720,6 +739,8 @@ class MacroEvaluator {
                     SystemMacro.Flatten -> Flatten
                     SystemMacro._Private_FlattenStruct -> _Private_FlattenStruct
                     SystemMacro._Private_MakeFieldNameAndValue -> _Private_MakeFieldNameAndValue
+                    SystemMacro.None -> Empty
+                    SystemMacro.Default -> Default
                     else -> TODO("Not implemented yet: ${macro.name}")
                 }
             }

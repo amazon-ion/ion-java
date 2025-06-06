@@ -12,7 +12,8 @@ public enum ExpressionType {
     CONTINUE_EXPANSION,
     END_OF_EXPANSION,
     VARIABLE,
-    TOMBSTONE;
+    TOMBSTONE,
+    NONE;
 
     public static final byte ANNOTATION_ORDINAL = 0; //(byte) ANNOTATION.ordinal();
     public static final byte E_EXPRESSION_ORDINAL = 1; // (byte) E_EXPRESSION.ordinal();
@@ -26,6 +27,7 @@ public enum ExpressionType {
     public static final byte END_OF_EXPANSION_ORDINAL = 9; //(byte) END_OF_EXPANSION.ordinal();
     public static final byte VARIABLE_ORDINAL = 10; //(byte) VARIABLE.ordinal();
     public static final byte TOMBSTONE_ORDINAL = 11;
+    public static final byte NONE_ORDINAL = 12;
 
 
     private static final ExpressionType[] VALUES = ExpressionType.values();

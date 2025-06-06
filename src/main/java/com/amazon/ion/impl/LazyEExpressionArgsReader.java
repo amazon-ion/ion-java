@@ -359,72 +359,68 @@ abstract class LazyEExpressionArgsReader {
         stepIntoEExpression();
         List<Macro.Parameter> signature = macro.getSignature();
         PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(signature);
-        if (verbatimTranscode || (macro instanceof SystemMacro && macro.getBodyTape().size() == 0)) {
+        if (verbatimTranscode) {
             collectVerbatimEExpressionArgs(macro, signature, presenceBitmap, fieldName);
+            return expressionTape;
+        } else if ((macro instanceof SystemMacro && macro.getBodyTape().size() == 0)) {
+            if (macro == SystemMacro.None) {
+                // TODO figure out how to elide None when possible
+                expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, fieldName);
+                stepOutOfEExpression();
+            } else {
+                collectVerbatimEExpressionArgs(macro, signature, presenceBitmap, fieldName);
+            }
             return expressionTape;
         }
         return collectAndFlattenUserEExpressionArgs(isTopLevel, macro, signature, presenceBitmap, fieldName);
     }
 
-    private void tombstoneInvocationEnd(ExpressionTape.Core tape, int eExpressionIndex) {
+    private void takeDefaultArgument(ExpressionTape.Core tape, int argumentsStart, int eExpressionIndex) {
+        // Tombstone the invocation and the first argument;
+        // take the second. Note: argumentsStart - 1 points to the Default invocation.
+        ExpressionTape.Element firstTombstoneInSequence = tape.elementAt(argumentsStart - 1);
+        SymbolToken fieldName = firstTombstoneInSequence.fieldName;
+        firstTombstoneInSequence.type = ExpressionType.TOMBSTONE_ORDINAL;
+        firstTombstoneInSequence.containerEnd = tape.findEndOfTombstoneSequence(tape.getExpressionStartIndex(eExpressionIndex, 1));
+        // Move the field name from the invocation to the value that remains.
+        tape.elementAt(firstTombstoneInSequence.containerEnd).fieldName = fieldName;
+        // Tombstone the invocation end marker.
         int invocationEndIndex = tape.getEExpressionEndIndex(eExpressionIndex);
         ExpressionTape.Element invocationEnd = tape.elementAt(invocationEndIndex);
         invocationEnd.type = ExpressionType.TOMBSTONE_ORDINAL;
         invocationEnd.containerEnd = tape.findEndOfTombstoneSequence(invocationEndIndex + 1);
     }
 
-    private void simplifyValuesInvocation(ExpressionTape.Core tape, int argumentsStart, int eExpressionIndex) {
-        // TODO move the field name to the new location?
-        int argumentsStartPastTombstone = tape.findEndOfTombstoneSequence(argumentsStart);
-        ExpressionTape.Element firstArgument = tape.elementAt(argumentsStartPastTombstone);
-        if (firstArgument.type == ExpressionType.EXPRESSION_GROUP_ORDINAL) {
-            ExpressionTape.Element firstElementInGroup = tape.elementAt(tape.findEndOfTombstoneSequence(argumentsStart + 1));
-            if (firstElementInGroup.type == ExpressionType.EXPRESSION_GROUP_END_ORDINAL) {
-                // The first argument is an empty group. The Values invocation can be elided in favor of the empty
-                // group. TODO in many cases, it would be safe to elide the entire thing to a no-op.
-                ExpressionTape.Element invocationStart = tape.elementAt(tape.getEExpressionStartIndex(eExpressionIndex));
-                // Tombstone the invocation start.
-                invocationStart.type = ExpressionType.TOMBSTONE_ORDINAL;
-                invocationStart.containerEnd = argumentsStartPastTombstone;
-                tombstoneInvocationEnd(tape, eExpressionIndex);
-            }
-        }
-        // Otherwise, the argument is not None, so the invocation cannot be simplified.
-    }
-
-    private void simplifyIfNoneInvocation(ExpressionTape.Core tape, int argumentsStart, int eExpressionIndex) {
-        ExpressionTape.Element firstArgument = tape.elementAt(tape.findEndOfTombstoneSequence(argumentsStart));
+    private void simplifyDefaultInvocation(ExpressionTape.Core tape, int argumentsStart, int eExpressionIndex) {
+        int actualArgumentStart = tape.findEndOfTombstoneSequence(argumentsStart);
+        ExpressionTape.Element firstArgument = tape.elementAt(actualArgumentStart);
         if (ExpressionType.isDataModelValue(firstArgument.type)) {
-            // The first argument is not None. Tombstone the invocation and the first and second arguments;
-            // take the third. Note: argumentsStart - 1 points to the IfNone invocation.
+            // The first argument is not None. Tombstone the invocation and the second argument;
+            // take the first. Note: argumentsStart - 1 points to the Default invocation.
             ExpressionTape.Element firstTombstoneInSequence = tape.elementAt(argumentsStart - 1);
             SymbolToken fieldName = firstTombstoneInSequence.fieldName;
             firstTombstoneInSequence.type = ExpressionType.TOMBSTONE_ORDINAL;
-            firstTombstoneInSequence.containerEnd = tape.getExpressionStartIndex(eExpressionIndex, 2); // TODO connect to tombstone sequence?
+            firstTombstoneInSequence.containerEnd = actualArgumentStart;
             // Move the field name from the invocation to the value that remains.
-            tape.elementAt(firstTombstoneInSequence.containerEnd).fieldName = fieldName;
-            tombstoneInvocationEnd(tape, eExpressionIndex);
+            firstArgument.fieldName = fieldName;
+            int invocationEndIndex = tape.getEExpressionEndIndex(eExpressionIndex);
+            ExpressionTape.Element invocationEnd = tape.elementAt(tape.findEndOfTombstoneSequence(tape.getExpressionStartIndex(eExpressionIndex, 1)));
+            invocationEnd.type = ExpressionType.TOMBSTONE_ORDINAL;
+            invocationEnd.containerEnd = tape.findEndOfTombstoneSequence(invocationEndIndex + 1);
         } else if (firstArgument.type == ExpressionType.EXPRESSION_GROUP_ORDINAL) {
             ExpressionTape.Element firstElementInGroup = tape.elementAt(tape.findEndOfTombstoneSequence(argumentsStart + 1));
             if (firstElementInGroup.type == ExpressionType.EXPRESSION_GROUP_END_ORDINAL) {
-                // The first argument is an empty group. Tombstone the invocation and the first and third arguments;
-                // take the second. Note: argumentsStart - 1 points to the IfNone invocation.
-                ExpressionTape.Element firstTombstoneInSequence = tape.elementAt(argumentsStart - 1);
-                SymbolToken fieldName = firstTombstoneInSequence.fieldName;
-                firstTombstoneInSequence.type = ExpressionType.TOMBSTONE_ORDINAL;
-                firstTombstoneInSequence.containerEnd = tape.getExpressionStartIndex(eExpressionIndex, 1); // TODO connect to tombstone sequence?
-                // Move the field name from the invocation to the value that remains.
-                tape.elementAt(firstTombstoneInSequence.containerEnd).fieldName = fieldName;
-                ExpressionTape.Element nextTombstoneSequenceStart = tape.elementAt(tape.getExpressionStartIndex(eExpressionIndex, 2));
-                nextTombstoneSequenceStart.type = ExpressionType.TOMBSTONE_ORDINAL;
-                nextTombstoneSequenceStart.containerEnd = tape.getEExpressionEndIndex(eExpressionIndex);
-                tombstoneInvocationEnd(tape, eExpressionIndex);
+                // The first argument is an empty group.
+                takeDefaultArgument(tape, argumentsStart, eExpressionIndex);
             }
             // Otherwise, this is a non-empty group, but it may still resolve to None if it contains a system macro that
             // cannot be simplified.
+        } else if (firstArgument.type == ExpressionType.NONE_ORDINAL) {
+            // The first argument is None.
+            takeDefaultArgument(tape, argumentsStart, eExpressionIndex);
         }
         // Otherwise, the first argument must be an e-expression that could not be simplified, so it can't be
-        // determined if it's None. Do not modify this IfNone invocation.
+        // determined if it's None. Do not modify this Default invocation.
     }
 
     private void simplifyResolvableMacroInvocations(ExpressionTape.Core tape) {
@@ -435,10 +431,10 @@ abstract class LazyEExpressionArgsReader {
             int eExpressionStart = tape.findEndOfTombstoneSequence(tape.getEExpressionStartIndex(eExpressionIndex));
             ExpressionTape.Element element = tape.elementAt(eExpressionStart);
             Macro macro = (Macro) element.context;
-            if (macro == SystemMacro.IfNone) {
-                simplifyIfNoneInvocation(tape, eExpressionStart + 1, eExpressionIndex);
-            } else if (macro == SystemMacro.Values) {
-                simplifyValuesInvocation(tape, eExpressionStart + 1, eExpressionIndex);
+            // Note optimizations for additional system macros could be added if necessary. The ones required for the
+            // other branching macros (IfNone, etc.) are similar to the one for Default.
+            if (macro == SystemMacro.Default) {
+                simplifyDefaultInvocation(tape, eExpressionStart + 1, eExpressionIndex);
             }
             // Otherwise, this system macro is not handled specially here; do nothing to it.
         }

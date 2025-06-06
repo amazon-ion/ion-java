@@ -24,4 +24,5 @@ public class ExpansionKinds {
     public static final byte SUM = 20;
     public static final byte DELTA = 21;
     public static final byte REPEAT = 22;
+    public static final byte DEFAULT = 23;
 }

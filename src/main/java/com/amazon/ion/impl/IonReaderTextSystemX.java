@@ -1253,9 +1253,12 @@ class IonReaderTextSystemX
         @Override
         protected void readParameter(Macro.Parameter parameter, long parameterPresence, boolean isTrailing) {
             if (IonReaderTextSystemX.this.nextRaw() == null) {
-                // Add an empty expression group if nothing present.
+                // TODO as of the moment this comment is being written it looks like the Expression model will be
+                //  replaced. However, if it isn't, there should probably be a special None expression that can
+                //  be a singleton without start/end indices. This would be faster and more compact in memory.
+                // Add a None invocation if nothing present.
                 int index = expressions.size() + 1;
-                expressions.add(expressionPool.createExpressionGroup(index, index));
+                expressions.add(expressionPool.createEExpression(SystemMacro.None, index, index));
                 return;
             }
             readValueAsExpression(isTrailing && parameter.getCardinality().canBeMulti);
