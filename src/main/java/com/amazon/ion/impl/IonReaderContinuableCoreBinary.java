@@ -1647,7 +1647,13 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Adds an expression that conveys that the parameter was not present (void).
          */
         private void addVoidExpression(SymbolToken fieldName) {
-            expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, fieldName);
+            // The following is a very cheap optimization that does not cover all possible cases where eliding
+            // None is possible. When there is a field name, we know that the None occurs in a struct and the field
+            // can simply be suppressed. The only time it cannot be suppressed is within a non-flattened system
+            // macro invocation. This is good enough for now.
+            if (fieldName == null) {
+                expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, null);
+            }
         }
 
         @Override

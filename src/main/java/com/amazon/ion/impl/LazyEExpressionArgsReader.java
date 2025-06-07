@@ -235,10 +235,10 @@ abstract class LazyEExpressionArgsReader {
             // Now, materialize and insert the argument from the invocation.
             // Copy everything up to the next variable.
             macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
-            int variableOrdinal = macroBodyTape.getVariableOrdinal(i);
+            int targetVariableOrdinal = macroBodyTape.getVariableOrdinal(i);
             int invocationOrdinal = i - numberOfDuplicatedVariables + numberOfOutOfOrderVariables;
             while (true) {
-                if (invocationOrdinal == variableOrdinal) {
+                if (invocationOrdinal == targetVariableOrdinal) {
                     // This is the common case: the parameter that is about to be read matches the ordinal of the next
                     // variable in the signature. This means it can be copied into the tape without using scratch space.
                     SymbolToken childFieldName = macroBodyTape.fieldNameForVariable(i);
@@ -253,14 +253,15 @@ abstract class LazyEExpressionArgsReader {
                     marker.startIndex = startIndexInTape;
                     marker.endIndex = expressionTape.size();
                     break;
-                } else if (invocationOrdinal < variableOrdinal) {
+                } else if (invocationOrdinal < targetVariableOrdinal) {
                     // The variable for this ordinal cannot have been read yet.
                     int scratchStartIndex = expressionTapeScratch.size();
                     expressionTape = expressionTapeScratch;
+                    int matchingVariableOrdinal = macroBodyTape.getVariableOrdinal(invocationOrdinal);
                     readParameter(
                         signature.get(invocationOrdinal),
                         presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                        null
+                        macroBodyTape.fieldNameForVariable(matchingVariableOrdinal)
                     );
                     expressionTape = expressionTapeOrdered;
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
@@ -271,17 +272,18 @@ abstract class LazyEExpressionArgsReader {
                     numberOfOutOfOrderVariables++;
                 } else {
                     // This is a variable that has already been encountered.
-                    Marker marker = markerPool[markerPoolStartIndex + variableOrdinal];
+                    Marker marker = markerPool[markerPoolStartIndex + targetVariableOrdinal];
                     if (marker == null) {
                         throw new IllegalStateException("Every variable ordinal must be recorded as it is encountered.");
                     }
                     numberOfDuplicatedVariables++;
+                    if (marker.startIndex == marker.endIndex) {
+                        // This variable was None, so it is elided from the expression tape.
+                        break;
+                    }
                     ExpressionTape source = marker.typeId == IonTypeID.ALWAYS_INVALID_TYPE_ID ? expressionTapeScratch : expressionTape;
                     // The argument for this variable has already been read. Copy it from the tape.
-                    int startIndex = expressionTape.size();
                     expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
-                    SymbolToken childFieldName = macroBodyTape.fieldNameForVariable(i);
-                    expressionTape.setFieldNameAt(startIndex, childFieldName);
                     break;
                 }
                 invocationOrdinal++;
@@ -364,8 +366,13 @@ abstract class LazyEExpressionArgsReader {
             return expressionTape;
         } else if ((macro instanceof SystemMacro && macro.getBodyTape().size() == 0)) {
             if (macro == SystemMacro.None) {
-                // TODO figure out how to elide None when possible
-                expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, fieldName);
+                // The following is a very cheap optimization that does not cover all possible cases where eliding
+                // None is possible. When there is a field name, we know that the None occurs in a struct and the field
+                // can simply be suppressed. The only time it cannot be suppressed is within a non-flattened system
+                // macro invocation. This is good enough for now.
+                if (fieldName == null) { // TODO can always skip at the top level too. This is useful for Meta
+                    expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, null);
+                }
                 stepOutOfEExpression();
             } else {
                 collectVerbatimEExpressionArgs(macro, signature, presenceBitmap, fieldName);
@@ -470,7 +477,6 @@ abstract class LazyEExpressionArgsReader {
         SymbolToken fieldName = null;
         if (reader.isInStruct()) {
             fieldName = reader.getFieldNameSymbol();
-            //verbatimExpressionTape.add(fieldName, ExpressionType.FIELD_NAME_ORDINAL, -1, -1);
         }
         expressionTape = verbatimExpressionTape;
         int start = (int) reader.valueMarker.startIndex;
