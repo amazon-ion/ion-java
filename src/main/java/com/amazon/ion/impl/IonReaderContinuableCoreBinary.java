@@ -1597,7 +1597,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Reads a single (non-grouped) expression.
          * @param parameter the parameter.
          */
-        private void readSingleExpression(Macro.Parameter parameter, SymbolToken fieldName) {
+        private void readSingleExpression(Macro.Parameter parameter, String fieldName) {
             Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 IonReaderContinuableCoreBinary.super.nextValue();
@@ -1614,7 +1614,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
          * Reads a group expression.
          * @param parameter the parameter.
          */
-        private void readGroupExpression(Macro.Parameter parameter, boolean requireSingleton, SymbolToken fieldName) {
+        private void readGroupExpression(Macro.Parameter parameter, boolean requireSingleton, String fieldName) {
             Macro.ParameterEncoding encoding = parameter.getType();
             if (encoding == Macro.ParameterEncoding.Tagged) {
                 enterTaggedArgumentGroup();
@@ -1646,7 +1646,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         /**
          * Adds an expression that conveys that the parameter was not present (void).
          */
-        private void addVoidExpression(SymbolToken fieldName) {
+        private void addVoidExpression(String fieldName) {
             // The following is a very cheap optimization that does not cover all possible cases where eliding
             // None is possible. When there is a field name, we know that the None occurs in a struct and the field
             // can simply be suppressed. The only time it cannot be suppressed is within a non-flattened system
@@ -1657,7 +1657,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         }
 
         @Override
-        protected void readParameter(Macro.Parameter parameter, long parameterPresence, SymbolToken fieldName) {
+        protected void readParameter(Macro.Parameter parameter, long parameterPresence, String fieldName) {
             switch (parameter.getCardinality()) {
                 case ZeroOrOne:
                     if (parameterPresence == PresenceBitmap.EXPRESSION) {
@@ -2848,6 +2848,20 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return null;
         }
         return getSymbolToken(fieldSid);
+    }
+
+    public String getFieldName() {
+        if (fieldTextMarker.startIndex > -1 || isEvaluatingEExpression || fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+            return getFieldText();
+        }
+        if (fieldSid < 0) {
+            return null;
+        }
+        String fieldName = getSymbol(fieldSid);
+        if (fieldName == null) {
+            throw new UnknownSymbolException(fieldSid);
+        }
+        return fieldName;
     }
 
     @Override

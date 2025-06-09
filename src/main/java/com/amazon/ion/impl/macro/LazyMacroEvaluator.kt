@@ -31,8 +31,8 @@ class LazyMacroEvaluator : IonReader {
     private val sideEffects: ExpressionTape = ExpressionTape(null, 4)
     private var invocationTape: ExpressionTape = ExpressionTape.EMPTY
     private var expressionTape: ExpressionTape = ExpressionTape.EMPTY
-    private var initialFieldName: SymbolToken? = null
-    private var currentFieldName: SymbolToken? = null
+    private var initialFieldName: String? = null
+    private var currentFieldName: String? = null
     private var currentAnnotations: List<SymbolToken>? = null
 
     private var eExpressionIndex = -1;
@@ -59,7 +59,7 @@ class LazyMacroEvaluator : IonReader {
     /**
      * Initialize the macro evaluator with an E-Expression.
      */
-    fun initExpansion(fieldName: SymbolToken?, encodingExpressions: ExpressionTape) {
+    fun initExpansion(fieldName: String?, encodingExpressions: ExpressionTape) {
         numExpandedExpressions = 0
         invocationTape = encodingExpressions
         expressionTape = invocationTape
@@ -294,7 +294,7 @@ class LazyMacroEvaluator : IonReader {
     }
 
     private fun handlePrivateMakeFieldNameAndValue(): Byte {
-        currentFieldName = readExactlyOneArgument(0, ::symbolValue)
+        currentFieldName = readExactlyOneArgument(0, ::stringValue)
         readArgument(1)
         expansionKind = EXACTLY_ONE_VALUE_STREAM
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
@@ -708,9 +708,9 @@ class LazyMacroEvaluator : IonReader {
 
     override fun isInStruct(): Boolean = containerStack[depth] == IonType.STRUCT
 
-    override fun getFieldId(): Int = currentFieldName?.sid ?: 0
-    override fun getFieldName(): String? = currentFieldName?.text
-    override fun getFieldNameSymbol(): SymbolToken? = currentFieldName
+    override fun getFieldId(): Int = -1
+    override fun getFieldName(): String? = currentFieldName
+    override fun getFieldNameSymbol(): SymbolToken? = if (currentFieldName == null) null else _Private_Utils.newSymbolToken(currentFieldName)
 
     /** TODO: Throw on data loss */
     override fun intValue(): Int = longValue().toInt()

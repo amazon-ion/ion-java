@@ -1094,19 +1094,4 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         return annotationTextIterator;
     }
 
-    @Override
-    public String getFieldName() {
-        if (fieldTextMarker.startIndex > -1 || isEvaluatingEExpression || fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
-            return getFieldText();
-        }
-        if (fieldSid < 0) {
-            return null;
-        }
-        String fieldName = getSymbol(fieldSid);
-        if (fieldName == null) {
-            throw new UnknownSymbolException(fieldSid);
-        }
-        return fieldName;
-    }
-
 }

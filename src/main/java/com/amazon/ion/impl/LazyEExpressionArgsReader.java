@@ -136,7 +136,7 @@ abstract class LazyEExpressionArgsReader {
      * @param parameter information about the parameter from the macro signature.
      * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
      */
-    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, SymbolToken fieldName);
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, String fieldName);
 
     /**
      * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
@@ -154,7 +154,7 @@ abstract class LazyEExpressionArgsReader {
     /**
      * Reads a scalar value from the stream into an expression.
      */
-    private void readScalarValueAsExpression(SymbolToken fieldName) {
+    private void readScalarValueAsExpression(String fieldName) {
         expressionTape.add(reader.valueTid, ExpressionType.DATA_MODEL_SCALAR_ORDINAL, (int) reader.valueMarker.startIndex, (int) reader.valueMarker.endIndex, fieldName);
     }
 
@@ -163,7 +163,7 @@ abstract class LazyEExpressionArgsReader {
      * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
      * @param type the type of container.
      */
-    private void readContainerValueAsExpression(IonType type, SymbolToken fieldName) {
+    private void readContainerValueAsExpression(IonType type, String fieldName) {
         boolean isExpressionGroup = isContainerAnExpressionGroup();
         if (isExpressionGroup) {
             expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1, fieldName);
@@ -173,10 +173,10 @@ abstract class LazyEExpressionArgsReader {
         // TODO if the container is prefixed, don't recursively step through it
         stepInRaw();
         while (nextRaw()) {
-            SymbolToken childFieldName = null;
+            String childFieldName = null;
             if (type == IonType.STRUCT) {
                 // TODO avoid having to create SymbolToken every time
-                childFieldName = reader.getFieldNameSymbol();
+                childFieldName = reader.getFieldName();
             }
             readValueAsExpression(false, childFieldName); // TODO avoid recursion
         }
@@ -191,7 +191,7 @@ abstract class LazyEExpressionArgsReader {
     /**
      * Reads the rest of the stream into a single expression group.
      */
-    private void readStreamAsExpressionGroup(SymbolToken fieldName) {
+    private void readStreamAsExpressionGroup(String fieldName) {
         expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1, fieldName);
         do {
             readValueAsExpression(false, null); // TODO avoid recursion // TODO or, should the field name be distributed to all?
@@ -205,7 +205,7 @@ abstract class LazyEExpressionArgsReader {
      * @param isImplicitRest true if this is the final parameter in the signature, it is variadic, and the format
      *                       supports implicit rest parameters (text only); otherwise, false.
      */
-    protected void readValueAsExpression(boolean isImplicitRest, SymbolToken fieldName) {
+    protected void readValueAsExpression(boolean isImplicitRest, String fieldName) {
         if (isImplicitRest && !isContainerAnExpressionGroup()) {
             readStreamAsExpressionGroup(fieldName);
             return;
@@ -241,7 +241,7 @@ abstract class LazyEExpressionArgsReader {
                 if (invocationOrdinal == targetVariableOrdinal) {
                     // This is the common case: the parameter that is about to be read matches the ordinal of the next
                     // variable in the signature. This means it can be copied into the tape without using scratch space.
-                    SymbolToken childFieldName = macroBodyTape.fieldNameForVariable(i);
+                    String childFieldName = macroBodyTape.fieldNameForVariable(i);
                     int startIndexInTape = expressionTape.size();
                     readParameter(
                         signature.get(invocationOrdinal),
@@ -300,7 +300,7 @@ abstract class LazyEExpressionArgsReader {
         for (int i = 0; i < numberOfVariables; i++) {
             // Copy everything up to the next variable.
             macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
-            SymbolToken childFieldName = macroBodyTape.fieldNameForVariable(i);
+            String childFieldName = macroBodyTape.fieldNameForVariable(i);
             // This is the common case: the parameter that is about to be read matches the ordinal of the next
             // variable in the signature. This means it can be copied into the tape without using scratch space.
             readParameter(
@@ -312,7 +312,7 @@ abstract class LazyEExpressionArgsReader {
         return macroBodyTapeIndex;
     }
 
-    private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, SymbolToken fieldName) {
+    private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, String fieldName) {
         ExpressionTape.Core macroBodyTape = macro.getBodyTape();
         // TODO avoid eagerly stepping through prefixed expressions
         int numberOfParameters = signature.size();
@@ -337,7 +337,7 @@ abstract class LazyEExpressionArgsReader {
         return expressionTape;
     }
 
-    private void collectVerbatimEExpressionArgs(Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, SymbolToken fieldName) {
+    private void collectVerbatimEExpressionArgs(Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, String fieldName) {
         // TODO avoid eagerly stepping through prefixed expressions
         expressionTape.add(macro, ExpressionType.E_EXPRESSION_ORDINAL, -1, -1, fieldName);
         int numberOfParameters = signature.size();
@@ -355,7 +355,7 @@ abstract class LazyEExpressionArgsReader {
     /**
      * Collects the expressions that compose the current macro invocation.
      */
-    private ExpressionTape collectEExpressionArgs(boolean isTopLevel, SymbolToken fieldName) {
+    private ExpressionTape collectEExpressionArgs(boolean isTopLevel, String fieldName) {
         // TODO if it's a system macro don't eagerly expand
         Macro macro = loadMacro();
         stepIntoEExpression();
@@ -386,7 +386,7 @@ abstract class LazyEExpressionArgsReader {
         // Tombstone the invocation and the first argument;
         // take the second. Note: argumentsStart - 1 points to the Default invocation.
         ExpressionTape.Element firstTombstoneInSequence = tape.elementAt(argumentsStart - 1);
-        SymbolToken fieldName = firstTombstoneInSequence.fieldName;
+        String fieldName = firstTombstoneInSequence.fieldName;
         firstTombstoneInSequence.type = ExpressionType.TOMBSTONE_ORDINAL;
         firstTombstoneInSequence.containerEnd = tape.findEndOfTombstoneSequence(tape.getExpressionStartIndex(eExpressionIndex, 1));
         // Move the field name from the invocation to the value that remains.
@@ -405,7 +405,7 @@ abstract class LazyEExpressionArgsReader {
             // The first argument is not None. Tombstone the invocation and the second argument;
             // take the first. Note: argumentsStart - 1 points to the Default invocation.
             ExpressionTape.Element firstTombstoneInSequence = tape.elementAt(argumentsStart - 1);
-            SymbolToken fieldName = firstTombstoneInSequence.fieldName;
+            String fieldName = firstTombstoneInSequence.fieldName;
             firstTombstoneInSequence.type = ExpressionType.TOMBSTONE_ORDINAL;
             firstTombstoneInSequence.containerEnd = actualArgumentStart;
             // Move the field name from the invocation to the value that remains.
@@ -453,10 +453,10 @@ abstract class LazyEExpressionArgsReader {
      */
     public void beginEvaluatingMacroInvocation(LazyMacroEvaluator macroEvaluator) {
         reader.pinBytesInCurrentValue();
-        SymbolToken fieldName = null;
+        String fieldName = null;
         if (reader.isInStruct()) {
             // TODO avoid having to create SymbolToken every time
-            fieldName = reader.getFieldNameSymbol();
+            fieldName = reader.getFieldName();
         }
         ExpressionTape tape = collectEExpressionArgs(true, fieldName);
         simplifyResolvableMacroInvocations(tape.core());
@@ -474,9 +474,9 @@ abstract class LazyEExpressionArgsReader {
             verbatimExpressionTape = new ExpressionTape(reader, 64);
         }
         reader.pinBytesInCurrentValue();
-        SymbolToken fieldName = null;
+        String fieldName = null;
         if (reader.isInStruct()) {
-            fieldName = reader.getFieldNameSymbol();
+            fieldName = reader.getFieldName();
         }
         expressionTape = verbatimExpressionTape;
         int start = (int) reader.valueMarker.startIndex;

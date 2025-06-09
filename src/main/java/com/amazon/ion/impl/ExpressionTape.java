@@ -42,7 +42,7 @@ public class ExpressionTape { // TODO make internal
         int end = -1;
         int containerStart = -1;
         int containerEnd = -1;
-        SymbolToken fieldName = null;
+        String fieldName = null;
     }
 
     public static class Core {
@@ -149,7 +149,7 @@ public class ExpressionTape { // TODO make internal
             return endIndex + 1;
         }
 
-        public SymbolToken fieldNameForVariable(int variableIndex) {
+        public String fieldNameForVariable(int variableIndex) {
             return elements[variableStarts[variableIndex]].fieldName;
         }
 
@@ -317,7 +317,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    void add(Object context, byte type, int start, int end, SymbolToken fieldName) {
+    void add(Object context, byte type, int start, int end, String fieldName) {
         if (i >= core.elements.length) {
             core.grow();
         }
@@ -337,7 +337,7 @@ public class ExpressionTape { // TODO make internal
         core.size++;
     }
 
-    private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart, SymbolToken fieldName) {
+    private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart, String fieldName) {
         int startIndex = core.size;
         for (int i = sourceStart; i < sourceEnd; i++) {
             Element sourceElement = source.elements[i];
@@ -410,7 +410,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    private void add(Object context, byte type, Object value, SymbolToken fieldName) {
+    private void add(Object context, byte type, Object value, String fieldName) {
         if (i >= core.elements.length) {
             core.grow();
         }
@@ -468,7 +468,7 @@ public class ExpressionTape { // TODO make internal
         core.size++;
     }
 
-    public void addScalar(IonType type, Object value, SymbolToken fieldName) {
+    public void addScalar(IonType type, Object value, String fieldName) {
         add(NON_NULL_SCALAR_TYPE_IDS[type.ordinal()], ExpressionType.DATA_MODEL_SCALAR_ORDINAL, value, fieldName);
     }
 
@@ -504,7 +504,7 @@ public class ExpressionTape { // TODO make internal
         return core.size;
     }
 
-    public void setFieldNameAt(int index, SymbolToken fieldName) {
+    public void setFieldNameAt(int index, String fieldName) {
         core.elements[index].fieldName = fieldName;
     }
 
@@ -569,7 +569,7 @@ public class ExpressionTape { // TODO make internal
         return (List<SymbolToken>) core.elements[i].context;
     }
 
-    public SymbolToken fieldName() {
+    public String fieldName() {
         return core.elements[i].fieldName;
     }
 
@@ -854,7 +854,7 @@ public class ExpressionTape { // TODO make internal
 
     }
 
-    public void addDataModelValue(Expression.DataModelValue value, SymbolToken fieldName) {
+    public void addDataModelValue(Expression.DataModelValue value, String fieldName) {
         List<SymbolToken> annotations = value.getAnnotations();
         if (!annotations.isEmpty()) {
             add(annotations, ExpressionType.ANNOTATION_ORDINAL, null, fieldName);
@@ -931,7 +931,7 @@ public class ExpressionTape { // TODO make internal
 
         ExpressionTape tape = new ExpressionTape(null, tapeSize);
         List<Byte>[] ends = new List[expressions.size() + 1];
-        SymbolToken fieldName = null;
+        String fieldName = null;
         for (int i = 0; i < expressions.size(); i++) {
             Expression expression = expressions.get(i);
             List<Byte> endsAtExpressionIndex = ends[i];
@@ -941,7 +941,7 @@ public class ExpressionTape { // TODO make internal
                 }
             }
             if (expression instanceof Expression.FieldName) {
-                fieldName = ((Expression.FieldName) expression).getValue();
+                fieldName = ((Expression.FieldName) expression).getValue().getText();
                 continue;
             } else if (expression instanceof Expression.InvokableExpression) {
                 Expression.InvokableExpression eExpression = (Expression.InvokableExpression) expression;
@@ -1031,9 +1031,9 @@ public class ExpressionTape { // TODO make internal
                 index++;
                 continue;
             }
-            SymbolToken fieldName = fieldName();
+            String fieldName = fieldName();
             if (fieldName != null) {
-                writer.setFieldNameSymbol(fieldName);
+                writer.setFieldName(fieldName);
             }
             switch (argument) {
                 case ExpressionType.ANNOTATION_ORDINAL:
