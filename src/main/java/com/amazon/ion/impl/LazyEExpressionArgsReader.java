@@ -257,11 +257,14 @@ abstract class LazyEExpressionArgsReader {
                     // The variable for this ordinal cannot have been read yet.
                     int scratchStartIndex = expressionTapeScratch.size();
                     expressionTape = expressionTapeScratch;
-                    int matchingVariableOrdinal = macroBodyTape.getVariableOrdinal(invocationOrdinal);
                     readParameter(
                         signature.get(invocationOrdinal),
                         presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                        macroBodyTape.fieldNameForVariable(matchingVariableOrdinal)
+                        // Note: currently there is not a good way of knowing what the field name for this argument
+                        // will be. If this can be cheaply calculated then it could be provided here to enable eliding
+                        // of None when the field name is not null, a small optimization. If this is done, the field
+                        // name does not need to be set in the next branch.
+                        null
                     );
                     expressionTape = expressionTapeOrdered;
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
@@ -283,7 +286,10 @@ abstract class LazyEExpressionArgsReader {
                     }
                     ExpressionTape source = marker.typeId == IonTypeID.ALWAYS_INVALID_TYPE_ID ? expressionTapeScratch : expressionTape;
                     // The argument for this variable has already been read. Copy it from the tape.
+                    int startIndex = expressionTape.size();
                     expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
+                    String childFieldName = macroBodyTape.fieldNameForVariable(i);
+                    expressionTape.setFieldNameAt(startIndex, childFieldName);
                     break;
                 }
                 invocationOrdinal++;
