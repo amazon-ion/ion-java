@@ -1333,6 +1333,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         private void installMacros() {
             if (!isMacroTableAppend) {
                 encodingContext = new EncodingContext(new MutableMacroTable(MacroTable.empty()));
+                // TODO convey this to the e-expression args reader so it can reset its invocation cache.
             } else if (!encodingContext.isMutable()) { // we need to append, but can't
                 encodingContext = new EncodingContext(new MutableMacroTable(encodingContext.getMacroTable()));
             }
@@ -1651,9 +1652,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             // None is possible. When there is a field name, we know that the None occurs in a struct and the field
             // can simply be suppressed. The only time it cannot be suppressed is within a non-flattened system
             // macro invocation. This is good enough for now.
-            if (fieldName == null) {
-                expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, null);
-            }
+            //if (fieldName == null) { // TODO tried removing to enable reuse of tape given same presence bits.
+                expressionTape.add(null, ExpressionType.NONE_ORDINAL, -1, -1, fieldName);
+            //}
         }
 
         @Override

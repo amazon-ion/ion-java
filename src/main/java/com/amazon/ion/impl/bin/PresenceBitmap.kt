@@ -309,6 +309,10 @@ internal class PresenceBitmap(
         if (numBytes > 0) buffer.writeFixedIntOrUIntAt(writePosition, resultBuffer, numBytes)
     }
 
+    fun getFirst64PresenceBits(): Long {
+        return a;
+    }
+
     /**
      * Integer division that rounds up instead of down.
      * E.g.:

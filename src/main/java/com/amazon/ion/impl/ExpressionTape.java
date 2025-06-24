@@ -51,7 +51,10 @@ public class ExpressionTape { // TODO make internal
         private int size = 0;
         private int[] numberOfExpressions;
         private int numberOfVariables = 0;
-        private int[] variableStarts;
+        private int[] variableStartsByInvocationArgumentOrdinal;
+        private int[] variableOrdinalsByInvocationArgumentOrdinal;
+        private int[][] variableStartsByVariableOrdinal;
+        private int[] numberOfDuplicateUsagesByVariableOrdinal;
         private int[] eExpressionStarts;
         private int[] eExpressionEnds;
         private int numberOfEExpressions = 0;
@@ -61,7 +64,10 @@ public class ExpressionTape { // TODO make internal
             expressionStarts = new int[1][]; // TODO figure out why this breaks when the first dimension is increased, then increase it
             expressionStarts[0] = new int[16];
             numberOfExpressions = new int[1];
-            variableStarts = new int[8];
+            variableStartsByInvocationArgumentOrdinal = new int[8];
+            variableOrdinalsByInvocationArgumentOrdinal = new int[8];
+            variableStartsByVariableOrdinal = new int[8][];
+            numberOfDuplicateUsagesByVariableOrdinal = new int[8];
             eExpressionStarts = new int[8];
             eExpressionEnds = new int[8];
         }
@@ -87,23 +93,75 @@ public class ExpressionTape { // TODO make internal
 
         void setNextExpression(int eExpressionIndex, int index) {
             int numberOfExpressionsInEExpression = numberOfExpressions[eExpressionIndex]++;
-            if (expressionStarts[eExpressionIndex].length < numberOfExpressionsInEExpression) {
+            if (expressionStarts[eExpressionIndex].length <= numberOfExpressionsInEExpression) {
                 growExpressionStartsForEExpression(eExpressionIndex);
             }
             expressionStarts[eExpressionIndex][numberOfExpressionsInEExpression] = index;
         }
 
-        void setNextVariable(int index) {
-            if (variableStarts.length <= numberOfVariables) {
-                variableStarts = Arrays.copyOf(variableStarts, variableStarts.length * 2);
+        void setNextVariable(int index, int variableOrdinal) {
+            if (variableStartsByInvocationArgumentOrdinal.length <= numberOfVariables) {
+                variableStartsByInvocationArgumentOrdinal = Arrays.copyOf(variableStartsByInvocationArgumentOrdinal, variableStartsByInvocationArgumentOrdinal.length * 2);
+                variableOrdinalsByInvocationArgumentOrdinal = Arrays.copyOf(variableOrdinalsByInvocationArgumentOrdinal, variableOrdinalsByInvocationArgumentOrdinal.length * 2);
             }
-            variableStarts[numberOfVariables++] = index;
+            /*
+            int variableOrdinal = (int) elements[index].context;
+            if (variableStartsByVariableOrdinal.length <= variableOrdinal) {
+                variableStartsByVariableOrdinal = Arrays.copyOf(variableStartsByVariableOrdinal, variableStartsByVariableOrdinal.length * 2);
+                variableStartsByVariableOrdinal[variableOrdinal] = new int[] { index };
+                numberOfDuplicateUsagesByVariableOrdinal = Arrays.copyOf(numberOfDuplicateUsagesByVariableOrdinal, numberOfDuplicateUsagesByVariableOrdinal.length * 2);
+            } else {
+                int[] variableStartsForVariableOrdinal = variableStartsByVariableOrdinal[variableOrdinal];
+                if (variableStartsForVariableOrdinal == null) {
+                    variableStartsByVariableOrdinal[variableOrdinal] = new int[] { index };
+                    numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal] = 0;
+                } else {
+                    int numberOfDuplicatesOfThisVariable = numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal];
+                    if (variableStartsForVariableOrdinal.length - 1 <= numberOfDuplicatesOfThisVariable) {
+                        variableStartsByVariableOrdinal[variableOrdinal] = Arrays.copyOf(variableStartsForVariableOrdinal, variableStartsForVariableOrdinal.length + 1);
+                        numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal] = ++numberOfDuplicatesOfThisVariable;
+                    }
+                    variableStartsByVariableOrdinal[variableOrdinal][numberOfDuplicatesOfThisVariable] = index;
+                }
+            }
+
+             */
+            variableOrdinalsByInvocationArgumentOrdinal[numberOfVariables] = variableOrdinal;
+            variableStartsByInvocationArgumentOrdinal[numberOfVariables++] = index;
+        }
+
+        void cacheVariableLocationByOrdinal(int variableStartIndex, int variableOrdinal) {
+            //int variableOrdinal = (int) elements[index].context;
+            if (variableStartsByVariableOrdinal.length <= variableOrdinal) {
+                while (variableStartsByVariableOrdinal.length <= variableOrdinal) { // Note: the while is required because the ordinals may be added out of order. Therefore, more than one growth may be required.
+                    variableStartsByVariableOrdinal = Arrays.copyOf(variableStartsByVariableOrdinal, variableStartsByVariableOrdinal.length * 2);
+                    variableStartsByVariableOrdinal[variableOrdinal] = new int[]{variableStartIndex};
+                    numberOfDuplicateUsagesByVariableOrdinal = Arrays.copyOf(numberOfDuplicateUsagesByVariableOrdinal, numberOfDuplicateUsagesByVariableOrdinal.length * 2);
+                }
+            } else {
+                int[] variableStartsForVariableOrdinal = variableStartsByVariableOrdinal[variableOrdinal];
+                if (variableStartsForVariableOrdinal == null) {
+                    variableStartsByVariableOrdinal[variableOrdinal] = new int[] { variableStartIndex };
+                    numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal] = 0;
+                } else {
+                    int numberOfDuplicatesOfThisVariable = numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal];
+                    if (variableStartsForVariableOrdinal.length - 1 <= numberOfDuplicatesOfThisVariable) {
+                        variableStartsByVariableOrdinal[variableOrdinal] = Arrays.copyOf(variableStartsForVariableOrdinal, variableStartsForVariableOrdinal.length + 1);
+                        numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal] = ++numberOfDuplicatesOfThisVariable;
+                    }
+                    variableStartsByVariableOrdinal[variableOrdinal][numberOfDuplicatesOfThisVariable] = variableStartIndex;
+                }
+            }
+            //numberOfVariables++;
         }
 
         int findEndOfExpression(int startIndex) {
             int relativeDepth = 0;
             int i = startIndex;
             loop: while (i < size) {
+                if (elements[i] == null) { // TODO this might be wrong/unnecessary, and check i vs i + 1
+                    return i + 1;
+                }
                 switch (elements[i].type) {
                     case ANNOTATION_ORDINAL:
                     case DATA_MODEL_SCALAR_ORDINAL:
@@ -143,14 +201,23 @@ public class ExpressionTape { // TODO make internal
             return i;
         }
 
+        public void recalculateEExpressionEnd(int eExpressionIndex, int startIndex) {
+            eExpressionStarts[eExpressionIndex] = startIndex;
+            eExpressionEnds[eExpressionIndex] = findEndOfExpression(startIndex);
+        }
+
+        public void setNumberOfEExpressions(int numberOfEExpressions) {
+            this.numberOfEExpressions = numberOfEExpressions;
+        }
+
         public int copyToVariable(int startIndex, int variableIndex, ExpressionTape other) {
-            int endIndex = variableStarts[variableIndex];
+            int endIndex = variableStartsByInvocationArgumentOrdinal[variableIndex];
             other.copyFromRange(this, startIndex, endIndex);
             return endIndex + 1;
         }
 
         public String fieldNameForVariable(int variableIndex) {
-            return elements[variableStarts[variableIndex]].fieldName;
+            return elements[variableStartsByInvocationArgumentOrdinal[variableIndex]].fieldName;
         }
 
         public int getNumberOfVariables() {
@@ -160,7 +227,7 @@ public class ExpressionTape { // TODO make internal
         public boolean areVariablesOrdered() {
             int previousVariableOrdinal = -1;
             for (int i = 0; i < numberOfVariables; i++) {
-                int currentVariableOrdinal = (int) elements[variableStarts[i]].context;
+                int currentVariableOrdinal = (int) elements[variableStartsByInvocationArgumentOrdinal[i]].context;
                 if (currentVariableOrdinal < previousVariableOrdinal) {
                     return false;
                 }
@@ -174,11 +241,20 @@ public class ExpressionTape { // TODO make internal
          * the ordinal of that variable, i.e. the order in which that variable occurs in the invocation.
          * For example, the IfNone system macro may have the tape (VARIABLE(0) VARIABLE(1) VARIABLE(0)). The variable
          * indices for that tape are (0 1 2) and the variable ordinals are (0 1 0).
-         * @param variableIndex a variable index, which the caller ensures is less than `numberOfVariables`.
+         * @param invocationArgumentOrdinal the ordinal of an invocation argument, which the caller ensures is less
+         *                                  than `numberOfVariables`.
          * @return the ordinal of the variable at the given index.
          */
-        public int getVariableOrdinal(int variableIndex) {
-            return (int) elements[variableStarts[variableIndex]].context;
+        public int getVariableOrdinal(int invocationArgumentOrdinal) {
+            return variableOrdinalsByInvocationArgumentOrdinal[invocationArgumentOrdinal];
+        }
+
+        public int[] getVariableStartIndices(int variableOrdinal) {
+            return variableStartsByVariableOrdinal[variableOrdinal];
+        }
+
+        public int getNumberOfDuplicateUsages(int variableOrdinal) {
+            return numberOfDuplicateUsagesByVariableOrdinal[variableOrdinal];
         }
 
         public int getExpressionStartIndex(int eExpressionIndex, int expressionOrdinal) {
@@ -189,14 +265,31 @@ public class ExpressionTape { // TODO make internal
             if (index >= size) {
                 return size;
             }
+            if (elements[index] == null) {
+                // TODO when does this happen? should it ever happen?
+                return index;
+            }
             while (elements[index].type == TOMBSTONE_ORDINAL) {
                 index = elements[index].containerEnd;
             }
             return index;
         }
 
-        public int getVariableStartIndex(int variableIndex) {
-            return variableStarts[variableIndex];
+        public void setTombstoneAt(int startIndex, int endIndex) {
+            Element element = elements[startIndex];
+            if (element == null) {
+                // TODO when does this happen? should it ever happen?
+                element = new Element();
+                elements[startIndex] = element;
+            }
+            element.type = TOMBSTONE_ORDINAL;
+            //element.context = null;
+            //element.value = null;
+            //element.end = -1;
+            //element.start = -1;
+            //element.fieldName = null; // TODO tried removing, changed nothing in targeted test. Check.
+            //element.containerStart = -1;
+            element.containerEnd = endIndex;
         }
 
         public int getEExpressionStartIndex(int eExpressionIndex) {
@@ -211,6 +304,22 @@ public class ExpressionTape { // TODO make internal
             return numberOfEExpressions;
         }
 
+        public int findNextTombstone(int startIndex) {
+            int endIndex = startIndex + 1;
+            while (elements[endIndex].type != TOMBSTONE_ORDINAL) {
+                endIndex++;
+            }
+            return endIndex;
+        }
+
+        public void extendTombstoneFrom(int startIndex) {
+            int endIndex = findNextTombstone(startIndex);
+            Element startElement = elements[startIndex];
+            startElement.type = TOMBSTONE_ORDINAL;
+            // Extend the tombstone sequence to the end of the tombstone sequence beginning at 'endIndex'.
+            startElement.containerEnd = elements[endIndex].containerEnd;
+        }
+
         public Element elementAt(int index) {
             return elements[index];
         }
@@ -220,7 +329,7 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
-    public static final ExpressionTape EMPTY = new ExpressionTape(new Core(0));
+    public static final ExpressionTape EMPTY = new ExpressionTape(null, new Core(0));
 
     private Core core;
     private final IonReaderContinuableCoreBinary reader; // If null, then the values are materialized
@@ -229,6 +338,8 @@ public class ExpressionTape { // TODO make internal
     private int depth = 0;
     private int[] eExpressionActiveAtDepth = new int[8];
     private int currentDataModelContainerStart = 0;
+    private int insertionLimit = Integer.MAX_VALUE;
+    private boolean lastAddOverflowed = false;
 
     public ExpressionTape(IonReaderContinuableCoreBinary reader, int initialSize) {
         this.reader = reader;
@@ -236,10 +347,22 @@ public class ExpressionTape { // TODO make internal
         Arrays.fill(eExpressionActiveAtDepth, -1);
     }
 
-    public ExpressionTape(Core core) {
-        reader = null;
+    public ExpressionTape(IonReaderContinuableCoreBinary reader, Core core) {
+        this.reader = reader;
         this.core = core;
         Arrays.fill(eExpressionActiveAtDepth, -1);
+    }
+
+    public boolean checkAndClearOverflow() {
+        if (lastAddOverflowed) {
+            lastAddOverflowed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public ExpressionTape blankCopy() {
+        return new ExpressionTape(reader, core.size);
     }
 
     public Core core() {
@@ -249,6 +372,20 @@ public class ExpressionTape { // TODO make internal
     public void reset(Core core) {
         this.core = core;
         rewindTo(0);
+        insertionLimit = Integer.MAX_VALUE;
+    }
+
+    /**
+     * Sets an insertion limit. If a call to `add` would add an element at the limit, the tape will be shifted right
+     * to make room
+     * @param limit the limit, or -1 to clear the limit.
+     */
+    public void setInsertionLimit(int limit) {
+        insertionLimit = limit;
+    }
+
+    public void clearInsertionLimit() {
+        insertionLimit = Integer.MAX_VALUE;
     }
 
     private void increaseDepth(boolean isEExpression) {
@@ -275,7 +412,7 @@ public class ExpressionTape { // TODO make internal
             case E_EXPRESSION_ORDINAL:
                 setChildExpressionIndex();
                 core.eExpressionStarts[core.numberOfEExpressions] = i;
-                core.elements[i].end = core.numberOfEExpressions++;
+                core.elements[i].end = core.numberOfEExpressions++; // TODO put this in containerEnd instead, then use start/end for e-expression start/end. Then get rid of the separate arrays for tracking e-expression start/end by index.
                 core.ensureEExpressionIndexAvailable(core.numberOfEExpressions);
                 core.elements[i].containerStart = currentDataModelContainerStart;
                 increaseDepth(true);
@@ -288,6 +425,7 @@ public class ExpressionTape { // TODO make internal
                 break;
             case EXPRESSION_GROUP_ORDINAL:
                 setChildExpressionIndex();
+                core.elements[i].containerStart = currentDataModelContainerStart;
                 increaseDepth(false);
                 break;
             case DATA_MODEL_SCALAR_ORDINAL:
@@ -298,7 +436,7 @@ public class ExpressionTape { // TODO make internal
                 break;
             case VARIABLE_ORDINAL:
                 setChildExpressionIndex();
-                core.setNextVariable(i);
+                core.setNextVariable(i, (int) core.elements[i].context);
                 core.elements[i].containerStart = currentDataModelContainerStart;
                 break;
             case E_EXPRESSION_END_ORDINAL:
@@ -317,7 +455,40 @@ public class ExpressionTape { // TODO make internal
         }
     }
 
+    public void markVariableStart(int variableOrdinal) {
+        // TODO these and other marked tape indices will be incorrect after shift occurs; need to be recalculated.
+        core.setNextVariable(i, variableOrdinal);
+        core.cacheVariableLocationByOrdinal(i, variableOrdinal);
+    }
+
+    private void shiftRightToMakeRoom(int minimumSpaceRequired) {
+        // TODO this is really expensive. May be possible to optimize if necessary. For example, the first time this
+        //  happens on an invocation, could start writing overflowing parameters to scratch space, marking start/end
+        //  indices and the total shortage. At the end of the invocation, can allocate a new tape once and zip together
+        //  the existing tape and the scratch tape in order. That way there's a maximum of one new allocation per
+        //  invocation. This also cuts down on over-allocation because the exact amount of extra space is known.
+        // TODO 16 is arbitrary. Is it possible to choose a better value?
+        Core newCore = new Core(core.size + Math.max(minimumSpaceRequired, 16)); // TODO larger size might not be required
+        ExpressionTape newTape = new ExpressionTape(reader, newCore);
+        //int savedInsertionLimit = insertionLimit;
+        insertionLimit = Integer.MAX_VALUE;
+        int currentIndex = i;
+        rewindTo(0); // TODO check, didn't appear to do anything
+        newTape.copyFromRange(core, 0, currentIndex); // TODO this could just be array copies up to the index
+        for (int tombstoneIndex = 0; tombstoneIndex < 16; tombstoneIndex++) {
+            newTape.add(null, TOMBSTONE_ORDINAL, null, null);
+            newCore.elements[newTape.i].containerEnd = 16 - tombstoneIndex;
+        }
+        newTape.copyFromRange(core, currentIndex, core.size);
+        core = newCore;
+    }
+
     void add(Object context, byte type, int start, int end, String fieldName) {
+        if (i > insertionLimit) {
+            //shiftRightToMakeRoom(i - insertionLimit);
+            lastAddOverflowed = true;
+            return;
+        }
         if (i >= core.elements.length) {
             core.grow();
         }
@@ -334,7 +505,9 @@ public class ExpressionTape { // TODO make internal
         element.fieldName = fieldName;
         setExpressionStart(type);
         i++;
-        core.size++;
+        if (i > core.size) { // Do not increase size if this was an in-place add.
+            core.size++;
+        }
     }
 
     private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart, String fieldName) {
@@ -427,7 +600,9 @@ public class ExpressionTape { // TODO make internal
         element.fieldName = fieldName;
         setExpressionStart(type);
         i++;
-        core.size++;
+        if (i > core.size) { // Do not increase size if this was an in-place add.
+            core.size++;
+        }
     }
 
     private void copyElement(Core other, int otherIndex) {
@@ -449,6 +624,11 @@ public class ExpressionTape { // TODO make internal
     void copyFromRange(Core other, int startIndex, int endIndex) {
         int copyLength = endIndex - startIndex;
         int destinationEnd = i + copyLength;
+        if (destinationEnd > insertionLimit) {
+            //shiftRightToMakeRoom(destinationEnd - insertionLimit);
+            lastAddOverflowed = true;
+            return;
+        }
         while (destinationEnd >= core.elements.length) {
             core.grow();
         }
@@ -456,7 +636,9 @@ public class ExpressionTape { // TODO make internal
             copyElement(other, otherIndex);
             i++;
         }
-        core.size += copyLength;
+        if (i > core.size) { // Do not increase size if this was an in-place copy.
+            core.size += i - core.size;
+        }
     }
 
     private void copyFrom(Core other, int otherIndex) {
@@ -465,7 +647,9 @@ public class ExpressionTape { // TODO make internal
         }
         copyElement(other, otherIndex);
         i++;
-        core.size++;
+        if (i > core.size) { // Do not increase size if this was an in-place copy.
+            core.size++;
+        }
     }
 
     public void addScalar(IonType type, Object value, String fieldName) {
@@ -500,6 +684,10 @@ public class ExpressionTape { // TODO make internal
         return core.elements[i].context;
     }
 
+    public int getEExpressionIndex() {
+        return core.elements[i].end; // Note: it's up to the caller to ensure i points to an e-expression
+    }
+
     public int size() {
         return core.size;
     }
@@ -512,6 +700,53 @@ public class ExpressionTape { // TODO make internal
         i = index;
         iNext = index;
         depth = 0;
+    }
+
+    public void prepareToOverwriteAt(int index) {
+        rewindTo(index);
+        currentDataModelContainerStart = core.elements[i].containerStart;
+        // TODO the following is only accurate for actual data model container depth, but depth is used even for pseudo-containers
+        int parentContainerIndex = currentDataModelContainerStart;
+        // First, go back to the start of the depth 0 container.
+        // TODO check that this doesn't always go back to 0
+        while (parentContainerIndex > 0) {
+            int grandparent = core.elements[parentContainerIndex].containerStart;
+            if (grandparent >= 0) {
+                parentContainerIndex = grandparent;
+            }
+        }
+        // Now, calculate the depth of containers between the parent start and the destination.
+        while (parentContainerIndex >= 0 && parentContainerIndex < i) {
+            byte type = core.elements[parentContainerIndex].type;
+            if (type == TOMBSTONE_ORDINAL) {
+                parentContainerIndex = core.elements[parentContainerIndex].containerEnd;
+            } else {
+                if (ExpressionType.isContainerStart(type)) {
+                    depth++;
+                } else if (ExpressionType.isEnd(type)) {
+                    depth--;
+                }
+                parentContainerIndex++;
+            }
+        }
+        /* TODO the following doesn't work because it can't handle tombstone sequences properly, which don't overwrite
+         the type of every element in the tombstone sequence. Therefore, when going back to front, you see more container
+         ends than starts.
+        while (parentContainerIndex > 0) {
+            parentContainerIndex = core.elements[parentContainerIndex].containerStart;
+            while (index > parentContainerIndex) {
+                byte type = core.elements[--index].type;
+                if (ExpressionType.isContainerStart(type)) {
+                    depth++;
+                } else if (ExpressionType.isEnd(type)) {
+                    depth--;
+                }
+            }
+        }
+
+         */
+        // TODO depth is inaccurate, but may not be needed. Check
+        // TODO other attributes might be needed, or it might be depth (check eExpressionActiveAtDepth)
     }
 
     public boolean isExhausted() {
@@ -527,10 +762,11 @@ public class ExpressionTape { // TODO make internal
         core.numberOfVariables = 0;
         depth = 0;
         core.numberOfEExpressions = 0;
+        insertionLimit = Integer.MAX_VALUE;
     }
 
     public void setNextAfterEndOfEExpression(int eExpressionIndex) {
-        iNext = core.eExpressionEnds[eExpressionIndex];
+        iNext = core.eExpressionEnds[eExpressionIndex]; // TODO not accurate after tape reuse
     }
 
     public void advanceToAfterEndEExpression(int eExpressionIndex) {
@@ -539,6 +775,15 @@ public class ExpressionTape { // TODO make internal
     }
 
     public void advanceToAfterEndContainer() {
+        if (isExhausted()) { // TODO is / why is this necessary?
+            return;
+        }
+        if (core.elements[i].type == DATA_MODEL_CONTAINER_END_ORDINAL) {
+            // TODO maybe this is an optimization, maybe not. Tried it for correctness; didn't work. Try with and without.
+            i++;
+            iNext = i;
+            return;
+        }
         i = core.elements[core.elements[i].containerStart].containerEnd + 1;
         iNext = i;
     }
