@@ -6734,31 +6734,34 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-    @Disabled
+
     @Test
     public void rewriteAllTypes() throws Exception {
 
         //Path file = Paths.get("/Users/greggt/Documents/real-ion-data/amazon-api/ion11", "productapi-buyingoptions-v2-request-1-1-no-makestring.10n");
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.11.ion");
         //Path output = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.10.10n");
-        //ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 
         try (
             IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file));
-            IonWriter writer = IonEncodingVersion.ION_1_0.textWriterBuilder().withPrettyPrinting().build((Appendable) System.out)
-            //IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out)
+            //IonWriter writer = IonEncodingVersion.ION_1_0.textWriterBuilder().withPrettyPrinting().build((Appendable) System.out)
+            IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out)
         ) {
             //writer.writeValues(reader);
+
 
             int i = 0;
             while (reader.next() != null) {
                 writer.writeValue(reader);
                 i++;
-                if (i == 7) {
+                if (i == 10000) {
                     break;
                 }
             }
+
+
 
 
 
@@ -6779,6 +6782,11 @@ public class IonReaderContinuableTopLevelBinaryTest {
              */
 
         }
+
+        System.out.println("Total invocations: " + LazyEExpressionArgsReader.totalNumberOfInvocations);
+        System.out.println("Successful hits: " + LazyEExpressionArgsReader.numberOfSuccessfulCachedInvocations);
+        System.out.println("Unsuccessful hits: " + LazyEExpressionArgsReader.numberOfUnsuccessfulCachedInvocations);
+        System.out.println("Misses: " + LazyEExpressionArgsReader.numberOfCacheMisses);
 
 
         /*

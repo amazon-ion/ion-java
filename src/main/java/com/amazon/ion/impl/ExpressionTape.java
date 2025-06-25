@@ -82,7 +82,7 @@ public class ExpressionTape { // TODO make internal
         }
 
         void ensureEExpressionIndexAvailable(int eExpressionIndex) {
-            if (expressionStarts.length <= eExpressionIndex) {
+            if (expressionStarts.length < eExpressionIndex) {
                 expressionStarts = Arrays.copyOf(expressionStarts, expressionStarts.length + 1);
                 expressionStarts[expressionStarts.length - 1] = new int[16];
                 eExpressionStarts = Arrays.copyOf(eExpressionStarts, eExpressionStarts.length + 1);
@@ -700,6 +700,20 @@ public class ExpressionTape { // TODO make internal
         i = index;
         iNext = index;
         depth = 0;
+    }
+
+    public void prepareToOverwrite() {
+        i = 0;
+        iNext = 0;
+        core.numberOfEExpressions = 0;
+        depth = 0;
+        Arrays.fill(core.numberOfExpressions, 0);
+        currentDataModelContainerStart = 0;
+        core.size = 0;
+        //Arrays.fill(eExpressionActiveAtDepth, -1); // TODO check
+        core.numberOfVariables = 0;
+        //Arrays.fill(core.numberOfDuplicateUsagesByVariableOrdinal, 0);
+        Arrays.fill(core.variableStartsByVariableOrdinal, null);
     }
 
     public void prepareToOverwriteAt(int index) {

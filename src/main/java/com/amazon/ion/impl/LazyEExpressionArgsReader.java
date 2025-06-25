@@ -49,6 +49,8 @@ abstract class LazyEExpressionArgsReader {
     // Reusable scratch tape for storing out-of-order expression arguments.
     private final ExpressionTape expressionTapeScratch;
 
+    //private final ExpressionTape expressionTapeUncached;
+
     private ExpressionTape verbatimExpressionTape = null;
 
     // Pool for presence bitmap instances.
@@ -104,6 +106,7 @@ abstract class LazyEExpressionArgsReader {
      */
     LazyEExpressionArgsReader(IonReaderContinuableCoreBinary reader) {
         this.reader = reader;
+        //expressionTapeUncached = new ExpressionTape(reader, 256);
         expressionTapeOrdered = new ExpressionTape(reader, 256);
         expressionTapeScratch = new ExpressionTape(reader, 64);
         expressionTape = expressionTapeOrdered;
@@ -674,10 +677,13 @@ abstract class LazyEExpressionArgsReader {
         macroInvocationTapeCache.put(testKey.copy(), tape);
         // The following will be false in the case of a constant macro, for which a new tape will have already been
         // created.
+        /*
         if (tape == expressionTape) {
             expressionTape = tape.blankCopy();
             expressionTapeOrdered = expressionTape;
         }
+
+         */
         return tape;
     }
 
@@ -711,6 +717,12 @@ abstract class LazyEExpressionArgsReader {
 
      */
 
+    // TODO remove all these before merge. They are for tracking hit rate during development.qq
+    public static int totalNumberOfInvocations = 0;
+    public static int numberOfSuccessfulCachedInvocations = 0;
+    public static int numberOfUnsuccessfulCachedInvocations = 0;
+    public static int numberOfCacheMisses = 0;
+
     /**
      * Materializes the expressions that compose the macro invocation on which the reader is positioned and feeds
      * them to the macro evaluator.
@@ -733,19 +745,19 @@ abstract class LazyEExpressionArgsReader {
         testKey.macro = macro;
         testKey.presenceBits = presenceBitmap; // TODO presence bitmap might not be the right key, unless changes in noneness can be handled.
         ExpressionTape tape = macroInvocationTapeCache.get(testKey);
+        totalNumberOfInvocations++;
         if (tape == null) {
+            expressionTape = new ExpressionTape(reader, 256);
+            expressionTapeOrdered = expressionTape;
             tape = createAndCacheNewInvocationTape(presenceBitmap, macro, fieldName);
+            numberOfCacheMisses++;
         } else {
             // Note: only attempting to resolve from the cache at the top level avoids having to handle the case where
             // a macro is provided an invocation of itself as an argument, and reduces the amount of cache-checking,
             // which is fairly expensive.
-            //tape = createAndCacheNewInvocationTape(presenceBitmap, macro, fieldName);
-            ExpressionTape savedExpressionTape = expressionTape;
             expressionTape = tape;
             expressionTapeOrdered = tape;
             boolean success = injectArgumentsIntoTapeTemplate(tape, presenceBitmap, macro.getSignature());
-            expressionTape = savedExpressionTape;
-            expressionTapeOrdered = savedExpressionTape;
             if (!success) {
                 // TODO the effectiveness of the cache is limited if any required growth causes !success and a reparse.
                 //  Could also thrash if it's a different argument each time that causes the growth. If they switch
@@ -755,9 +767,15 @@ abstract class LazyEExpressionArgsReader {
                 //  evict and re-learn every X uses.
                 reader.sliceAfterMacroInvocationHeader(eExpressionStart, eExpressionEnd, typeID, macroAddress, isSystemMacro); // Rewind, prepare to read again.
                 stepIntoEExpression();
-                loadPresenceBitmapIfNecessary(macro.getSignature());
-                expressionTape.clear(); // TODO did nothing, check
-                tape = createAndCacheNewInvocationTape(presenceBitmap, macro, fieldName);
+                reader.fillArgumentEncodingBitmap(presenceBitmap.getByteSize()); // TODO this could be even simpler -- just seek forward to valueMarker.endIndex
+                tape.prepareToOverwrite();
+                markVariables = true;
+                tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName);
+                markVariables = false;
+                //simplifyResolvableMacroInvocations(tape.core()); // Note: uncommenting this has no observed performance benefit
+                numberOfUnsuccessfulCachedInvocations++;
+            } else {
+                numberOfSuccessfulCachedInvocations++;
             }
             // TODO re-simplify resolvable macro invocations. Need to modify simplifyResolvableMacroInvocations(tape.core());
             //  so that it can handle the case where it was previously simplified (and there is no longer a macro at one of the locations)
@@ -795,7 +813,7 @@ abstract class LazyEExpressionArgsReader {
         collectVerbatimEExpressionArgs(macro, signature, presenceBitmap, true, fieldName);
         reader.sliceAfterMacroInvocationHeader(eExpressionStart, eExpressionEnd, typeID, macroAddress, isSystemMacro); // Rewind, prepare to read again.
         stepIntoEExpression();
-        loadPresenceBitmapIfNecessary(signature);
+        reader.fillArgumentEncodingBitmap(presenceBitmap.getByteSize());
         verbatimTranscode = false;
         expressionTape = expressionTapeOrdered;
         macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(macro, presenceBitmap, true, fieldName));
@@ -811,9 +829,9 @@ abstract class LazyEExpressionArgsReader {
         presenceBitmapPool.clear();
         reader.unpinBytes();
         reader.returnToCheckpoint();
-        expressionTapeOrdered.clear();
+        //expressionTapeOrdered.clear();
         expressionTapeScratch.clear();
-        expressionTape = expressionTapeOrdered;
+        //expressionTape = expressionTapeOrdered;
         verbatimTranscode = false;
         markerPoolIndex = -1;
         eExpressionStart = -1;
