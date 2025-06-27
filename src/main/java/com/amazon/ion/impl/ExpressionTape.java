@@ -221,9 +221,9 @@ public class ExpressionTape { // TODO make internal
             eExpressionEnds[eExpressionIndex] = findEndOfExpression(startIndex);
         }
 
-        public void truncateEExpressionCaches(int numberOfEExpressions, int oldLength) {
-            this.numberOfEExpressions = numberOfEExpressions;
-            for (int i = numberOfEExpressions; i < oldLength; i++) {
+        public void truncateEExpressionCaches(int truncatedLength, int currentLength) {
+            this.numberOfEExpressions = truncatedLength;
+            for (int i = truncatedLength; i < currentLength; i++) {
                 numberOfExpressions[i] = 0;
             }
         }

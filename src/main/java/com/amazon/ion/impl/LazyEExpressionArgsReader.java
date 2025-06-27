@@ -856,7 +856,7 @@ abstract class LazyEExpressionArgsReader {
         eExpressionStart = -1;
         eExpressionEnd = -1;
         if (numberOfEExpressionsBeforeInjection >= 0) {
-            expressionTape.core().truncateEExpressionCaches(numberOfEExpressionsAfterInjection, numberOfEExpressionsBeforeInjection);
+            expressionTape.core().truncateEExpressionCaches(numberOfEExpressionsBeforeInjection, numberOfEExpressionsAfterInjection);
             numberOfEExpressionsBeforeInjection = -1;
             numberOfEExpressionsAfterInjection = -1;
         }

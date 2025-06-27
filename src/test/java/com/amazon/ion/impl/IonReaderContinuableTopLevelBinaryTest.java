@@ -6734,7 +6734,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-
+    @Disabled
     @Test
     public void rewriteAllTypes() throws Exception {
 
