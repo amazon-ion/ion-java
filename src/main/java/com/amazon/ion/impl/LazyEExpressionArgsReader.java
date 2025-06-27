@@ -638,7 +638,7 @@ abstract class LazyEExpressionArgsReader {
                 int limit = core.findEndOfTombstoneSequence(core.findEndOfExpression(variableStart));
                 tape.setInsertionLimit(limit);
                 // Position core at variableStart before copying.
-                tape.prepareToOverwriteAt(variableStart);
+                tape.prepareToOverwriteAt(variableStart, variableOrdinal);
                 boolean existingIsNone = core.elementAt(variableStart).type == ExpressionType.NONE_ORDINAL;
                 if (variableUsageCount == 0) {
                     // This is the first usage. Read directly into the location.
@@ -684,15 +684,6 @@ abstract class LazyEExpressionArgsReader {
         markVariables = false;
         simplifyResolvableMacroInvocations(tape.core());
         macroInvocationTapeCache.put(testKey.copy(), tape);
-        // The following will be false in the case of a constant macro, for which a new tape will have already been
-        // created.
-        /*
-        if (tape == expressionTape) {
-            expressionTape = tape.blankCopy();
-            expressionTapeOrdered = expressionTape;
-        }
-
-         */
         return tape;
     }
 
@@ -770,10 +761,6 @@ abstract class LazyEExpressionArgsReader {
             // injected arguments are e-expressions. Dropping these prevents the cached tape's e-expression index
             // caches from growing infinitely.
             if (injectArgumentsIntoTapeTemplate(tape, presenceBitmap, macro.getSignature())) {
-                // TODO the following line results in 1/10 the allocation rate compared to the same line of code in
-                //  finishEvaluating...(), but causes groupTestMulti to fail. How can the memory reduction be achieved
-                //  correctly?
-                //tape.core().truncateEExpressionCaches(numberOfEExpressions, tape.core().getNumberOfEExpressions());
                 numberOfEExpressionsBeforeInjection = numberOfEExpressions;
                 numberOfEExpressionsAfterInjection = tape.core().getNumberOfEExpressions();
                 numberOfSuccessfulCachedInvocations++;

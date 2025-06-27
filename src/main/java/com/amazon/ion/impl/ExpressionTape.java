@@ -54,6 +54,7 @@ public class ExpressionTape { // TODO make internal
         private int[] variableStartsByInvocationArgumentOrdinal;
         private int[] variableOrdinalsByInvocationArgumentOrdinal;
         private int[][] variableStartsByVariableOrdinal;
+        private int[] depthByVariableOrdinal;
         private int[] numberOfDuplicateUsagesByVariableOrdinal;
         private int[] eExpressionStarts;
         private int[] eExpressionEnds;
@@ -67,6 +68,7 @@ public class ExpressionTape { // TODO make internal
             variableStartsByInvocationArgumentOrdinal = new int[8];
             variableOrdinalsByInvocationArgumentOrdinal = new int[8];
             variableStartsByVariableOrdinal = new int[8][];
+            depthByVariableOrdinal = new int[8];
             numberOfDuplicateUsagesByVariableOrdinal = new int[8];
             eExpressionStarts = new int[8];
             eExpressionEnds = new int[8];
@@ -99,10 +101,11 @@ public class ExpressionTape { // TODO make internal
             expressionStarts[eExpressionIndex][numberOfExpressionsInEExpression] = index;
         }
 
-        void setNextVariable(int index, int variableOrdinal) {
+        void setNextVariable(int index, int variableOrdinal, int depth) {
             if (variableStartsByInvocationArgumentOrdinal.length <= numberOfVariables) {
                 variableStartsByInvocationArgumentOrdinal = Arrays.copyOf(variableStartsByInvocationArgumentOrdinal, variableStartsByInvocationArgumentOrdinal.length * 2);
                 variableOrdinalsByInvocationArgumentOrdinal = Arrays.copyOf(variableOrdinalsByInvocationArgumentOrdinal, variableOrdinalsByInvocationArgumentOrdinal.length * 2);
+                depthByVariableOrdinal = Arrays.copyOf(depthByVariableOrdinal, depthByVariableOrdinal.length * 2);
             }
             /*
             int variableOrdinal = (int) elements[index].context;
@@ -127,6 +130,7 @@ public class ExpressionTape { // TODO make internal
 
              */
             variableOrdinalsByInvocationArgumentOrdinal[numberOfVariables] = variableOrdinal;
+            depthByVariableOrdinal[numberOfVariables] = depth;
             variableStartsByInvocationArgumentOrdinal[numberOfVariables++] = index;
         }
 
@@ -454,7 +458,7 @@ public class ExpressionTape { // TODO make internal
                 break;
             case VARIABLE_ORDINAL:
                 setChildExpressionIndex();
-                core.setNextVariable(i, (int) core.elements[i].context);
+                core.setNextVariable(i, (int) core.elements[i].context, depth);
                 core.elements[i].containerStart = currentDataModelContainerStart;
                 break;
             case E_EXPRESSION_END_ORDINAL:
@@ -475,7 +479,7 @@ public class ExpressionTape { // TODO make internal
 
     public void markVariableStart(int variableOrdinal) {
         // TODO these and other marked tape indices will be incorrect after shift occurs; need to be recalculated.
-        core.setNextVariable(i, variableOrdinal);
+        core.setNextVariable(i, variableOrdinal, depth);
         core.cacheVariableLocationByOrdinal(i, variableOrdinal);
     }
 
@@ -756,34 +760,10 @@ public class ExpressionTape { // TODO make internal
         Arrays.fill(core.variableStartsByVariableOrdinal, null);
     }
 
-    public void prepareToOverwriteAt(int index) {
+    public void prepareToOverwriteAt(int index, int variableOrdinal) {
         rewindTo(index);
-        // TODO performance: cache depths by variable index
         currentDataModelContainerStart = core.elements[i].containerStart;
-        int parentContainerIndex = currentDataModelContainerStart;
-        // First, go back to the start of the depth 0 container.
-        // TODO check that this doesn't always go back to 0
-        while (parentContainerIndex > 0) {
-            int grandparent = core.elements[parentContainerIndex].containerStart;
-            if (grandparent >= 0) {
-                parentContainerIndex = grandparent;
-            }
-        }
-        // Now, calculate the depth of containers between the parent start and the destination.
-        while (parentContainerIndex >= 0 && parentContainerIndex < i) {
-            byte type = core.elements[parentContainerIndex].type;
-            if (type == TOMBSTONE_ORDINAL) {
-                parentContainerIndex = core.elements[parentContainerIndex].containerEnd;
-            } else {
-                if (ExpressionType.isContainerStart(type)) {
-                    depth++;
-                } else if (ExpressionType.isEnd(type)) {
-                    depth--;
-                }
-                parentContainerIndex++;
-            }
-        }
-        // TODO other attributes might be needed, or it might be depth (check eExpressionActiveAtDepth)
+        depth = core.depthByVariableOrdinal[variableOrdinal];
     }
 
     public boolean isExhausted() {
