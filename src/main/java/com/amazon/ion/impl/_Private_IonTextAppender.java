@@ -22,7 +22,7 @@ import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
-import com.amazon.ion.impl.ryu.RyuDouble;
+import com.amazon.ion.impl.schubfach.DoubleToDecimal;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util._Private_FastAppendable;
 import java.io.ByteArrayInputStream;
@@ -840,7 +840,7 @@ public final class _Private_IonTextAppender
         }
         else
         {
-            String str = RyuDouble.doubleToString(value);
+            String str = DoubleToDecimal.toString(value);
             if (str.endsWith(".0"))
             {
                 appendAscii(str, 0, str.length() - 2);
