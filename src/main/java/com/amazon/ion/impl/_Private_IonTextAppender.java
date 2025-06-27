@@ -22,6 +22,7 @@ import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
 
 import com.amazon.ion.Decimal;
 import com.amazon.ion.impl.Base64Encoder.TextStream;
+import com.amazon.ion.impl.ryu.RyuDouble;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util._Private_FastAppendable;
 import java.io.ByteArrayInputStream;
@@ -839,9 +840,7 @@ public final class _Private_IonTextAppender
         }
         else
         {
-            // Double.toString() forces a digit after the decimal point.
-            // Remove it when it's not meaningful.
-            String str = Double.toString(value);
+            String str = RyuDouble.doubleToString(value);
             if (str.endsWith(".0"))
             {
                 appendAscii(str, 0, str.length() - 2);
