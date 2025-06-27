@@ -6741,13 +6741,13 @@ public class IonReaderContinuableTopLevelBinaryTest {
         //Path file = Paths.get("/Users/greggt/Documents/real-ion-data/amazon-api/ion11", "productapi-buyingoptions-v2-request-1-1-no-makestring.10n");
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.11.ion");
         //Path output = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "service_log_large.10.10n");
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        //ByteArrayOutputStream out = new ByteArrayOutputStream();
 
 
         try (
             IonReader reader = IonReaderBuilder.standard().build(Files.newInputStream(file));
-            //IonWriter writer = IonEncodingVersion.ION_1_0.textWriterBuilder().withPrettyPrinting().build((Appendable) System.out)
-            IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out)
+            IonWriter writer = IonEncodingVersion.ION_1_0.textWriterBuilder().withPrettyPrinting().build((Appendable) System.out)
+            //IonWriter writer = IonEncodingVersion.ION_1_0.binaryWriterBuilder().build(out)
         ) {
             //writer.writeValues(reader);
 
@@ -6756,14 +6756,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
             while (reader.next() != null) {
                 writer.writeValue(reader);
                 i++;
-                if (i == 10000) {
+                if (i == 6) {
                     break;
                 }
             }
-
-
-
-
 
             /*
             for (int i = 0; i < Integer.MAX_VALUE; i++) {
@@ -6771,8 +6767,10 @@ public class IonReaderContinuableTopLevelBinaryTest {
                     if (reader.next() == null) {
                         break;
                     }
-                    System.out.println(i);
-                    writer.writeValue(reader);
+                    //System.out.println(i);
+                    //if (i == 9933) { // TODO normally it fails at 9933, but having this branch makes it fail at 526612
+                        writer.writeValue(reader);
+                    //}
                 } catch (Exception e) {
                     System.out.println("progress: " + i);
                     throw e;
@@ -6912,7 +6910,7 @@ public class IonReaderContinuableTopLevelBinaryTest {
         }
     }
 
-    @Disabled
+    //@Disabled
     @Test
     public void groupTest() throws Exception {
         Path file = Paths.get("/Users/greggt/Documents/real-ion-data/Lambda/Shorthand11/", "group_test.11.ion");
@@ -7249,6 +7247,37 @@ public class IonReaderContinuableTopLevelBinaryTest {
             assertEquals(IonType.STRING, reader.next());
             assertEquals("Levels", reader.getFieldName());
             assertEquals("baz", reader.stringValue());
+            assertNull(reader.next());
+            reader.stepOut();
+
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Attributes", reader.getFieldName());
+            reader.stepIn();
+            assertNull(reader.next());
+            reader.stepOut();
+            assertEquals(IonType.LIST, reader.next());
+            assertEquals("Counters", reader.getFieldName());
+            reader.stepIn();
+            assertEquals(IonType.STRUCT, reader.next());
+            reader.stepIn();
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Name", reader.getFieldName());
+            assertEquals("Event", reader.stringValue());
+            assertEquals(IonType.FLOAT, reader.next());
+            assertEquals("Sum", reader.getFieldName());
+            assertEquals(2.0, reader.doubleValue(), 1e-9);
+            assertEquals(IonType.SYMBOL, reader.next());
+            assertEquals("Unit", reader.getFieldName());
+            assertEquals("", reader.stringValue());
+            assertEquals(IonType.INT, reader.next());
+            assertEquals("Count", reader.getFieldName());
+            assertEquals(2, reader.intValue());
+            assertNull(reader.next());
+            reader.stepOut();
+            assertNull(reader.next());
+            reader.stepOut();
             assertNull(reader.next());
             reader.stepOut();
 

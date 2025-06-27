@@ -158,7 +158,7 @@ public class ExpressionTape { // TODO make internal
         int findEndOfExpression(int startIndex) {
             int relativeDepth = 0;
             int i = startIndex;
-            loop: while (i < size) {
+            while (i < size) {
                 if (elements[i] == null) { // TODO this might be wrong/unnecessary, and check i vs i + 1
                     return i + 1;
                 }
@@ -168,26 +168,41 @@ public class ExpressionTape { // TODO make internal
                     case VARIABLE_ORDINAL:
                     case NONE_ORDINAL:
                         if (relativeDepth == 0) {
+                            /*
                             if (i > startIndex) {
                                 break loop;
                             }
+
+                             */
+                            return i + 1;
                         }
                         break;
                     case E_EXPRESSION_ORDINAL:
                     case EXPRESSION_GROUP_ORDINAL:
+                        relativeDepth++;
+                        break;
                     case DATA_MODEL_CONTAINER_ORDINAL:
+                        /*
                         if (relativeDepth == 0) {
                             if (i > startIndex) {
                                 break loop;
                             }
                         }
-                        relativeDepth++;
+
+                         */
+                        i = elements[i].containerEnd;
+                        if (relativeDepth == 0) {
+                            return i + 1;
+                        }
+                        //relativeDepth++; // TODO check
+                        break;
+                    case DATA_MODEL_CONTAINER_END_ORDINAL: // TODO how can this happen?
                         break;
                     case EXPRESSION_GROUP_END_ORDINAL:
-                    case DATA_MODEL_CONTAINER_END_ORDINAL:
                     case E_EXPRESSION_END_ORDINAL:
-                        if (--relativeDepth < 0) {
-                            break loop;
+                        if (--relativeDepth <= 0) {
+                            //break loop;
+                            return i + 1;
                         }
                         break;
                     case TOMBSTONE_ORDINAL:
@@ -206,8 +221,11 @@ public class ExpressionTape { // TODO make internal
             eExpressionEnds[eExpressionIndex] = findEndOfExpression(startIndex);
         }
 
-        public void setNumberOfEExpressions(int numberOfEExpressions) {
+        public void truncateEExpressionCaches(int numberOfEExpressions, int oldLength) {
             this.numberOfEExpressions = numberOfEExpressions;
+            for (int i = numberOfEExpressions; i < oldLength; i++) {
+                numberOfExpressions[i] = 0;
+            }
         }
 
         public int copyToVariable(int startIndex, int variableIndex, ExpressionTape other) {
@@ -484,7 +502,7 @@ public class ExpressionTape { // TODO make internal
     }
 
     void add(Object context, byte type, int start, int end, String fieldName) {
-        if (i > insertionLimit) {
+        if (i >= insertionLimit) {
             //shiftRightToMakeRoom(i - insertionLimit);
             lastAddOverflowed = true;
             return;
@@ -508,6 +526,15 @@ public class ExpressionTape { // TODO make internal
         if (i > core.size) { // Do not increase size if this was an in-place add.
             core.size++;
         }
+        /*
+        if (i >= core.size) {
+            setExpressionStart(type);
+            i++;
+            core.size++;
+        } else { // Do not increase size if this was an in-place add.
+            i++;
+        }
+         */
     }
 
     private void inlineExpression(Core source, int sourceStart, int sourceEnd, Core arguments, int argumentsStart, String fieldName) {
@@ -603,9 +630,19 @@ public class ExpressionTape { // TODO make internal
         if (i > core.size) { // Do not increase size if this was an in-place add.
             core.size++;
         }
+        /*
+        if (i >= core.size) {
+            setExpressionStart(type);
+            i++;
+            core.size++;
+        } else { // Do not increase size if this was an in-place add.
+            i++;
+        }
+
+         */
     }
 
-    private void copyElement(Core other, int otherIndex) {
+    private void copyElement(Core other, int otherIndex, boolean shouldCacheIndices) {
         Element element = core.elements[i];
         if (element == null) {
             element = new Element();
@@ -618,13 +655,15 @@ public class ExpressionTape { // TODO make internal
         element.start = otherElement.start;
         element.end = otherElement.end;
         element.fieldName = otherElement.fieldName;
-        setExpressionStart(element.type);
+        if (shouldCacheIndices) {
+            setExpressionStart(element.type);
+        }
     }
 
     void copyFromRange(Core other, int startIndex, int endIndex) {
         int copyLength = endIndex - startIndex;
         int destinationEnd = i + copyLength;
-        if (destinationEnd > insertionLimit) {
+        if (destinationEnd >= insertionLimit) {
             //shiftRightToMakeRoom(destinationEnd - insertionLimit);
             lastAddOverflowed = true;
             return;
@@ -632,8 +671,9 @@ public class ExpressionTape { // TODO make internal
         while (destinationEnd >= core.elements.length) {
             core.grow();
         }
+        boolean shouldCacheIndices = destinationEnd > core.size;
         for (int otherIndex = startIndex; otherIndex < endIndex; otherIndex++) {
-            copyElement(other, otherIndex);
+            copyElement(other, otherIndex, true);
             i++;
         }
         if (i > core.size) { // Do not increase size if this was an in-place copy.
@@ -645,7 +685,7 @@ public class ExpressionTape { // TODO make internal
         if (i >= core.elements.length) {
             core.grow();
         }
-        copyElement(other, otherIndex);
+        copyElement(other, otherIndex, true);
         i++;
         if (i > core.size) { // Do not increase size if this was an in-place copy.
             core.size++;
@@ -718,8 +758,8 @@ public class ExpressionTape { // TODO make internal
 
     public void prepareToOverwriteAt(int index) {
         rewindTo(index);
+        // TODO performance: cache depths by variable index
         currentDataModelContainerStart = core.elements[i].containerStart;
-        // TODO the following is only accurate for actual data model container depth, but depth is used even for pseudo-containers
         int parentContainerIndex = currentDataModelContainerStart;
         // First, go back to the start of the depth 0 container.
         // TODO check that this doesn't always go back to 0
@@ -743,23 +783,6 @@ public class ExpressionTape { // TODO make internal
                 parentContainerIndex++;
             }
         }
-        /* TODO the following doesn't work because it can't handle tombstone sequences properly, which don't overwrite
-         the type of every element in the tombstone sequence. Therefore, when going back to front, you see more container
-         ends than starts.
-        while (parentContainerIndex > 0) {
-            parentContainerIndex = core.elements[parentContainerIndex].containerStart;
-            while (index > parentContainerIndex) {
-                byte type = core.elements[--index].type;
-                if (ExpressionType.isContainerStart(type)) {
-                    depth++;
-                } else if (ExpressionType.isEnd(type)) {
-                    depth--;
-                }
-            }
-        }
-
-         */
-        // TODO depth is inaccurate, but may not be needed. Check
         // TODO other attributes might be needed, or it might be depth (check eExpressionActiveAtDepth)
     }
 

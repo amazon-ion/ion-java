@@ -65,6 +65,9 @@ abstract class LazyEExpressionArgsReader {
     private int eExpressionStart = -1;
     private int eExpressionEnd = -1;
 
+    private int numberOfEExpressionsBeforeInjection = -1;
+    private int numberOfEExpressionsAfterInjection = -1;
+
     // TODO might want to integrate this invocation cache into the encoding context so only a single lookup is needed
     // TODO figure out when/how to purge the cache. When the encoding context is reset. Maybe also limit size.
     private final Map<MacroCacheKey, ExpressionTape> macroInvocationTapeCache = new HashMap<>(16);
@@ -628,6 +631,10 @@ abstract class LazyEExpressionArgsReader {
             for (int variableUsageCount = 0; variableUsageCount <= core.getNumberOfDuplicateUsages(variableOrdinal); variableUsageCount++) {
                 int variableStart = variableStarts[variableUsageCount];
                 // TODO the following is fairly expensive. Can cache variable expression ends if necessary.
+
+                // TODO note: seeking to the end of the tombstone sequence allows us to reuse space that was
+                //  used by a previous invocation, but not the most recent invocation. But what if the next argument
+                //  begins with a tombstone? This is ambiguous. Need to differentiate between the two cases.
                 int limit = core.findEndOfTombstoneSequence(core.findEndOfExpression(variableStart));
                 tape.setInsertionLimit(limit);
                 // Position core at variableStart before copying.
@@ -666,6 +673,8 @@ abstract class LazyEExpressionArgsReader {
             }
         }
         stepOutOfEExpression();
+        // TODO see if this can work and if it has performance benefits
+        //simplifyResolvableMacroInvocations(core);
         return true;
     }
 
@@ -733,7 +742,6 @@ abstract class LazyEExpressionArgsReader {
         if (reader.isInStruct()) {
             fieldName = reader.getFieldName();
         }
-        // TODO broken: the following indices need to be shifted left if the underlying buffer is refilled. Wait... the bytes are pinned. Can they still be shifted to make more room? Yes they can.
         eExpressionStart = (int) reader.valueMarker.startIndex;
         eExpressionEnd = (int) reader.valueMarker.endIndex;
         IonTypeID typeID = reader.valueTid;
@@ -757,8 +765,19 @@ abstract class LazyEExpressionArgsReader {
             // which is fairly expensive.
             expressionTape = tape;
             expressionTapeOrdered = tape;
-            boolean success = injectArgumentsIntoTapeTemplate(tape, presenceBitmap, macro.getSignature());
-            if (!success) {
+            int numberOfEExpressions = tape.core().getNumberOfEExpressions();
+            // Restore the number of invocations in the cached tape before the injection. More may be added if
+            // injected arguments are e-expressions. Dropping these prevents the cached tape's e-expression index
+            // caches from growing infinitely.
+            if (injectArgumentsIntoTapeTemplate(tape, presenceBitmap, macro.getSignature())) {
+                // TODO the following line results in 1/10 the allocation rate compared to the same line of code in
+                //  finishEvaluating...(), but causes groupTestMulti to fail. How can the memory reduction be achieved
+                //  correctly?
+                //tape.core().truncateEExpressionCaches(numberOfEExpressions, tape.core().getNumberOfEExpressions());
+                numberOfEExpressionsBeforeInjection = numberOfEExpressions;
+                numberOfEExpressionsAfterInjection = tape.core().getNumberOfEExpressions();
+                numberOfSuccessfulCachedInvocations++;
+            } else {
                 // TODO the effectiveness of the cache is limited if any required growth causes !success and a reparse.
                 //  Could also thrash if it's a different argument each time that causes the growth. If they switch
                 //  off, then the newly cached invocation tape isn't sufficient for the next invocation. Consider
@@ -772,10 +791,10 @@ abstract class LazyEExpressionArgsReader {
                 markVariables = true;
                 tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName);
                 markVariables = false;
-                //simplifyResolvableMacroInvocations(tape.core()); // Note: uncommenting this has no observed performance benefit
+                // TODO: the following has no observed performance benefit, but it is required for correctness. This
+                //  indicates a defect in the evaluator.
+                simplifyResolvableMacroInvocations(tape.core());
                 numberOfUnsuccessfulCachedInvocations++;
-            } else {
-                numberOfSuccessfulCachedInvocations++;
             }
             // TODO re-simplify resolvable macro invocations. Need to modify simplifyResolvableMacroInvocations(tape.core());
             //  so that it can handle the case where it was previously simplified (and there is no longer a macro at one of the locations)
@@ -836,5 +855,10 @@ abstract class LazyEExpressionArgsReader {
         markerPoolIndex = -1;
         eExpressionStart = -1;
         eExpressionEnd = -1;
+        if (numberOfEExpressionsBeforeInjection >= 0) {
+            expressionTape.core().truncateEExpressionCaches(numberOfEExpressionsAfterInjection, numberOfEExpressionsBeforeInjection);
+            numberOfEExpressionsBeforeInjection = -1;
+            numberOfEExpressionsAfterInjection = -1;
+        }
     }
 }

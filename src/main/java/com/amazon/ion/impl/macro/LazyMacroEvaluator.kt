@@ -125,11 +125,18 @@ class LazyMacroEvaluator : IonReader {
             if (produceNext() == ExpressionType.END_OF_EXPANSION_ORDINAL) break
             n++
         }
-        expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
+        //expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
         if (n == 0) readArgument(1) else readArgument(0)
         dropChildren(expansionIndex)
         finishChildExpansion() // This finishes the Default
-        return ExpressionType.CONTINUE_EXPANSION_ORDINAL
+
+        val defaultIndex = eExpressionIndex;
+        // TODO add tests for providing containers and macro invocations as arguments to default.
+        val result = produceNext()
+        expressionTape.setNextAfterEndOfEExpression(defaultIndex)
+        return result
+
+        //return ExpressionType.CONTINUE_EXPANSION_ORDINAL
     }
 
     private fun handleIfNone(): Byte = handleBranchIf() { it == 0 }
@@ -370,7 +377,8 @@ class LazyMacroEvaluator : IonReader {
         // TODO do these three in one step? OR, change setNextAfterEndOfEExpression to skip the eexp i currently points at and then remove the next two lines
         expressionTape.prepareNext()
         expressionTape.next()
-        expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
+        // TODO the following line should not be necessary.
+        //expressionTape.setNextAfterEndOfEExpression(eExpressionIndex)
         expandChild(macro.expansionKind)
         return ExpressionType.CONTINUE_EXPANSION_ORDINAL
     }
