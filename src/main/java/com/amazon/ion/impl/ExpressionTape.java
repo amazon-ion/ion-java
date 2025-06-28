@@ -483,28 +483,6 @@ public class ExpressionTape { // TODO make internal
         core.cacheVariableLocationByOrdinal(i, variableOrdinal);
     }
 
-    private void shiftRightToMakeRoom(int minimumSpaceRequired) {
-        // TODO this is really expensive. May be possible to optimize if necessary. For example, the first time this
-        //  happens on an invocation, could start writing overflowing parameters to scratch space, marking start/end
-        //  indices and the total shortage. At the end of the invocation, can allocate a new tape once and zip together
-        //  the existing tape and the scratch tape in order. That way there's a maximum of one new allocation per
-        //  invocation. This also cuts down on over-allocation because the exact amount of extra space is known.
-        // TODO 16 is arbitrary. Is it possible to choose a better value?
-        Core newCore = new Core(core.size + Math.max(minimumSpaceRequired, 16)); // TODO larger size might not be required
-        ExpressionTape newTape = new ExpressionTape(reader, newCore);
-        //int savedInsertionLimit = insertionLimit;
-        insertionLimit = Integer.MAX_VALUE;
-        int currentIndex = i;
-        rewindTo(0); // TODO check, didn't appear to do anything
-        newTape.copyFromRange(core, 0, currentIndex); // TODO this could just be array copies up to the index
-        for (int tombstoneIndex = 0; tombstoneIndex < 16; tombstoneIndex++) {
-            newTape.add(null, TOMBSTONE_ORDINAL, null, null);
-            newCore.elements[newTape.i].containerEnd = 16 - tombstoneIndex;
-        }
-        newTape.copyFromRange(core, currentIndex, core.size);
-        core = newCore;
-    }
-
     void add(Object context, byte type, int start, int end, String fieldName) {
         if (i >= insertionLimit) {
             //shiftRightToMakeRoom(i - insertionLimit);
@@ -646,7 +624,7 @@ public class ExpressionTape { // TODO make internal
          */
     }
 
-    private void copyElement(Core other, int otherIndex, boolean shouldCacheIndices) {
+    private void copyElement(Core other, int otherIndex) {
         Element element = core.elements[i];
         if (element == null) {
             element = new Element();
@@ -659,9 +637,8 @@ public class ExpressionTape { // TODO make internal
         element.start = otherElement.start;
         element.end = otherElement.end;
         element.fieldName = otherElement.fieldName;
-        if (shouldCacheIndices) {
-            setExpressionStart(element.type);
-        }
+        //if (shouldCacheIndices) {
+        setExpressionStart(element.type);
     }
 
     void copyFromRange(Core other, int startIndex, int endIndex) {
@@ -675,9 +652,9 @@ public class ExpressionTape { // TODO make internal
         while (destinationEnd >= core.elements.length) {
             core.grow();
         }
-        boolean shouldCacheIndices = destinationEnd > core.size;
+        //boolean shouldCacheIndices = destinationEnd > core.size;
         for (int otherIndex = startIndex; otherIndex < endIndex; otherIndex++) {
-            copyElement(other, otherIndex, true);
+            copyElement(other, otherIndex);
             i++;
         }
         if (i > core.size) { // Do not increase size if this was an in-place copy.
@@ -689,7 +666,7 @@ public class ExpressionTape { // TODO make internal
         if (i >= core.elements.length) {
             core.grow();
         }
-        copyElement(other, otherIndex, true);
+        copyElement(other, otherIndex);
         i++;
         if (i > core.size) { // Do not increase size if this was an in-place copy.
             core.size++;
@@ -848,9 +825,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.BOOL);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         boolean value = reader.booleanValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -867,9 +841,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         long value = reader.longValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -886,9 +857,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         BigInteger value = reader.bigIntegerValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -911,9 +879,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.INT);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         IntegerSize value = reader.getIntegerSize();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -931,9 +896,6 @@ public class ExpressionTape { // TODO make internal
             throw new IonException(String.format("Expected int or decimal, but found %s.", typeId.type));
         }
         reader.sliceAfterHeader(element.start, element.end, typeId);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         Decimal value = reader.decimalValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -954,9 +916,6 @@ public class ExpressionTape { // TODO make internal
             throw new IonException(String.format("Expected string or symbol, but found %s.", typeId.type));
         }
         reader.sliceAfterHeader(element.start, element.end, typeId);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         String value = reader.stringValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -977,9 +936,6 @@ public class ExpressionTape { // TODO make internal
             throw new IonException(String.format("Expected string or symbol, but found %s.", typeId.type));
         }
         reader.sliceAfterHeader(element.start, element.end, typeId);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         SymbolToken value;
         if (typeId.type == IonType.SYMBOL) {
             value = reader.symbolValue();
@@ -1014,9 +970,6 @@ public class ExpressionTape { // TODO make internal
             throw new IonException(String.format("Expected blob or clob, but found %s.", typeId.type));
         }
         reader.sliceAfterHeader(element.start, element.end, typeId);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         byte[] value = reader.newBytes();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -1030,9 +983,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.FLOAT);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         double value = reader.doubleValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
@@ -1046,9 +996,6 @@ public class ExpressionTape { // TODO make internal
         boolean isEvaluating = reader.isEvaluatingEExpression;
         reader.isEvaluatingEExpression = false; // TODO hack
         prepareToRead(IonType.TIMESTAMP);
-        if (reader.isNullValue()) {
-            throw new IonException("Expected a non-null value.");
-        }
         Timestamp value = reader.timestampValue();
         reader.isEvaluatingEExpression = isEvaluating;
         return value;
