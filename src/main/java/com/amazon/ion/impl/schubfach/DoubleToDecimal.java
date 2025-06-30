@@ -110,7 +110,7 @@ final public class DoubleToDecimal {
         -d.ddddddddddddddddE-eee    H + 7 characters
     where there are H digits d
      */
-    public final int MAX_CHARS = H + 7;
+    public static final int MAX_CHARS = H + 7;
 
     // Numerical results are created here...
     private final byte[] bytes = new byte[MAX_CHARS];
@@ -494,7 +494,7 @@ final public class DoubleToDecimal {
         long hm = MathUtils.multiplyHigh(f, 193_428_131_138_340_668L) >>> 20;
         int l = (int) (f - 100_000_000L * hm);
         int h = (int) (hm * 1_441_151_881L >>> 57);
-        int m = (int) (hm - 100_000_000 * h);
+        int m = (int) (hm - 100_000_000L * h);
 
         if (0 < e && e <= 7) {
             return toChars1(h, m, l, e);
