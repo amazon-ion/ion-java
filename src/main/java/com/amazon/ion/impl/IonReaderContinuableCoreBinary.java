@@ -2649,7 +2649,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     @Override
     public String getSymbolText() {
         if (isEvaluatingEExpression) {
-            return macroEvaluatorIonReader.symbolValue().assumeText();
+            return macroEvaluatorIonReader.stringValue();
         }
         if (valueMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
             return getSystemSymbolToken(valueMarker).getText();
