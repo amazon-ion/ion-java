@@ -644,7 +644,7 @@ abstract class LazyEExpressionArgsReader {
             return;
         }
         ExpressionTape.Element precedingElement = tape.elementAt(startIndex - 1);
-        if (precedingElement.type == ExpressionType.TOMBSTONE_ORDINAL) {
+        if (precedingElement != null && precedingElement.type == ExpressionType.TOMBSTONE_ORDINAL) {
             if (precedingElement.context == SystemMacro.Default) {
                 undoSimplificationOfDefaultInvocation(tape, startIndex, endIndex, existingIsNone, precedingElement);
             }
@@ -798,14 +798,6 @@ abstract class LazyEExpressionArgsReader {
                 numberOfEExpressionsAfterInjection = tape.core().getNumberOfEExpressions();
                 numberOfSuccessfulCachedInvocations++;
             } else {
-                // TODO the effectiveness of the cache is limited if any required growth causes !success and a reparse.
-                //  Could also thrash if it's a different argument each time that causes the growth. If they switch
-                //  off, then the newly cached invocation tape isn't sufficient for the next invocation. Consider
-                //  not caching the redone tape? Or don't cache until seeing X invocations, and keep space for the
-                //  maximum size of each argument seen during the learning phase, then never re-cache on bail out. Or,
-                //  evict and re-learn every X uses.
-                // TODO try using the unsuccessfully reused tape as a guide; always allocate at least as much space
-                //  for each variable as was in that tape, overallocating if necessary.
                 reader.sliceAfterMacroInvocationHeader(eExpressionStart, eExpressionEnd, typeID, macroAddress, isSystemMacro); // Rewind, prepare to read again.
                 stepIntoEExpression();
                 reader.fillArgumentEncodingBitmap(presenceBitmap.getByteSize()); // TODO this could be even simpler -- just seek forward to valueMarker.endIndex

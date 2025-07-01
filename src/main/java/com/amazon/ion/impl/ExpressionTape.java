@@ -508,12 +508,13 @@ public class ExpressionTape { // TODO make internal
         while (destinationEnd >= core.elements.length) {
             core.grow();
         }
-        for (int tombstoneIndex = index; tombstoneIndex < destinationEnd; tombstoneIndex++) {
-            // TODO try just leaving unused elements after the first tombstone marker null; the evaluator should never
-            //  touch them, and they should be null checked before being overwritten with actual data.
-            setTombstoneAt(tombstoneIndex, destinationEnd);
-            i++;
-        }
+        // Note: this leaves 'null' elements between the tombstone marker and the new end of the elements array.
+        // Proper null checking of randomly-accessed elements is therefore required. An alternative solution is to
+        // set all the elements in this range to non-null tombstone elements with 'containerEnd' at 'destinationEnd'.
+        // However, we already had most of the null checking required to make this work because we do not eagerly
+        // initialize non-null elements after array growth in order to reduce memory consumption.
+        setTombstoneAt(index, destinationEnd);
+        i = destinationEnd;
         if (i > core.size) { // Do not increase size if this was an in-place copy.
             core.size += i - core.size;
         }
@@ -826,7 +827,7 @@ public class ExpressionTape { // TODO make internal
         //  whether multiple shifts could be applied to the same index (I think not)
         for (int i = 0; i < core.size; i++) {
             Element element = core.elements[i];
-            if (element.type != ExpressionType.E_EXPRESSION_ORDINAL && element.start >= 0) {
+            if (element != null && element.type != ExpressionType.E_EXPRESSION_ORDINAL && element.start >= 0) {
                 element.start -= shiftAmount;
                 element.end -= shiftAmount;
             }
