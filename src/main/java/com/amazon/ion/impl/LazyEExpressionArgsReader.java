@@ -186,7 +186,7 @@ abstract class LazyEExpressionArgsReader {
      * @param parameter information about the parameter from the macro signature.
      * @param parameterPresence the presence bits dedicated to this parameter (unused in text).
      */
-    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, String fieldName);
+    protected abstract void readParameter(Macro.Parameter parameter, long parameterPresence, String fieldName, ExpressionTape templateTape);
 
     /**
      * Reads the macro's address and attempts to resolve that address to a Macro from the macro table.
@@ -213,7 +213,7 @@ abstract class LazyEExpressionArgsReader {
      * the MacroEvaluator responsible for evaluating the e-expression to which this container belongs.
      * @param type the type of container.
      */
-    private void readContainerValueAsExpression(IonType type, String fieldName) {
+    private void readContainerValueAsExpression(IonType type, String fieldName, ExpressionTape templateTape) {
         boolean isExpressionGroup = isContainerAnExpressionGroup();
         if (isExpressionGroup) {
             expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1, fieldName);
@@ -228,7 +228,7 @@ abstract class LazyEExpressionArgsReader {
                 // TODO avoid having to create SymbolToken every time
                 childFieldName = reader.getFieldName();
             }
-            readValueAsExpression(false, childFieldName); // TODO avoid recursion
+            readValueAsExpression(false, childFieldName, templateTape); // TODO avoid recursion
         }
         if (isExpressionGroup) {
             expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1, null);
@@ -241,10 +241,10 @@ abstract class LazyEExpressionArgsReader {
     /**
      * Reads the rest of the stream into a single expression group.
      */
-    private void readStreamAsExpressionGroup(String fieldName) {
+    private void readStreamAsExpressionGroup(String fieldName, ExpressionTape templateTape) {
         expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_ORDINAL, -1, -1, fieldName);
         do {
-            readValueAsExpression(false, null); // TODO avoid recursion // TODO or, should the field name be distributed to all?
+            readValueAsExpression(false, null, templateTape); // TODO avoid recursion // TODO or, should the field name be distributed to all?
         } while (nextRaw());
         expressionTape.add(null, ExpressionType.EXPRESSION_GROUP_END_ORDINAL, -1, -1, null);
     }
@@ -255,15 +255,15 @@ abstract class LazyEExpressionArgsReader {
      * @param isImplicitRest true if this is the final parameter in the signature, it is variadic, and the format
      *                       supports implicit rest parameters (text only); otherwise, false.
      */
-    protected void readValueAsExpression(boolean isImplicitRest, String fieldName) {
+    protected void readValueAsExpression(boolean isImplicitRest, String fieldName, ExpressionTape templateTape) {
         if (isImplicitRest && !isContainerAnExpressionGroup()) {
-            readStreamAsExpressionGroup(fieldName);
+            readStreamAsExpressionGroup(fieldName, templateTape);
             return;
         } else if (isMacroInvocation()) {
             Macro macro = loadMacro();
             stepIntoEExpression();
             PresenceBitmap presenceBitmap = loadPresenceBitmapIfNecessary(macro.getSignature());
-            collectEExpressionArgs(macro, presenceBitmap, false, fieldName); // TODO avoid recursion
+            collectEExpressionArgs(macro, presenceBitmap, false, fieldName, templateTape); // TODO avoid recursion
             return;
         }
         IonType type = reader.getEncodingType();
@@ -272,13 +272,13 @@ abstract class LazyEExpressionArgsReader {
             expressionTape.add(annotations, ExpressionType.ANNOTATION_ORDINAL, -1, -1, null);
         }
         if (IonType.isContainer(type) && !reader.isNullValue()) {
-            readContainerValueAsExpression(type, fieldName);
+            readContainerValueAsExpression(type, fieldName, templateTape);
         } else {
             readScalarValueAsExpression(fieldName);
         }
     }
 
-    private int collectAndFlattenComplexEExpression(boolean isTopLevel, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, int markerPoolStartIndex) {
+    private int collectAndFlattenComplexEExpression(boolean isTopLevel, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, int markerPoolStartIndex, ExpressionTape templateTape) {
         // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
         int macroBodyTapeIndex = 0;
         int numberOfVariables = macroBodyTape.getNumberOfVariables();
@@ -302,8 +302,14 @@ abstract class LazyEExpressionArgsReader {
                     readParameter(
                         signature.get(invocationOrdinal),
                         presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(invocationOrdinal),
-                        childFieldName
+                        childFieldName,
+                        templateTape
                     );
+                    if (markVariables && isTopLevel) {
+                        padToSize(templateTape, startIndexInTape);
+                        expressionTape.markVariableEnd();
+                    }
+
                     // TODO reserve some tombstone space after the parameter as a % of the parameter size to accommodate a
                     //  future larger parameter for this spot that can be overwritten in-place.
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
@@ -322,7 +328,8 @@ abstract class LazyEExpressionArgsReader {
                         // will be. If this can be cheaply calculated then it could be provided here to enable eliding
                         // of None when the field name is not null, a small optimization. If this is done, the field
                         // name does not need to be set in the next branch.
-                        null
+                        null,
+                        templateTape
                     );
                     expressionTape = expressionTapeOrdered;
                     Marker marker = getMarker(markerPoolStartIndex + invocationOrdinal);
@@ -351,6 +358,10 @@ abstract class LazyEExpressionArgsReader {
                     expressionTape.copyFromRange(source.core(), (int) marker.startIndex, (int) marker.endIndex);
                     String childFieldName = macroBodyTape.fieldNameForVariable(i);
                     expressionTape.setFieldNameAt(startIndex, childFieldName);
+                    if (markVariables && isTopLevel) {
+                        padToSize(templateTape, startIndex);
+                        expressionTape.markVariableEnd();
+                    }
                     // TODO reserve some tombstone space after the parameter as a % of the parameter size to accommodate a
                     //  future larger parameter for this spot that can be overwritten in-place.
                     break;
@@ -362,7 +373,24 @@ abstract class LazyEExpressionArgsReader {
         return macroBodyTapeIndex;
     }
 
-    private int collectAndFlattenSimpleEExpression(boolean isTopLevel, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+    private void padToSize(ExpressionTape templateTape, int indexBeforeVariable) {
+        int indexAfterVariable = expressionTape.currentIndex();
+        int actualVariableSize = indexAfterVariable - indexBeforeVariable;
+        int paddedSize;
+        if (templateTape == null) {
+            // Note: floor is used because this avoids adding padding when the existing value for this variable is
+            // a scalar (size 1), which is likely to recur. Could also try ceil to do the opposite and see how it affects
+            // performance and memory usage.
+            paddedSize = (int) Math.floor(actualVariableSize * 1.3); // Overallocate by 30% (this is arbitrary and may be tuned)
+        } else {
+            int templateVariableSize = templateTape.getVariableSize(expressionTape.core().getNumberOfVariables() - 1);
+            paddedSize = Math.max(actualVariableSize, templateVariableSize);
+        }
+        int amountOfPadding = paddedSize - actualVariableSize;
+        expressionTape.padWithTombstonesAt(indexAfterVariable, amountOfPadding);
+    }
+
+    private int collectAndFlattenSimpleEExpression(boolean isTopLevel, ExpressionTape.Core macroBodyTape, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, ExpressionTape templateTape) {
         // TODO drop expression groups? No longer needed after the variables are resolved. Further simplifies the evaluator. Might miss validation? Also, would need to distribute field names over the elements of the group.
         int macroBodyTapeIndex = 0;
         int numberOfVariables = macroBodyTape.getNumberOfVariables();
@@ -370,21 +398,25 @@ abstract class LazyEExpressionArgsReader {
             // Copy everything up to the next variable.
             macroBodyTapeIndex = macroBodyTape.copyToVariable(macroBodyTapeIndex, i, expressionTape);
             String childFieldName = macroBodyTape.fieldNameForVariable(i);
+            int indexBeforeVariable = expressionTape.currentIndex(); // TODO or is this size()
             if (markVariables && isTopLevel) {
                 expressionTape.markVariableStart(expressionTape.core().getNumberOfVariables()); // TODO could consider moving this calculation to after the tape is known to be reused
             }
             readParameter(
                 signature.get(i),
                 presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
-                childFieldName
+                childFieldName,
+                templateTape
             );
-            // TODO reserve some tombstone space after the parameter as a % of the parameter size to accommodate a
-            //  future larger parameter for this spot that can be overwritten in-place.
+            if (markVariables && isTopLevel) {
+                padToSize(templateTape, indexBeforeVariable);
+                expressionTape.markVariableEnd();
+            }
         }
         return macroBodyTapeIndex;
     }
 
-    private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, String fieldName) {
+    private ExpressionTape collectAndFlattenUserEExpressionArgs(boolean isTopLevel, Macro macro, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap, String fieldName, ExpressionTape templateTape) {
         ExpressionTape.Core macroBodyTape = macro.getBodyTape();
         // TODO avoid eagerly stepping through prefixed expressions
         int numberOfParameters = signature.size();
@@ -398,9 +430,9 @@ abstract class LazyEExpressionArgsReader {
                 return constantTape;
             }
         } else if (macro.isSimple()) {
-            macroBodyTapeIndex = collectAndFlattenSimpleEExpression(isTopLevel, macroBodyTape, signature, presenceBitmap);
+            macroBodyTapeIndex = collectAndFlattenSimpleEExpression(isTopLevel, macroBodyTape, signature, presenceBitmap, templateTape);
         } else {
-            macroBodyTapeIndex = collectAndFlattenComplexEExpression(isTopLevel, macroBodyTape, signature, presenceBitmap, markerPoolIndex + 1);
+            macroBodyTapeIndex = collectAndFlattenComplexEExpression(isTopLevel, macroBodyTape, signature, presenceBitmap, markerPoolIndex + 1, templateTape);
         }
         // Copy everything after the last parameter.
         expressionTape.copyFromRange(macroBodyTape, macroBodyTapeIndex, macroBodyTape.size());
@@ -422,6 +454,7 @@ abstract class LazyEExpressionArgsReader {
             readParameter(
                 signature.get(i),
                 presenceBitmap == null ? PresenceBitmap.EXPRESSION : presenceBitmap.get(i),
+                null,
                 null
             );
         }
@@ -432,7 +465,7 @@ abstract class LazyEExpressionArgsReader {
     /**
      * Collects the expressions that compose the current macro invocation.
      */
-    private ExpressionTape collectEExpressionArgs(Macro macro, PresenceBitmap presenceBitmap, boolean isTopLevel, String fieldName) {
+    private ExpressionTape collectEExpressionArgs(Macro macro, PresenceBitmap presenceBitmap, boolean isTopLevel, String fieldName, ExpressionTape templateTape) {
         // TODO if it's a system macro don't eagerly expand
         //Macro macro = loadMacro();
         //stepIntoEExpression();
@@ -457,7 +490,7 @@ abstract class LazyEExpressionArgsReader {
             }
             return expressionTape;
         }
-        return collectAndFlattenUserEExpressionArgs(isTopLevel, macro, signature, presenceBitmap, fieldName);
+        return collectAndFlattenUserEExpressionArgs(isTopLevel, macro, signature, presenceBitmap, fieldName, templateTape);
     }
 
     private void takeDefaultArgument(ExpressionTape.Core tape, int argumentsStart, int eExpressionIndex) {
@@ -643,7 +676,7 @@ abstract class LazyEExpressionArgsReader {
                 if (variableUsageCount == 0) {
                     // This is the first usage. Read directly into the location.
                     firstUsageStart = variableStart;
-                    readParameter(signature.get(variableOrdinal), presenceBitmap.get(variableOrdinal), tape.fieldName());
+                    readParameter(signature.get(variableOrdinal), presenceBitmap.get(variableOrdinal), tape.fieldName(), null);
                     firstUsageEnd = tape.currentIndex();
                 } else {
                     // This is a duplicate usage. Copy from the first location to the next location.
@@ -667,7 +700,7 @@ abstract class LazyEExpressionArgsReader {
                 //limit = core.findEndOfTombstoneSequence(actualEnd);
                 if (actualEnd < limit) {
                     // Less space was used than was available
-                    core.setTombstoneAt(actualEnd, limit);
+                    tape.setTombstoneAt(actualEnd, limit);
                 }
                 undoSimplificationOfResolvableMacroInvocationsIfNecessary(core, variableStart, actualEnd, existingIsNone);
             }
@@ -680,7 +713,7 @@ abstract class LazyEExpressionArgsReader {
 
     private ExpressionTape createAndCacheNewInvocationTape(PresenceBitmap presenceBitmap, Macro macro, String fieldName) {
         markVariables = true;
-        ExpressionTape tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName);
+        ExpressionTape tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName, null);
         markVariables = false;
         simplifyResolvableMacroInvocations(tape.core());
         macroInvocationTapeCache.put(testKey.copy(), tape);
@@ -771,12 +804,14 @@ abstract class LazyEExpressionArgsReader {
                 //  not caching the redone tape? Or don't cache until seeing X invocations, and keep space for the
                 //  maximum size of each argument seen during the learning phase, then never re-cache on bail out. Or,
                 //  evict and re-learn every X uses.
+                // TODO try using the unsuccessfully reused tape as a guide; always allocate at least as much space
+                //  for each variable as was in that tape, overallocating if necessary.
                 reader.sliceAfterMacroInvocationHeader(eExpressionStart, eExpressionEnd, typeID, macroAddress, isSystemMacro); // Rewind, prepare to read again.
                 stepIntoEExpression();
                 reader.fillArgumentEncodingBitmap(presenceBitmap.getByteSize()); // TODO this could be even simpler -- just seek forward to valueMarker.endIndex
                 tape.prepareToOverwrite();
                 markVariables = true;
-                tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName);
+                tape = collectEExpressionArgs(macro, presenceBitmap, true, fieldName, tape);
                 markVariables = false;
                 // TODO: the following has no observed performance benefit, but it is required for correctness. This
                 //  indicates a defect in the evaluator.
@@ -822,7 +857,7 @@ abstract class LazyEExpressionArgsReader {
         reader.fillArgumentEncodingBitmap(presenceBitmap.getByteSize());
         verbatimTranscode = false;
         expressionTape = expressionTapeOrdered;
-        macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(macro, presenceBitmap, true, fieldName));
+        macroEvaluator.initExpansion(fieldName, collectEExpressionArgs(macro, presenceBitmap, true, fieldName, null));
         verbatimExpressionTape.transcodeArgumentsTo(transcoder);
         verbatimExpressionTape.clear();
         markerPoolIndex = -1;

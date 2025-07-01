@@ -52,6 +52,7 @@ public class ExpressionTape { // TODO make internal
         private int[] numberOfExpressions;
         private int numberOfVariables = 0;
         private int[] variableStartsByInvocationArgumentOrdinal;
+        private int[] variableEndsByInvocationArgumentOrdinal;
         private int[] variableOrdinalsByInvocationArgumentOrdinal;
         private int[][] variableStartsByVariableOrdinal;
         private int[] depthByVariableOrdinal;
@@ -66,6 +67,7 @@ public class ExpressionTape { // TODO make internal
             expressionStarts[0] = new int[16];
             numberOfExpressions = new int[1];
             variableStartsByInvocationArgumentOrdinal = new int[8];
+            variableEndsByInvocationArgumentOrdinal = new int[8];
             variableOrdinalsByInvocationArgumentOrdinal = new int[8];
             variableStartsByVariableOrdinal = new int[8][];
             depthByVariableOrdinal = new int[8];
@@ -104,6 +106,7 @@ public class ExpressionTape { // TODO make internal
         void setNextVariable(int index, int variableOrdinal, int depth) {
             if (variableStartsByInvocationArgumentOrdinal.length <= numberOfVariables) {
                 variableStartsByInvocationArgumentOrdinal = Arrays.copyOf(variableStartsByInvocationArgumentOrdinal, variableStartsByInvocationArgumentOrdinal.length * 2);
+                variableEndsByInvocationArgumentOrdinal = Arrays.copyOf(variableEndsByInvocationArgumentOrdinal, variableEndsByInvocationArgumentOrdinal.length * 2);
                 variableOrdinalsByInvocationArgumentOrdinal = Arrays.copyOf(variableOrdinalsByInvocationArgumentOrdinal, variableOrdinalsByInvocationArgumentOrdinal.length * 2);
                 depthByVariableOrdinal = Arrays.copyOf(depthByVariableOrdinal, depthByVariableOrdinal.length * 2);
             }
@@ -132,6 +135,12 @@ public class ExpressionTape { // TODO make internal
             variableOrdinalsByInvocationArgumentOrdinal[numberOfVariables] = variableOrdinal;
             depthByVariableOrdinal[numberOfVariables] = depth;
             variableStartsByInvocationArgumentOrdinal[numberOfVariables++] = index;
+        }
+
+        void setVariableEnd(int index) {
+            // Note: this must always happen as a bookend to setNextVariable, which guarantees that there will be room
+            // in this array.
+            variableEndsByInvocationArgumentOrdinal[numberOfVariables - 1] = index;
         }
 
         void cacheVariableLocationByOrdinal(int variableStartIndex, int variableOrdinal) {
@@ -293,25 +302,11 @@ public class ExpressionTape { // TODO make internal
             }
             while (elements[index].type == TOMBSTONE_ORDINAL) {
                 index = elements[index].containerEnd;
+                if (index >= size) {
+                    break;
+                }
             }
             return index;
-        }
-
-        public void setTombstoneAt(int startIndex, int endIndex) {
-            Element element = elements[startIndex];
-            if (element == null) {
-                // TODO when does this happen? should it ever happen?
-                element = new Element();
-                elements[startIndex] = element;
-            }
-            element.type = TOMBSTONE_ORDINAL;
-            //element.context = null;
-            //element.value = null;
-            //element.end = -1;
-            //element.start = -1;
-            //element.fieldName = null; // TODO tried removing, changed nothing in targeted test. Check.
-            //element.containerStart = -1;
-            element.containerEnd = endIndex;
         }
 
         public int getEExpressionStartIndex(int eExpressionIndex) {
@@ -481,6 +476,47 @@ public class ExpressionTape { // TODO make internal
         // TODO these and other marked tape indices will be incorrect after shift occurs; need to be recalculated.
         core.setNextVariable(i, variableOrdinal, depth);
         core.cacheVariableLocationByOrdinal(i, variableOrdinal);
+    }
+
+    public void markVariableEnd() {
+        core.setVariableEnd(i);
+    }
+
+    public int getVariableSize(int invocationArgumentOrdinal) {
+        return core.variableEndsByInvocationArgumentOrdinal[invocationArgumentOrdinal] - core.variableStartsByInvocationArgumentOrdinal[invocationArgumentOrdinal];
+    }
+
+    public void setTombstoneAt(int startIndex, int endIndex) {
+        Element element = core.elements[startIndex];
+        if (element == null) {
+            // TODO when does this happen? should it ever happen?
+            element = new Element();
+            core.elements[startIndex] = element;
+        }
+        element.type = TOMBSTONE_ORDINAL;
+        //element.context = null;
+        //element.value = null;
+        //element.end = -1;
+        //element.start = -1;
+        //element.fieldName = null; // TODO tried removing, changed nothing in targeted test. Check.
+        element.containerStart = currentDataModelContainerStart;
+        element.containerEnd = endIndex;
+    }
+
+    public void padWithTombstonesAt(int index, int length) {
+        int destinationEnd = index + length;
+        while (destinationEnd >= core.elements.length) {
+            core.grow();
+        }
+        for (int tombstoneIndex = index; tombstoneIndex < destinationEnd; tombstoneIndex++) {
+            // TODO try just leaving unused elements after the first tombstone marker null; the evaluator should never
+            //  touch them, and they should be null checked before being overwritten with actual data.
+            setTombstoneAt(tombstoneIndex, destinationEnd);
+            i++;
+        }
+        if (i > core.size) { // Do not increase size if this was an in-place copy.
+            core.size += i - core.size;
+        }
     }
 
     void add(Object context, byte type, int start, int end, String fieldName) {
@@ -775,11 +811,13 @@ public class ExpressionTape { // TODO make internal
         if (core.elements[i].type == DATA_MODEL_CONTAINER_END_ORDINAL) {
             // TODO maybe this is an optimization, maybe not. Tried it for correctness; didn't work. Try with and without.
             i++;
-            iNext = i;
-            return;
+        } else {
+            i = core.elements[core.elements[i].containerStart].containerEnd + 1;
         }
-        i = core.elements[core.elements[i].containerStart].containerEnd + 1;
         iNext = i;
+        if (!isExhausted()) {
+            currentDataModelContainerStart = core.elements[i].containerStart;
+        }
     }
 
     void shiftIndicesLeft(int shiftAmount) {
