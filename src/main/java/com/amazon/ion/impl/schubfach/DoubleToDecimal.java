@@ -264,8 +264,8 @@ final public class DoubleToDecimal {
     private String toDecimalString(double v) {
         switch (toDecimal(v)) {
             case NON_SPECIAL: return charsToString();
-            case PLUS_ZERO: return "0.0";
-            case MINUS_ZERO: return "-0.0";
+            case PLUS_ZERO: return "0e0";
+            case MINUS_ZERO: return "-0e0";
             case PLUS_INF: return "Infinity";
             case MINUS_INF: return "-Infinity";
             default: return "NaN";
@@ -289,8 +289,8 @@ final public class DoubleToDecimal {
                     app.append(chars[i]);
                 }
                 return app;
-            case PLUS_ZERO: return app.append("0.0");
-            case MINUS_ZERO: return app.append("-0.0");
+            case PLUS_ZERO: return app.append("0e0");
+            case MINUS_ZERO: return app.append("-0e0");
             case PLUS_INF: return app.append("Infinity");
             case MINUS_INF: return app.append("-Infinity");
             default: return app.append("NaN");
@@ -498,11 +498,11 @@ final public class DoubleToDecimal {
 
         if (0 < e && e <= 7) {
             return toChars1(h, m, l, e);
-        }
-        if (-3 < e && e <= 0) {
+        } else if (-3 < e && e <= 0) {
             return toChars2(h, m, l, e);
+        } else {
+            return toChars3(h, m, l, e);
         }
-        return toChars3(h, m, l, e);
     }
 
     private int toChars1(int h, int m, int l, int e) {
@@ -527,6 +527,9 @@ final public class DoubleToDecimal {
             y = t & MASK_28;
         }
         lowDigits(l);
+
+        applyIonFormatting();
+
         return NON_SPECIAL;
     }
 
@@ -540,6 +543,9 @@ final public class DoubleToDecimal {
         appendDigit(h);
         append8Digits(m);
         lowDigits(l);
+
+        applyIonFormatting();
+
         return NON_SPECIAL;
     }
 
@@ -598,7 +604,7 @@ final public class DoubleToDecimal {
     }
 
     private void exponent(int e) {
-        append('E');
+        append('e');
         if (e < 0) {
             append('-');
             e = -e;
@@ -632,6 +638,30 @@ final public class DoubleToDecimal {
 
     private void appendDigit(int d) {
         bytes[++index] = (byte) ('0' + d);
+    }
+
+    private void applyIonFormatting(){
+        //check if the result ends with ".0"
+        if (index >=1 && bytes[index - 1] == '.' && bytes[index] == '0'){
+            //replace ".0" with "e0"
+            index -= 2;
+            append('e');
+            append('0');
+        } else {
+            //check if there's already an exponent
+            boolean hasExponent = false;
+            for (int i = 0; i < index; i++) {
+                if (bytes[i] == 'e' || bytes[i] == 'E') {
+                    hasExponent = true;
+                    break;
+                }
+            }
+
+            if (!hasExponent){
+                append('e');
+                append('0');
+            }
+        }
     }
 
     // Using the deprecated constructor enhances performance.

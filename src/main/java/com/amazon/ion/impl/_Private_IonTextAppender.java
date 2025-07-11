@@ -841,19 +841,7 @@ public final class _Private_IonTextAppender
         else
         {
             String str = DoubleToDecimal.toString(value);
-            if (str.endsWith(".0"))
-            {
-                appendAscii(str, 0, str.length() - 2);
-                appendAscii("e0");
-            }
-            else
-            {
-                appendAscii(str);
-                if (str.indexOf('E') == -1)
-                {
-                    appendAscii("e0");
-                }
-            }
+            appendAscii(str);
         }
     }
 
