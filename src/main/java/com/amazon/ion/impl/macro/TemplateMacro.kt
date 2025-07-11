@@ -11,7 +11,8 @@ import com.amazon.ion.impl.*
 class TemplateMacro @JvmOverloads constructor(
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>,
-    override val bodyTape: ExpressionTape.Core = ExpressionTape.inlineNestedInvocations(ExpressionTape.from(body))
+    override val bodyTape: ExpressionTape.Core = ExpressionTape.inlineNestedInvocations(ExpressionTape.from(body)),
+    override val bodyBytecode: Bytecode = Bytecode(body)
 ) : Macro {
 
     override val isSimple by lazy {

@@ -4,6 +4,8 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.FakeSymbolToken;
 import com.amazon.ion.IntegerSize;
+import com.amazon.ion.IonBufferConfiguration;
+import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonDatagram;
 import com.amazon.ion.IonEncodingVersion;
 import com.amazon.ion.IonException;
@@ -22,6 +24,7 @@ import com.amazon.ion.impl.macro.Expression;
 import com.amazon.ion.impl.macro.Macro;
 import com.amazon.ion.impl.macro.MacroRef;
 import com.amazon.ion.impl.macro.MacroTable;
+import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ParameterFactory;
 import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
@@ -30,6 +33,7 @@ import com.amazon.ion.system.IonSystemBuilder;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -493,6 +497,91 @@ public class EncodingDirectiveCompilationTest {
             assertMacroTablesContainsExpectedMappings(reader, streamType, expectedMacroTable);
             assertEquals("foo", reader.stringValue());
         }
+    }
+
+    @Test
+    public void structMacroWithOneOptionalInterpreted() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "People");
+        writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
+        // The macro body
+        writer.stepInStruct(false);
+        writeVariableField(writer, symbols, "ID", "$ID");
+        writeVariableField(writer, symbols, "Name", "$Name");
+        writeVariableField(writer, symbols, "Bald", "$Bald");
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("People", new TemplateMacro(
+            Arrays.asList(
+                new Macro.Parameter("$ID", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Name", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Bald", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrOne)
+            ),
+            Arrays.asList(
+                new Expression.StructValue(Collections.emptyList(), 0, 7, new HashMap<String, List<Integer>>() {{
+                    put("ID", Collections.singletonList(2));
+                    put("Name", Collections.singletonList(4));
+                    put("Bald", Collections.singletonList(6));
+                }}),
+                new Expression.FieldName(new FakeSymbolToken("ID", symbols.get("ID"))),
+                new Expression.VariableRef(0),
+                new Expression.FieldName(new FakeSymbolToken("Name", symbols.get("Name"))),
+                new Expression.VariableRef(1),
+                new Expression.FieldName(new FakeSymbolToken("Bald", symbols.get("Bald"))),
+                new Expression.VariableRef(2)
+            )
+        ));
+        StreamType.BINARY.startMacroInvocationByName(writer, "People", expectedMacroTable);
+        writer.writeInt(123);
+        writer.writeString("Bob");
+        writer.writeBool(false);
+        writer.stepOut();
+
+        writer.stepInEExp(0, false, expectedMacroTable.get("People"));
+        writer.writeInt(Long.MIN_VALUE);
+        writer.writeString("Sue");
+        // The optional "Bald" is not included.
+        writer.stepOut();
+
+        writer.writeInt(42); // Not a macro invocation
+        byte[] data = getBytes(writer, out);
+
+        IonCursorBinary cursor = new IonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
+        Interpreter interpreter = new Interpreter(cursor);
+        MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
+        macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
+        EncodingContext encodingContext = new EncodingContext(macroTable);
+        interpreter.setEncodingContext(encodingContext);
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Symbol table
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Macro table
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
+        assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // ID: 123
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Name: Bob
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Bald: False
+        assertEquals(IonCursor.Event.END_CONTAINER, interpreter.nextValue()); // End of evaluated container
+        assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepOutOfContainer());
+
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
+        assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // ID: Integer.MIN_VALUE
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Name: Sue
+        assertEquals(IonCursor.Event.END_CONTAINER, interpreter.nextValue()); // End of evaluated container
+        assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepOutOfContainer());
+
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // 42
+        assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
+        interpreter.close();
+        cursor.close();
     }
 
     @ParameterizedTest(name = "{0},{1}")
@@ -1081,6 +1170,59 @@ public class EncodingDirectiveCompilationTest {
             reader.stepOut();
             assertNull(reader.next());
         }
+    }
+
+    private static Map<MacroRef, Macro> convertToMacroRefMap(SortedMap<String, Macro> sortedMap) {
+        Map<MacroRef, Macro> result = new HashMap<>();
+        int index = 0;
+        for (Macro macro : sortedMap.values()) {
+            result.put(MacroRef.byId(index++), macro);
+        }
+        return result;
+    }
+
+    @Test
+    public void constantMacroInterpreted() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "Pi");
+        startModuleDirectiveForDefaultModule(writer);
+        writeEncodingDirectiveSymbolTable(writer, "foo");
+        startMacroTable(writer);
+        startMacro(writer, symbols, "Pi");
+        writeMacroSignature(writer, symbols); // Empty signature
+        writer.writeDecimal(new BigDecimal("3.14159")); // The body: a constant
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("Pi", new TemplateMacro(
+            Collections.emptyList(),
+            Collections.singletonList(new Expression.DecimalValue(Collections.emptyList(), new BigDecimal("3.14159")))
+        ));
+
+        writer.stepInEExp(0, false, expectedMacroTable.get("Pi"));
+        writer.stepOut();
+        StreamType.BINARY.startMacroInvocationByName(writer, "Pi", expectedMacroTable);
+        writer.stepOut();
+
+        byte[] data = getBytes(writer, out);
+
+        IonCursorBinary cursor = new IonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
+        Interpreter interpreter = new Interpreter(cursor);
+        MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
+        macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
+        EncodingContext encodingContext = new EncodingContext(macroTable);
+        interpreter.setEncodingContext(encodingContext);
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The symbol table. Skip; this would be handled by a wrapper.
+        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The encoding directive. Skip; this would be handled by a wrapper.
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // First invocation
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Second invocation
+        assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
+        interpreter.close();
+        cursor.close();
     }
 
     @ParameterizedTest(name = "{0},{1}")

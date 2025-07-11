@@ -3033,6 +3033,41 @@ class IonCursorBinary implements IonCursor {
         }
     }
 
+    // TODO skipMacroInvocation should call this
+    Event stepOutOfEExpressionFrom(int argumentIndex, List<Macro.Parameter> signature, PresenceBitmap presenceBitmap) {
+        for (int i = argumentIndex; i < signature.size(); i++) {
+            Macro.Parameter parameter = signature.get(i);
+            long parameterPresence = presenceBitmap.get(i);
+            if (parameterPresence == PresenceBitmap.VOID) {
+                continue;
+            }
+            if (parameterPresence == PresenceBitmap.GROUP) {
+                Macro.ParameterEncoding encoding = parameter.getType();
+                if (encoding == Macro.ParameterEncoding.Tagged) {
+                    enterTaggedArgumentGroup();
+                } else {
+                    enterTaglessArgumentGroup(encoding.taglessEncodingKind);
+                }
+                if (event == Event.NEEDS_DATA) {
+                    return event;
+                }
+                if (exitArgumentGroup() == Event.NEEDS_DATA) {
+                    return event;
+                }
+            } else {
+                // A single expression
+                if (isSlowMode) {
+                    if (slowSkipMacroParameter(parameter)) {
+                        return Event.NEEDS_DATA;
+                    }
+                } else {
+                    uncheckedSkipMacroParameter(parameter);
+                }
+            }
+        }
+        return stepOutOfEExpression();
+    }
+
     /**
      * Steps out of an e-expression, restoring the context of the parent container (if any). Note: it is up to the
      * caller to ensure either that either 1) the e-expression is at its end when this method is called, or 2) the end

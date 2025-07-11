@@ -21,7 +21,8 @@ enum class SystemMacro(
     private val _systemSymbol: SystemSymbols_1_1?,
     override val signature: List<Macro.Parameter>,
     override val body: List<Expression.TemplateBodyExpression>? = null,
-    override val bodyTape: ExpressionTape.Core = ExpressionTape.from(body ?: emptyList())
+    override val bodyTape: ExpressionTape.Core = ExpressionTape.from(body ?: emptyList()),
+    override val bodyBytecode: Bytecode = Bytecode(body ?: emptyList())
 ) : Macro {
     // Technically not system macros, but special forms. However, it's easier to model them as if they are macros in TDL.
     // We give them an ID of -1 to distinguish that they are not addressable outside TDL.
