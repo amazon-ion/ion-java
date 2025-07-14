@@ -447,6 +447,31 @@ public interface IonReader
     // In particular, does this move the cursor beyond the current value?
     // Also, this could be problematic to use since other value-extraction
     // methods are read-once, so one can't look at the value before calling this.
-//    public String valueToString();
+    // public String valueToString();
+
+    /**
+     * Closes this reader and releases any system resources associated with it.
+     * <p>
+     * For readers created from an {@link java.io.InputStream}, this method will
+     * close the underlying stream. For readers created from byte arrays or strings,
+     * this method will release internal resources such as UTF-8 decoders.
+     * <p>
+     * After calling this method, the reader should not be used for any further
+     * operations. Attempting to use a closed reader may result in undefined behavior.
+     * <p>
+     * This method makes {@code IonReader} compatible with try-with-resources statements:
+     * <pre>{@code
+     * try (IonReader reader = IonReaderBuilder.standard().build(inputStream)) {
+     *     // Use the reader
+     *     while (reader.next() != null) {
+     *         // Process values
+     *     }
+     * } // Reader is automatically closed here
+     * }</pre>
+     *
+     * @throws IOException if an I/O error occurs while closing the underlying stream
+     */
+    @Override
+    void close() throws IOException;
 
 }
