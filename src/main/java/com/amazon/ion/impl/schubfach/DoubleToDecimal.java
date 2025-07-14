@@ -266,9 +266,9 @@ final public class DoubleToDecimal {
             case NON_SPECIAL: return charsToString();
             case PLUS_ZERO: return "0e0";
             case MINUS_ZERO: return "-0e0";
-            case PLUS_INF: return "Infinity";
-            case MINUS_INF: return "-Infinity";
-            default: return "NaN";
+            case PLUS_INF: return "+inf";
+            case MINUS_INF: return "-inf";
+            default: return "nan";
         }
     }
 
@@ -291,9 +291,9 @@ final public class DoubleToDecimal {
                 return app;
             case PLUS_ZERO: return app.append("0e0");
             case MINUS_ZERO: return app.append("-0e0");
-            case PLUS_INF: return app.append("Infinity");
-            case MINUS_INF: return app.append("-Infinity");
-            default: return app.append("NaN");
+            case PLUS_INF: return app.append("+inf");
+            case MINUS_INF: return app.append("-inf");
+            default: return app.append("nan");
         }
     }
 
