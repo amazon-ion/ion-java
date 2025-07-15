@@ -555,7 +555,7 @@ public class EncodingDirectiveCompilationTest {
         writer.writeInt(42); // Not a macro invocation
         byte[] data = getBytes(writer, out);
 
-        IonCursorBinary cursor = new IonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
+        ParsingIonCursorBinary cursor = new ParsingIonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
         Interpreter interpreter = new Interpreter(cursor);
         MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
         macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
@@ -564,22 +564,44 @@ public class EncodingDirectiveCompilationTest {
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Symbol table
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Macro table
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
+        assertEquals(IonType.STRUCT, interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // ID: 123
+        assertEquals(IonType.INT, interpreter.getType());
+        assertEquals("ID", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals(123, interpreter.intValue());
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Name: Bob
+        assertEquals(IonType.STRING, interpreter.getType());
+        assertEquals("Name", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals("Bob", interpreter.stringValue());
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Bald: False
+        assertEquals(IonType.BOOL, interpreter.getType());
+        assertEquals("Bald", interpreter.getFieldNameSymbol().assumeText());
+        assertFalse( interpreter.booleanValue());
         assertEquals(IonCursor.Event.END_CONTAINER, interpreter.nextValue()); // End of evaluated container
+        assertNull(interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepOutOfContainer());
 
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
+        assertEquals(IonType.STRUCT, interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
-        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // ID: Integer.MIN_VALUE
+        assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // ID: Long.MIN_VALUE
+        assertEquals(IonType.INT, interpreter.getType());
+        assertEquals("ID", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals(Long.MIN_VALUE, interpreter.longValue());
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Name: Sue
+        assertEquals(IonType.STRING, interpreter.getType());
+        assertEquals("Name", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals("Sue", interpreter.stringValue());
         assertEquals(IonCursor.Event.END_CONTAINER, interpreter.nextValue()); // End of evaluated container
+        assertNull(interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepOutOfContainer());
 
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // 42
+        assertEquals(IonType.INT, interpreter.getType());
+        assertEquals(42, interpreter.intValue());
         assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
+        assertNull(interpreter.getType());
         interpreter.close();
         cursor.close();
     }
@@ -1183,6 +1205,7 @@ public class EncodingDirectiveCompilationTest {
 
     @Test
     public void constantMacroInterpreted() {
+        BigDecimal pi = new BigDecimal("3.14159");
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
         writer.writeIVM();
@@ -1192,7 +1215,7 @@ public class EncodingDirectiveCompilationTest {
         startMacroTable(writer);
         startMacro(writer, symbols, "Pi");
         writeMacroSignature(writer, symbols); // Empty signature
-        writer.writeDecimal(new BigDecimal("3.14159")); // The body: a constant
+        writer.writeDecimal(pi); // The body: a constant
         endMacro(writer);
         endMacroTable(writer);
         endEncodingDirective(writer);
@@ -1200,7 +1223,7 @@ public class EncodingDirectiveCompilationTest {
         SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
         expectedMacroTable.put("Pi", new TemplateMacro(
             Collections.emptyList(),
-            Collections.singletonList(new Expression.DecimalValue(Collections.emptyList(), new BigDecimal("3.14159")))
+            Collections.singletonList(new Expression.DecimalValue(Collections.emptyList(), pi))
         ));
 
         writer.stepInEExp(0, false, expectedMacroTable.get("Pi"));
@@ -1210,7 +1233,7 @@ public class EncodingDirectiveCompilationTest {
 
         byte[] data = getBytes(writer, out);
 
-        IonCursorBinary cursor = new IonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
+        ParsingIonCursorBinary cursor = new ParsingIonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
         Interpreter interpreter = new Interpreter(cursor);
         MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
         macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
@@ -1219,8 +1242,13 @@ public class EncodingDirectiveCompilationTest {
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The symbol table. Skip; this would be handled by a wrapper.
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The encoding directive. Skip; this would be handled by a wrapper.
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // First invocation
+        assertEquals(IonType.DECIMAL, interpreter.getType());
+        assertEquals(pi, interpreter.bigDecimalValue());
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // Second invocation
+        assertEquals(IonType.DECIMAL, interpreter.getType());
+        assertEquals(pi, interpreter.bigDecimalValue());
         assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
+        assertNull(interpreter.getType());
         interpreter.close();
         cursor.close();
     }

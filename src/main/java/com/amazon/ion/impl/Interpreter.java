@@ -1,8 +1,12 @@
 package com.amazon.ion.impl;
 
+import com.amazon.ion.Decimal;
+import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.bin.PresenceBitmap;
 import com.amazon.ion.impl.macro.EncodingContext;
@@ -14,10 +18,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 
-public class Interpreter implements IonCursor {
+public class Interpreter extends DelegatingIonReaderContinuableCore {
 
     private static final int OPERATION_RIGHT_SHIFT = 24;
     private static final int ONE_BYTE_MASK = 0xFF;
@@ -39,7 +45,7 @@ public class Interpreter implements IonCursor {
     // TODO the goal is to have the interpreter be the only IonCursor implementation the Core reader interacts with,
     //  allowing it to remove the "isEvaluatingEExpression" checks from all its methods. This may require some of the
     //  core reader's value parsing methods to be moved in here so they can operate on the interpreter's raw cursor.
-    Interpreter(IonCursorBinary cursor) {
+    Interpreter(ParsingIonCursorBinary cursor) {
         //this.cursor = cursor;
         pushStackFrame(new MacroAwareIonCursorBinary().initialize(cursor), null);
     }
@@ -51,10 +57,10 @@ public class Interpreter implements IonCursor {
     private static class StackFrame {
 
         private ArgumentSource argumentSource;
-        private IonCursor dataSource;
+        private IonReaderContinuableCore dataSource;
     }
 
-    private final IonCursor voidCursor = new IonCursor() {
+    private final IonReaderContinuableCore voidCursor = new DelegatingIonReaderContinuableCore() {
 
         @Override
         public Event nextValue() {
@@ -118,16 +124,16 @@ public class Interpreter implements IonCursor {
             return this;
         }
 
-        public IonCursor evaluate() {
+        public IonReaderContinuableCore evaluate(String fieldName) {
             if (source == null) {
-                return new BytecodeCursor().initialize(bytecode, startIndex, endIndex, false, parentArguments);
+                return new BytecodeCursor().initialize(bytecode, startIndex, endIndex, false, parentArguments, fieldName);
             }
-            return source.evaluateArgument(startIndex);
+            return source.evaluateArgument(startIndex, fieldName);
         }
     }
 
     private interface ArgumentSource {
-        IonCursor evaluateArgument(int argumentIndex);
+        IonReaderContinuableCore evaluateArgument(int argumentIndex, String fieldName);
         void close();
     }
 
@@ -174,8 +180,8 @@ public class Interpreter implements IonCursor {
          */
 
         @Override
-        public IonCursor evaluateArgument(int argumentIndex) {
-            return argumentRegisters[argumentIndex].evaluate();
+        public IonReaderContinuableCore evaluateArgument(int argumentIndex, String fieldName) {
+            return argumentRegisters[argumentIndex].evaluate(fieldName);
         }
 
         @Override
@@ -187,14 +193,14 @@ public class Interpreter implements IonCursor {
     private class LazyArgumentSource implements ArgumentSource {
 
         private PresenceBitmap presenceBitmap;
-        private IonCursorBinary dataSource;
+        private ParsingIonCursorBinary dataSource;
         private List<Macro.Parameter> signature;
         private int firstArgumentStart;
         private int firstArgumentEnd;
         private IonTypeID firstArgumentTypeId;
         private int currentArgumentIndex;
 
-        LazyArgumentSource initialize(PresenceBitmap presenceBitmap, IonCursorBinary dataSource, List<Macro.Parameter> signature) {
+        LazyArgumentSource initialize(PresenceBitmap presenceBitmap, ParsingIonCursorBinary dataSource, List<Macro.Parameter> signature) {
             this.presenceBitmap = presenceBitmap;
             this.dataSource = dataSource;
             this.signature = signature;
@@ -208,15 +214,14 @@ public class Interpreter implements IonCursor {
         }
 
         @Override
-        public IonCursor evaluateArgument(int argumentIndex) {
+        public IonReaderContinuableCore evaluateArgument(int argumentIndex, String fieldName) {
             long presence = presenceBitmap.get(argumentIndex);
             if (presence == PresenceBitmap.VOID) {
                 return voidCursor;
             }
             // Position the reader on the argument with the given index
             if (argumentIndex != currentArgumentIndex) {
-                if (argumentIndex == currentArgumentIndex + 1){
-                    //dataSource.nextValue(); // TODO handling of the event?
+                if (argumentIndex == currentArgumentIndex + 1) {
                     currentArgumentIndex += 1;
                 } else {
                     dataSource.sliceAfterHeader(firstArgumentStart, firstArgumentEnd, firstArgumentTypeId);
@@ -231,9 +236,9 @@ public class Interpreter implements IonCursor {
             }
 
             if (presence == PresenceBitmap.EXPRESSION) {
-                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), false);
+                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), false, fieldName);
             } else if (presence == PresenceBitmap.GROUP) {
-                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), true);
+                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), true, fieldName);
             } else {
                 throw new IonException("Illegal presence bits.");
             }
@@ -245,22 +250,23 @@ public class Interpreter implements IonCursor {
         }
     }
 
-
-    // TODO the goal of this cursor is to return a single value (or group) and then NEEDS_INSTRUCTION
-    private class LimitedIonCursor implements IonCursor {
+    private class LimitedIonCursor extends DelegatingIonReaderContinuableCore {
 
         private IonCursorBinary delegate;
         private int startDepth;
         private boolean isExhausted;
         private boolean isExpressionGroup;
         private Macro.Parameter parameter;
+        private String fieldName = null;
 
-        LimitedIonCursor initialize(IonCursorBinary delegate, Macro.Parameter parameter, boolean isExpressionGroup) {
+        LimitedIonCursor initialize(ParsingIonCursorBinary delegate, Macro.Parameter parameter, boolean isExpressionGroup, String fieldName) {
             this.delegate = delegate;
+            setDelegate(delegate);
             startDepth = delegate.containerIndex;
             isExhausted = false;
             this.parameter = parameter;
             this.isExpressionGroup = isExpressionGroup;
+            this.fieldName = fieldName;
             if (isExpressionGroup) {
                 if (parameter.getType() == Macro.ParameterEncoding.Tagged) {
                     delegate.enterTaggedArgumentGroup();
@@ -308,11 +314,6 @@ public class Interpreter implements IonCursor {
         }
 
         @Override
-        public Event stepIntoContainer() {
-            return delegate.stepIntoContainer();
-        }
-
-        @Override
         public Event stepOutOfContainer() {
             Event event = delegate.stepOutOfContainer();
             // TODO this returns NEEDS_INSTRUCTION, which clashes with the exhausted condition. Needs fix
@@ -323,18 +324,18 @@ public class Interpreter implements IonCursor {
         }
 
         @Override
-        public Event fillValue() {
-            return delegate.fillValue();
+        public boolean hasFieldText() {
+            return fieldName != null;
         }
 
         @Override
-        public Event getCurrentEvent() {
-            return delegate.getCurrentEvent();
+        public String getFieldText() {
+            return fieldName;
         }
 
         @Override
-        public Event endStream() {
-            return delegate.endStream();
+        public SymbolToken getFieldNameSymbol() {
+            return _Private_Utils.newSymbolToken(fieldName);
         }
 
         @Override
@@ -343,13 +344,13 @@ public class Interpreter implements IonCursor {
         }
     }
 
-    // Wraps another IonCursor and conveys NEEDS_INSTRUCTION after a single value has been provided
-    private class MacroAwareIonCursorBinary implements IonCursor {
+    private class MacroAwareIonCursorBinary extends DelegatingIonReaderContinuableCore {
 
-        private IonCursorBinary delegate;
+        private ParsingIonCursorBinary delegate;
 
-        MacroAwareIonCursorBinary initialize(IonCursorBinary delegate) {
+        MacroAwareIonCursorBinary initialize(ParsingIonCursorBinary delegate) {
             this.delegate = delegate;
+            setDelegate(delegate);
             return this;
         }
 
@@ -384,7 +385,7 @@ public class Interpreter implements IonCursor {
                     PresenceBitmap presenceBitmap = delegate.loadPresenceBitmap(macro.getSignature(), presenceBitmapPool);
                     pushStackFrame(
                         // TODO when should parentArguments be non-null?
-                        new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, null),
+                        new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, null, null),
                         new LazyArgumentSource().initialize(presenceBitmap, delegate, macro.getSignature())
                     );
                 }
@@ -393,40 +394,16 @@ public class Interpreter implements IonCursor {
         }
 
         @Override
-        public Event stepIntoContainer() {
-            return delegate.stepIntoContainer();
-        }
-
-        @Override
-        public Event stepOutOfContainer() {
-            return delegate.stepOutOfContainer();
-        }
-
-        @Override
-        public Event fillValue() {
-            return delegate.fillValue();
-        }
-
-        @Override
-        public Event getCurrentEvent() {
-            return delegate.getCurrentEvent();
-        }
-
-        @Override
-        public Event endStream() {
-            return delegate.endStream();
-        }
-
-        @Override
         public void close() throws IOException {
             // Do nothing
         }
     }
 
-    private class BytecodeCursor implements IonCursor {
+    private class BytecodeCursor implements IonReaderContinuableCore {
 
         private IonType ionType = null;
         private Iterator<String> annotations = Collections.emptyIterator();
+        private String initialFieldName = null;
         private String fieldName = null;
 
         // Holders for already-materialized values
@@ -439,6 +416,7 @@ public class Interpreter implements IonCursor {
         private BigDecimal bigDecimalValue;
         private Timestamp timestampValue;
         private String stringValue;
+        private IntegerSize integerSize;
 
         private BytecodeArgumentSource argumentSource = new BytecodeArgumentSource();
         private ArgumentSource parentArguments;
@@ -447,13 +425,14 @@ public class Interpreter implements IonCursor {
         private int programCounterLimit;
         private boolean popStackWhenExhausted;
 
-        public BytecodeCursor initialize(/*IonCursorBinary cursor, */Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments) {
+        public BytecodeCursor initialize(/*IonCursorBinary cursor, */Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
             //this.cursor = cursor;
             this.bytecode = bytecode;
             programCounter = programCounterStart;
             this.programCounterLimit = programCounterLimit;
             this.popStackWhenExhausted = popStackWhenExhausted;
             this.parentArguments = parentArguments;
+            this.initialFieldName = fieldName;
             return this;
         }
 
@@ -463,7 +442,8 @@ public class Interpreter implements IonCursor {
 
         private void reset() {
             isNull = false;
-            fieldName = null;
+            fieldName = initialFieldName;
+            initialFieldName = null;
             annotations = Collections.emptyIterator();
             ionType = null;
             bigIntValue = null;
@@ -471,6 +451,7 @@ public class Interpreter implements IonCursor {
             timestampValue = null;
             stringValue = null;
             argumentSource.initialize(null/*, null*/);
+            integerSize = null;
         }
 
         @Override
@@ -495,22 +476,27 @@ public class Interpreter implements IonCursor {
                     case BytecodeOpcodes.OP_SMALL_INT:
                         ionType = IonType.INT;
                         intValue = opcode & DATA_MASK;
+                        integerSize = IntegerSize.INT;
                         return IonCursor.Event.START_SCALAR;
                     case BytecodeOpcodes.OP_INLINE_INT:
                         ionType = IonType.INT;
                         intValue = nextOpcode();
+                        integerSize = IntegerSize.INT;
                         return IonCursor.Event.START_SCALAR;
                     case BytecodeOpcodes.OP_CP_LONG:
                         ionType = IonType.INT;
+                        integerSize = IntegerSize.LONG;
                         longValue = bytecode.getLong(opcode & DATA_MASK);
                         return IonCursor.Event.START_SCALAR;
                     case BytecodeOpcodes.OP_CP_BIG_INT:
                         ionType = IonType.INT;
+                        integerSize = IntegerSize.BIG_INTEGER;
                         bigIntValue = bytecode.getBigInteger(opcode & DATA_MASK);
                         return IonCursor.Event.START_SCALAR;
                     case BytecodeOpcodes.OP_SMALL_NEG_INT:
                         ionType = IonType.INT;
                         intValue = -(opcode & DATA_MASK);
+                        integerSize = IntegerSize.INT;
                         return IonCursor.Event.START_SCALAR;
                     case BytecodeOpcodes.OP_CP_FLOAT:
                         ionType = IonType.FLOAT;
@@ -560,18 +546,6 @@ public class Interpreter implements IonCursor {
                     case BytecodeOpcodes.OP_SEXP_END:
                         // TODO pop from stack?
                         return IonCursor.Event.END_CONTAINER;
-                    /*
-                    case BytecodeOpcodes.OP_STRUCT_EMPTY:
-                        ionType = IonType.STRUCT;
-                        return IonCursor.Event.START_CONTAINER; // TODO first yield this, then END_CONTAINER
-                    case BytecodeOpcodes.OP_LIST_EMPTY:
-                        ionType = IonType.LIST;
-                        return IonCursor.Event.START_CONTAINER; // TODO first yield this, then END_CONTAINER
-                    case BytecodeOpcodes.OP_SEXP_EMPTY:
-                        ionType = IonType.SEXP;
-                        return IonCursor.Event.START_CONTAINER; // TODO first yield this, then END_CONTAINER
-
-                     */
                     case BytecodeOpcodes.OP_CP_FIELD_NAME:
                         fieldName = bytecode.getString(opcode & DATA_MASK);
                         break;
@@ -592,13 +566,13 @@ public class Interpreter implements IonCursor {
                         break;
                          */
                         int argumentIndex = opcode & DATA_MASK;
-                        pushStackFrame(top.argumentSource.evaluateArgument(argumentIndex), top.argumentSource);
+                        pushStackFrame(top.argumentSource.evaluateArgument(argumentIndex, fieldName), top.argumentSource);
                         return Event.NEEDS_INSTRUCTION;
                     case BytecodeOpcodes.OP_INVOKE_MACRO:
                         Macro macro = bytecode.getMacro(opcode & DATA_MASK);
                         Bytecode bodyBytecode = macro.getBodyBytecode();
                         pushStackFrame(
-                            new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, top.argumentSource),
+                            new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, top.argumentSource, fieldName),
                             argumentSource
                         );
                         return Event.NEEDS_INSTRUCTION;
@@ -644,10 +618,180 @@ public class Interpreter implements IonCursor {
         public void close() {
             // Nothing to do
         }
+
+        @Override
+        public int getDepth() {
+            return 0; // TODO
+        }
+
+        @Override
+        public IonType getType() {
+            return ionType;
+        }
+
+        @Override
+        public IonType getEncodingType() {
+            return ionType;
+        }
+
+        @Override
+        public IntegerSize getIntegerSize() {
+            return integerSize;
+        }
+
+        @Override
+        public boolean isNullValue() {
+            return isNull;
+        }
+
+        @Override
+        public boolean isInStruct() {
+            return false; // TODO
+        }
+
+        @Override
+        public int getFieldId() {
+            return -1;
+        }
+
+        @Override
+        public boolean hasFieldText() {
+            return fieldName != null; // TODO or just true?
+        }
+
+        @Override
+        public String getFieldText() {
+            return fieldName;
+        }
+
+        @Override
+        public SymbolToken getFieldNameSymbol() {
+            return _Private_Utils.newSymbolToken(fieldName);
+        }
+
+        @Override
+        public void consumeAnnotationTokens(Consumer<SymbolToken> consumer) {
+            annotations.forEachRemaining(s -> consumer.accept(_Private_Utils.newSymbolToken(s)));
+        }
+
+        @Override
+        public boolean booleanValue() {
+            return booleanValue;
+        }
+
+        @Override
+        public int intValue() {
+            return intValue;
+        }
+
+        @Override
+        public long longValue() {
+            return longValue;
+        }
+
+        @Override
+        public BigInteger bigIntegerValue() {
+            return bigIntValue;
+        }
+
+        @Override
+        public double doubleValue() {
+            return floatValue;
+        }
+
+        @Override
+        public BigDecimal bigDecimalValue() {
+            return bigDecimalValue;
+        }
+
+        @Override
+        public Decimal decimalValue() {
+            return Decimal.valueOf(bigDecimalValue); // TODO optimize
+        }
+
+        @Override
+        public Date dateValue() {
+            return timestampValue.dateValue();
+        }
+
+        @Override
+        public Timestamp timestampValue() {
+            return timestampValue;
+        }
+
+        @Override
+        public String stringValue() {
+            return stringValue;
+        }
+
+        @Override
+        public int symbolValueId() {
+            return -1;
+        }
+
+        @Override
+        public boolean hasSymbolText() {
+            return ionType == IonType.SYMBOL;
+        }
+
+        @Override
+        public String getSymbolText() {
+            return stringValue;
+        }
+
+        @Override
+        public SymbolToken symbolValue() {
+            return _Private_Utils.newSymbolToken(stringValue);
+        }
+
+        @Override
+        public int byteSize() {
+            throw new UnsupportedOperationException(); // TODO
+        }
+
+        @Override
+        public byte[] newBytes() {
+            throw new UnsupportedOperationException(); // TODO
+        }
+
+        @Override
+        public int getBytes(byte[] buffer, int offset, int len) {
+            throw new UnsupportedOperationException(); // TODO
+        }
+
+        @Override
+        public int getIonMajorVersion() {
+            return 1;
+        }
+
+        @Override
+        public int getIonMinorVersion() {
+            return 1;
+        }
+
+        @Override
+        public void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
+            // Nothing to do; bytecode is only used below the top level.
+        }
+
+        @Override
+        public boolean hasAnnotations() {
+            return annotations.hasNext();
+        }
+
+        @Override
+        public void resetEncodingContext() {
+            // TODO do nothing?
+        }
+
+        @Override
+        public String getSymbol(int sid) {
+            throw new UnsupportedOperationException(); // TODO does something need to be done for this? Symbol table lookup from the parent context?
+        }
     }
 
     // The data source may either be an IonCursorBinary over the raw encoding or an interpreter over some bytecode
-    private StackFrame pushStackFrame(IonCursor dataSource, ArgumentSource argumentSource) {
+    private StackFrame pushStackFrame(IonReaderContinuableCore dataSource, ArgumentSource argumentSource) {
         if (stackFrameIndex >= stack.length) {
             StackFrame[] newStack = new StackFrame[stack.length * 2];
             System.arraycopy(stack, 0, newStack, 0, stack.length);
@@ -662,6 +806,7 @@ public class Interpreter implements IonCursor {
         stackFrame.argumentSource = argumentSource;
         stackFrame.dataSource = dataSource;
         top = stackFrame;
+        setDelegate(top.dataSource);
         yield = false;
         return stackFrame;
     }
@@ -672,9 +817,11 @@ public class Interpreter implements IonCursor {
             return;
         }
         top = stack[stackFrameIndex];
+        setDelegate(top.dataSource);
         yield = false;
     }
 
+    @Override
     public IonCursor.Event nextValue() {
         Event event;
         do {
@@ -682,31 +829,6 @@ public class Interpreter implements IonCursor {
             event = top.dataSource.nextValue();
         } while (!yield);
         return event;
-    }
-
-    @Override
-    public Event stepIntoContainer() {
-        return top.dataSource.stepIntoContainer();
-    }
-
-    @Override
-    public Event stepOutOfContainer() {
-        return top.dataSource.stepOutOfContainer();
-    }
-
-    @Override
-    public Event fillValue() {
-        return top.dataSource.fillValue();
-    }
-
-    @Override
-    public Event getCurrentEvent() {
-        return top.dataSource.getCurrentEvent();
-    }
-
-    @Override
-    public Event endStream() {
-        return top.dataSource.endStream();
     }
 
     @Override
