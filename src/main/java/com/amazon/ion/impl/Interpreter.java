@@ -30,7 +30,6 @@ public class Interpreter extends DelegatingIonReaderContinuableCore {
     private static final int DATA_MASK = 0x00FFFFFF;
     private static final IonType[] ION_TYPES_BY_ORDINAL = IonType.values();
 
-    //private final IonCursorBinary cursor; // TODO would be nice to have an abstraction that could serve both binary and text
     private StackFrame[] stack = new StackFrame[8];
     private int stackFrameIndex = -1;
     private StackFrame top = null;
@@ -46,7 +45,6 @@ public class Interpreter extends DelegatingIonReaderContinuableCore {
     //  allowing it to remove the "isEvaluatingEExpression" checks from all its methods. This may require some of the
     //  core reader's value parsing methods to be moved in here so they can operate on the interpreter's raw cursor.
     Interpreter(ParsingIonCursorBinary cursor) {
-        //this.cursor = cursor;
         pushStackFrame(new MacroAwareIonCursorBinary().initialize(cursor), null);
     }
 
@@ -425,8 +423,7 @@ public class Interpreter extends DelegatingIonReaderContinuableCore {
         private int programCounterLimit;
         private boolean popStackWhenExhausted;
 
-        public BytecodeCursor initialize(/*IonCursorBinary cursor, */Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
-            //this.cursor = cursor;
+        public BytecodeCursor initialize(Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
             this.bytecode = bytecode;
             programCounter = programCounterStart;
             this.programCounterLimit = programCounterLimit;
@@ -816,6 +813,7 @@ public class Interpreter extends DelegatingIonReaderContinuableCore {
             top = null;
             return;
         }
+        // TODO top.dataSource.close()
         top = stack[stackFrameIndex];
         setDelegate(top.dataSource);
         yield = false;
