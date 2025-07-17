@@ -1203,7 +1203,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     }
 
     @Override
-    EncodingContext getEncodingContext() {
+    public EncodingContext getEncodingContext() {
         return encodingContext;
     }
 

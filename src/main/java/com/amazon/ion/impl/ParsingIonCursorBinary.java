@@ -15,6 +15,7 @@ import com.amazon.ion.impl.bin.IntList;
 import com.amazon.ion.impl.bin.OpCodes;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool;
+import com.amazon.ion.impl.macro.EncodingContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -106,16 +107,29 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
         new byte[12],
     };
 
-    ParsingIonCursorBinary(IonBufferConfiguration configuration, byte[] buffer, int offset, int length) {
+    interface NullaryVoidFunction {
+        void invoke();
+    }
+
+    interface PrepareScalarFunction {
+        void prepareScalar(NullaryVoidFunction superPrepareScalar);
+    }
+
+    private final PrepareScalarFunction prepareScalarFunction;
+    private final NullaryVoidFunction thisPrepareScalar = this::prepareScalarBase;
+
+    ParsingIonCursorBinary(IonBufferConfiguration configuration, byte[] buffer, int offset, int length, PrepareScalarFunction prepareScalarFunction) {
         super(configuration, buffer, offset, length);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
+        this.prepareScalarFunction = prepareScalarFunction;
     }
 
-    ParsingIonCursorBinary(IonBufferConfiguration configuration, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
+    ParsingIonCursorBinary(IonBufferConfiguration configuration, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen, PrepareScalarFunction prepareScalarFunction) {
         super(configuration, inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
+        this.prepareScalarFunction = prepareScalarFunction;
     }
 
     /**
@@ -1070,14 +1084,18 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
         return valueTid != null && valueTid.isNull;
     }
 
+    void prepareScalarBase() {
+        if (valueMarker.endIndex > limit) {
+            throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
+        }
+    }
+
     /**
      * Performs any logic necessary to prepare a scalar value for parsing. Subclasses may wish to provide additional
      * logic, such as ensuring that the value is present in the buffer.
      */
     void prepareScalar() {
-        if (valueMarker.endIndex > limit) {
-            throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
-        }
+        prepareScalarFunction.prepareScalar(thisPrepareScalar);
     }
 
     /**
@@ -1260,6 +1278,11 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
     @Override
     public String getSymbol(int sid) {
         throw new UnsupportedOperationException(); // TODO needs symbol table?
+    }
+
+    @Override
+    public EncodingContext getEncodingContext() {
+        return EncodingContext.getDefault();
     }
 
     /**
@@ -1542,7 +1565,7 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
     }
 
     @Override
-    public String stringValue() {
+    public String stringValue() { // TODO don't try to resolve symbols?
         String value;
         IonType type = getEncodingType();
         if (type == IonType.STRING) {
@@ -1750,6 +1773,7 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
         return utf8Decoder.decode(utf8InputBuffer, (int) (fieldTextMarker.endIndex - fieldTextMarker.startIndex));
     }
 
+    // TODO remove, must only be in the symbol-aware implementations
     @Override
     public SymbolToken getFieldNameSymbol() {
         if (fieldTextMarker.startIndex > -1) {
@@ -1764,6 +1788,7 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
         return getSymbolToken(fieldSid);
     }
 
+    // TODO remove, must only be in the symbol-aware implementations
     public String getFieldName() {
         if (fieldTextMarker.startIndex > -1 || fieldTextMarker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
             return getFieldText();

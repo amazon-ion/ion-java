@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 
 import static com.amazon.ion.impl.IonTypeID.DELIMITED_END_ID;
 import static com.amazon.ion.impl.IonTypeID.ONE_ANNOTATION_FLEX_SYM_LOWER_NIBBLE_1_1;
@@ -405,6 +406,12 @@ class IonCursorBinary implements IonCursor {
      * cannot come from this pool; an externally managed pool must be used in that case.
      */
     private final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
+
+    private Supplier<EncodingContext> encodingContextSupplier = this::getEncodingContext;
+
+    void setEncodingContextSupplier(Supplier<EncodingContext> encodingContextSupplier) {
+        this.encodingContextSupplier = encodingContextSupplier;
+    }
 
     /**
      * @return the given configuration's DataHandler, or null if that DataHandler is a no-op.
@@ -2067,7 +2074,7 @@ class IonCursorBinary implements IonCursor {
      * @return true if the end of the stream was reached before skipping past the invocation; otherwise, false.
      */
     private boolean skipMacroInvocation() {
-        EncodingContext context = isSystemInvocation ? EncodingContext.getDefault() : getEncodingContext();
+        EncodingContext context = isSystemInvocation ? EncodingContext.getDefault() : encodingContextSupplier.get();
         Macro macro = context.getMacroTable().get(MacroRef.byId((int) macroInvocationId));
         if (macro == null) {
             throw new IonException(String.format("Cannot skip over unknown macro with ID %d.", macroInvocationId));

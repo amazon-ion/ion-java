@@ -175,7 +175,7 @@ public final class _Private_IonReaderFactory
 
     public static final IonReader makeReaderBinary(IonReaderBuilder builder, InputStream is, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen)
     {
-        return new IonReaderContinuableTopLevelBinary(builder, is, alreadyRead, alreadyReadOff, alreadyReadLen);
+        return new InterpreterIonReaderBinary(builder, is, alreadyRead, alreadyReadOff, alreadyReadLen);
     }
 
     public static final IonReader makeSystemReaderBinary(IonReaderBuilder builder, InputStream is, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen)
@@ -187,7 +187,7 @@ public final class _Private_IonReaderFactory
 
     public static final IonReader makeReaderBinary(IonReaderBuilder builder, byte[] buffer, int off, int len)
     {
-        return new IonReaderContinuableTopLevelBinary(builder, buffer, off, len);
+        return new InterpreterIonReaderBinary(builder, buffer, off, len);
     }
 
     public static final IonReader makeSystemReaderBinary(IonReaderBuilder builder, byte[] buffer, int off, int len)

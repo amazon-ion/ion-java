@@ -6,6 +6,7 @@ import com.amazon.ion.Decimal;
 import com.amazon.ion.IntegerSize;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IvmNotificationConsumer;
+import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl.macro.EncodingContext;
@@ -14,55 +15,46 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 /**
- * A delegation implementation of {@link IonReaderContinuableCore} that forwards all method calls
- * to another {@link IonReaderContinuableCore} instance.
+ * A delegation implementation of IonReaderContinuableApplication that forwards all method calls
+ * to another IonReaderContinuableApplication instance.
  */
-public class DelegatingIonReaderContinuableCore implements IonReaderContinuableCore {
+public class DelegatingIonReaderContinuableApplication implements IonReaderContinuableApplication {
 
-    IonReaderContinuableCore delegate = null;
+    IonReaderContinuableApplication delegate;
 
-    void setDelegate(IonReaderContinuableCore newDelegate) {
+    void setDelegate(IonReaderContinuableApplication newDelegate) {
         delegate = newDelegate;
     }
 
-    // IonCursor methods
+    // IonReaderContinuableApplication methods
 
     @Override
-    public Event nextValue() {
-        return delegate.nextValue();
+    public SymbolTable getSymbolTable() {
+        return delegate.getSymbolTable();
     }
 
     @Override
-    public Event stepIntoContainer() {
-        return delegate.stepIntoContainer();
+    public String[] getTypeAnnotations() {
+        return delegate.getTypeAnnotations();
     }
 
     @Override
-    public Event stepOutOfContainer() {
-        return delegate.stepOutOfContainer();
+    public Iterator<String> iterateTypeAnnotations() {
+        return delegate.iterateTypeAnnotations();
     }
 
     @Override
-    public Event fillValue() {
-        return delegate.fillValue();
+    public String getFieldName() {
+        return delegate.getFieldName();
     }
 
     @Override
-    public Event getCurrentEvent() {
-        return delegate.getCurrentEvent();
-    }
-
-    @Override
-    public Event endStream() {
-        return delegate.endStream();
-    }
-
-    @Override
-    public void close() throws IOException {
-        delegate.close();
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        return delegate.getTypeAnnotationSymbols();
     }
 
     // IonReaderContinuableCore methods
@@ -243,5 +235,42 @@ public class DelegatingIonReaderContinuableCore implements IonReaderContinuableC
     @Override
     public EncodingContext getEncodingContext() {
         return delegate.getEncodingContext();
+    }
+
+    // IonCursor methods
+
+    @Override
+    public Event nextValue() {
+        return delegate.nextValue();
+    }
+
+    @Override
+    public Event stepIntoContainer() {
+        return delegate.stepIntoContainer();
+    }
+
+    @Override
+    public Event stepOutOfContainer() {
+        return delegate.stepOutOfContainer();
+    }
+
+    @Override
+    public Event fillValue() {
+        return delegate.fillValue();
+    }
+
+    @Override
+    public Event getCurrentEvent() {
+        return delegate.getCurrentEvent();
+    }
+
+    @Override
+    public Event endStream() {
+        return delegate.endStream();
+    }
+
+    @Override
+    public void close() throws IOException {
+        delegate.close();
     }
 }

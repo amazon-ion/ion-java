@@ -14,6 +14,7 @@ import com.amazon.ion.IonReader;
 import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonText;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonWriter;
 import com.amazon.ion.MacroAwareIonReader;
 import com.amazon.ion.MacroAwareIonWriter;
 import com.amazon.ion.SystemSymbols;
@@ -28,6 +29,7 @@ import com.amazon.ion.impl.macro.MutableMacroTable;
 import com.amazon.ion.impl.macro.ParameterFactory;
 import com.amazon.ion.impl.macro.SystemMacro;
 import com.amazon.ion.impl.macro.TemplateMacro;
+import com.amazon.ion.system.IonBinaryWriterBuilder;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import org.hamcrest.Description;
@@ -40,9 +42,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -228,7 +233,7 @@ public class EncodingDirectiveCompilationTest {
 
             @Override
             EncodingContext getEncodingContext(IonReader reader) {
-                return ((IonReaderContinuableCoreBinary) reader).getEncodingContext();
+                return ((IonReaderContinuableCore) reader).getEncodingContext();
             }
 
             @Override
@@ -500,6 +505,102 @@ public class EncodingDirectiveCompilationTest {
     }
 
     @Test
+    public void tempWriteALotOfBasicStructInvocations() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "People");
+        writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
+        // The macro body
+        writer.stepInStruct(false);
+        writeVariableField(writer, symbols, "ID", "$ID");
+        writeVariableField(writer, symbols, "Name", "$Name");
+        writeVariableField(writer, symbols, "Bald", "$Bald");
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("People", new TemplateMacro(
+            Arrays.asList(
+                new Macro.Parameter("$ID", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Name", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Bald", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrOne)
+            ),
+            Arrays.asList(
+                new Expression.StructValue(Collections.emptyList(), 0, 7, new HashMap<String, List<Integer>>() {{
+                    put("ID", Collections.singletonList(2));
+                    put("Name", Collections.singletonList(4));
+                    put("Bald", Collections.singletonList(6));
+                }}),
+                new Expression.FieldName(new FakeSymbolToken("ID", symbols.get("ID"))),
+                new Expression.VariableRef(0),
+                new Expression.FieldName(new FakeSymbolToken("Name", symbols.get("Name"))),
+                new Expression.VariableRef(1),
+                new Expression.FieldName(new FakeSymbolToken("Bald", symbols.get("Bald"))),
+                new Expression.VariableRef(2)
+            )
+        ));
+        for (int i = 0; i < 10000; i++) {
+            StreamType.BINARY.startMacroInvocationByName(writer, "People", expectedMacroTable);
+            writer.writeInt(123);
+            writer.writeString("Bob");
+            writer.writeBool(false);
+            writer.stepOut();
+
+            writer.stepInEExp(0, false, expectedMacroTable.get("People"));
+            writer.writeInt(Long.MIN_VALUE);
+            writer.writeString("Sue");
+            // The optional "Bald" is not included.
+            writer.stepOut();
+
+            StreamType.BINARY.startMacroInvocationByName(writer, "People", expectedMacroTable);
+            writer.writeInt(-6);
+            writer.writeString("Jeff");
+            writer.writeBool(true);
+            writer.stepOut();
+
+            writer.stepInEExp(0, false, expectedMacroTable.get("People"));
+            writer.writeInt(0);
+            writer.writeString("Ron");
+            // The optional "Bald" is not included.
+            writer.stepOut();
+
+        }
+
+        writer.writeInt(42); // Not a macro invocation
+        byte[] data = getBytes(writer, out);
+
+        try (OutputStream fileOut = Files.newOutputStream(Paths.get("/Users/greggt/Documents/real-ion-data/ion-11-samples/simple_invocations.11.10n"))) {
+            fileOut.write(data);
+        }
+    }
+
+    @Test
+    public void tempRewriteSimpleInvocationsTo10() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (IonReader reader = IonReaderBuilder.standard().build(Files.readAllBytes(Paths.get("/Users/greggt/Documents/real-ion-data/ion-11-samples/simple_invocations.11.10n")));
+             IonWriter writer = IonBinaryWriterBuilder.standard().build(out)
+        ) {
+            int i = 0;
+            try {
+                while (reader.next() != null) {
+                    writer.writeValue(reader);
+                    i++;
+                }
+            } catch (Exception e) {
+                System.out.println("Exception at " + i);
+                throw e;
+            }
+            //writer.writeValues(reader);
+        }
+    }
+
+    @Test
     public void structMacroWithOneOptionalInterpreted() {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
@@ -555,14 +656,7 @@ public class EncodingDirectiveCompilationTest {
         writer.writeInt(42); // Not a macro invocation
         byte[] data = getBytes(writer, out);
 
-        ParsingIonCursorBinary cursor = new ParsingIonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
-        Interpreter interpreter = new Interpreter(cursor);
-        MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
-        macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
-        EncodingContext encodingContext = new EncodingContext(macroTable);
-        interpreter.setEncodingContext(encodingContext);
-        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Symbol table
-        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Macro table
+        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length, ParsingIonCursorBinary.NullaryVoidFunction::invoke);
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
         assertEquals(IonType.STRUCT, interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
@@ -603,7 +697,94 @@ public class EncodingDirectiveCompilationTest {
         assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
         assertNull(interpreter.getType());
         interpreter.close();
-        cursor.close();
+    }
+
+    @Test
+    public void structMacroWithOneOptionalInterpretedIonReader() throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonRawWriter_1_1 writer = StreamType.BINARY.newWriter(out);
+        writer.writeIVM();
+        Map<String, Integer> symbols = initializeSymbolTable(writer, "People", "ID", "Name", "Bald", "$ID", "$Name", "$Bald", "?");
+        startModuleDirectiveForDefaultModule(writer);
+        startMacroTable(writer);
+        startMacro(writer, symbols, "People");
+        writeMacroSignature(writer, symbols, "$ID", "$Name", "$Bald", "?");
+        // The macro body
+        writer.stepInStruct(false);
+        writeVariableField(writer, symbols, "ID", "$ID");
+        writeVariableField(writer, symbols, "Name", "$Name");
+        writeVariableField(writer, symbols, "Bald", "$Bald");
+        writer.stepOut();
+        endMacro(writer);
+        endMacroTable(writer);
+        endEncodingDirective(writer);
+
+        SortedMap<String, Macro> expectedMacroTable = new TreeMap<>();
+        expectedMacroTable.put("People", new TemplateMacro(
+            Arrays.asList(
+                new Macro.Parameter("$ID", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Name", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ExactlyOne),
+                new Macro.Parameter("$Bald", Macro.ParameterEncoding.Tagged, Macro.ParameterCardinality.ZeroOrOne)
+            ),
+            Arrays.asList(
+                new Expression.StructValue(Collections.emptyList(), 0, 7, new HashMap<String, List<Integer>>() {{
+                    put("ID", Collections.singletonList(2));
+                    put("Name", Collections.singletonList(4));
+                    put("Bald", Collections.singletonList(6));
+                }}),
+                new Expression.FieldName(new FakeSymbolToken("ID", symbols.get("ID"))),
+                new Expression.VariableRef(0),
+                new Expression.FieldName(new FakeSymbolToken("Name", symbols.get("Name"))),
+                new Expression.VariableRef(1),
+                new Expression.FieldName(new FakeSymbolToken("Bald", symbols.get("Bald"))),
+                new Expression.VariableRef(2)
+            )
+        ));
+        StreamType.BINARY.startMacroInvocationByName(writer, "People", expectedMacroTable);
+        writer.writeInt(123);
+        writer.writeString("Bob");
+        writer.writeBool(false);
+        writer.stepOut();
+
+        writer.stepInEExp(0, false, expectedMacroTable.get("People"));
+        writer.writeInt(Long.MIN_VALUE);
+        writer.writeString("Sue");
+        // The optional "Bald" is not included.
+        writer.stepOut();
+
+        writer.writeInt(42); // Not a macro invocation
+        byte[] data = getBytes(writer, out);
+
+        IonReader interpreter = new InterpreterIonReaderBinary(IonReaderBuilder.standard(), data, 0, data.length);
+        assertEquals(IonType.STRUCT, interpreter.next());
+        interpreter.stepIn();
+        assertEquals(IonType.INT, interpreter.next());
+        assertEquals("ID", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals(123, interpreter.intValue());
+        assertEquals(IonType.STRING, interpreter.next());
+        assertEquals("Name", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals("Bob", interpreter.stringValue());
+        assertEquals(IonType.BOOL, interpreter.next());
+        assertEquals("Bald", interpreter.getFieldNameSymbol().assumeText());
+        assertFalse(interpreter.booleanValue());
+        assertNull(interpreter.next());
+        interpreter.stepOut();
+
+        assertEquals(IonType.STRUCT, interpreter.next());
+        interpreter.stepIn();
+        assertEquals(IonType.INT, interpreter.next());
+        assertEquals("ID", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals(Long.MIN_VALUE, interpreter.longValue());
+        assertEquals(IonType.STRING, interpreter.next());
+        assertEquals("Name", interpreter.getFieldNameSymbol().assumeText());
+        assertEquals("Sue", interpreter.stringValue());
+        assertNull(interpreter.next());
+        interpreter.stepOut();
+
+        assertEquals(IonType.INT, interpreter.next());
+        assertEquals(42, interpreter.intValue());
+        assertNull(interpreter.next());
+        interpreter.close();
     }
 
     @ParameterizedTest(name = "{0},{1}")
@@ -1194,15 +1375,6 @@ public class EncodingDirectiveCompilationTest {
         }
     }
 
-    private static Map<MacroRef, Macro> convertToMacroRefMap(SortedMap<String, Macro> sortedMap) {
-        Map<MacroRef, Macro> result = new HashMap<>();
-        int index = 0;
-        for (Macro macro : sortedMap.values()) {
-            result.put(MacroRef.byId(index++), macro);
-        }
-        return result;
-    }
-
     @Test
     public void constantMacroInterpreted() {
         BigDecimal pi = new BigDecimal("3.14159");
@@ -1233,14 +1405,7 @@ public class EncodingDirectiveCompilationTest {
 
         byte[] data = getBytes(writer, out);
 
-        ParsingIonCursorBinary cursor = new ParsingIonCursorBinary(IonBufferConfiguration.DEFAULT, data, 0, data.length);
-        Interpreter interpreter = new Interpreter(cursor);
-        MacroTable macroTable = new MutableMacroTable(MacroTable.empty());
-        macroTable.putAll(convertToMacroRefMap(expectedMacroTable));
-        EncodingContext encodingContext = new EncodingContext(macroTable);
-        interpreter.setEncodingContext(encodingContext);
-        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The symbol table. Skip; this would be handled by a wrapper.
-        assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // The encoding directive. Skip; this would be handled by a wrapper.
+        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length, ParsingIonCursorBinary.NullaryVoidFunction::invoke);
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // First invocation
         assertEquals(IonType.DECIMAL, interpreter.getType());
         assertEquals(pi, interpreter.bigDecimalValue());
@@ -1250,7 +1415,6 @@ public class EncodingDirectiveCompilationTest {
         assertEquals(IonCursor.Event.NEEDS_DATA, interpreter.nextValue());
         assertNull(interpreter.getType());
         interpreter.close();
-        cursor.close();
     }
 
     @ParameterizedTest(name = "{0},{1}")

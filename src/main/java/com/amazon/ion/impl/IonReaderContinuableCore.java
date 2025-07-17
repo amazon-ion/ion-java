@@ -12,6 +12,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.impl.macro.EncodingContext;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -332,5 +333,11 @@ public interface IonReaderContinuableCore extends IonCursor {
      * @return a String or null.
      */
     String getSymbol(int sid);
+
+    /**
+     * Returns the encoding context (macro table) that is currently active.
+     * @return the current encoding context.
+     */
+    EncodingContext getEncodingContext();
 
 }
