@@ -20,9 +20,9 @@ import java.util.function.Consumer;
  * A delegation implementation of {@link IonReaderContinuableCore} that forwards all method calls
  * to another {@link IonReaderContinuableCore} instance.
  */
-public class DelegatingIonReaderContinuableCore implements IonReaderContinuableCore {
+abstract class DelegatingIonReaderContinuableCore implements IonReaderContinuableCore {
 
-    IonReaderContinuableCore delegate = null;
+    protected IonReaderContinuableCore delegate = null;
 
     void setDelegate(IonReaderContinuableCore newDelegate) {
         delegate = newDelegate;

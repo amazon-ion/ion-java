@@ -22,9 +22,9 @@ import java.util.function.Consumer;
  * A delegation implementation of IonReaderContinuableApplication that forwards all method calls
  * to another IonReaderContinuableApplication instance.
  */
-public class DelegatingIonReaderContinuableApplication implements IonReaderContinuableApplication {
+abstract class DelegatingIonReaderContinuableApplication implements IonReaderContinuableApplication {
 
-    IonReaderContinuableApplication delegate;
+    protected IonReaderContinuableApplication delegate;
 
     void setDelegate(IonReaderContinuableApplication newDelegate) {
         delegate = newDelegate;

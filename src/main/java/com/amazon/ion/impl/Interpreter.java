@@ -131,7 +131,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
         // TODO this creates too many layers of delegation, which may impact performance. Look into combining functionality of the cursor types that are independent of the stack.
         //  Probably via inheritance...
-        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor));
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor));
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -144,7 +144,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         rawCursor.setEncodingContextSupplier(this::getEncodingContext);
         SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
-        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor));
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor));
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -180,13 +180,6 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             }
         );
     }
-
-    /*
-    public void setEncodingContext(EncodingContext encodingContext) {
-        this.encodingContext = encodingContext;
-    }
-
-     */
 
     private class StackFrame {
 
@@ -547,93 +540,6 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             }
         }
         return true;
-    }
-
-    private class EncodingDirectiveAwareIonCursor extends DelegatingIonReaderContinuableApplication {
-
-        private final EncodingDirectiveInterceptingIonCursor encodingDirectiveInterceptingCursor = new EncodingDirectiveInterceptingIonCursor();
-
-        EncodingDirectiveAwareIonCursor initialize(IonReaderContinuableApplication delegate) {
-            setDelegate(delegate);
-            return this;
-        }
-
-        /**
-         * @return true if current value has a sequence of annotations that begins with `$ion`; otherwise, false.
-         */
-        boolean startsWithIonAnnotation() {
-            if (rawCursor.minorVersion > 0) {
-                Marker marker = rawCursor.annotationTokenMarkers.get(0);
-                return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION);
-            }
-            return false;
-        }
-
-        @Override
-        public String getSymbol(int sid) {
-            // Only symbol IDs declared in Ion 1.1 encoding directives (not Ion 1.0 symbol tables) are resolved by the
-            // core reader. In Ion 1.0, 'symbols' is never populated by the core reader.
-            if (sid > 0 && sid - 1 <= localSymbolMaxOffset) {
-                return symbols[sid - 1];
-            }
-            return null;
-        }
-
-        /**
-         * Returns true if the symbol at `marker`...
-         * <p> * is a system symbol with the same ID as the expected System Symbol
-         * <p> * is an inline symbol with the same utf8 bytes as the expected System Symbol
-         * <p> * is a user symbol that maps to the same text as the expected System Symbol
-         * <p>
-         */
-        boolean matchesSystemSymbol_1_1(Marker marker, SystemSymbols_1_1 systemSymbol) {
-            if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
-                return systemSymbol.getText().equals(rawCursor.getSystemSymbolToken(marker).getText());
-            } else if (marker.startIndex < 0) {
-                // This is a local symbol whose ID is stored in marker.endIndex.
-                return systemSymbol.getText().equals(getSymbol((int) marker.endIndex));
-            } else {
-                // This is an inline symbol with UTF-8 bytes bounded by the marker.
-                return bytesMatch(systemSymbol.getUtf8Bytes(), rawCursor.buffer, (int) marker.startIndex, (int) marker.endIndex);
-            }
-        }
-
-        /**
-         * @return true if the reader is positioned on an encoding directive; otherwise, false.
-         */
-        private boolean isPositionedOnEncodingDirective() {
-            return rawCursor.event == Event.START_CONTAINER
-                && rawCursor.hasAnnotations
-                && delegate.getType() == IonType.SEXP //valueTid.type == IonType.SEXP
-                //&& parent == null
-                && startsWithIonAnnotation();
-        }
-
-        /**
-         * @return true if the macro evaluator is positioned on an encoding directive; otherwise, false.
-         */
-        /*
-        private boolean isPositionedOnEvaluatedEncodingDirective() { // TODO this is probably needed, or some better abstraction for checking encoding directive and symbol table.
-            if (macroEvaluatorIonReader.getType() != IonType.SEXP) {
-                return false;
-            }
-            Iterator<String> annotations = macroEvaluatorIonReader.iterateTypeAnnotations();
-            return annotations.hasNext()
-                && annotations.next().equals(SystemSymbols_1_1.ION.getText());
-        }
-
-         */
-
-        @Override
-        public Event nextValue() {
-            Event event = delegate.nextValue();
-            if (isPositionedOnEncodingDirective()) {
-                pushStackFrame().initializeDataSource(encodingDirectiveInterceptingCursor.initialize(delegate)); // TODO argument source?
-                top.yieldByDefault = false;
-                event = Event.NEEDS_INSTRUCTION;
-            }
-            return event;
-        }
     }
 
     /**
@@ -1707,15 +1613,67 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         private final SymbolTableInterceptingIonCursor symbolTableInterceptingIonCursor = new SymbolTableInterceptingIonCursor();
         private final DepthOneIonCursor depthOneCursor = new DepthOneIonCursor();
-        private IonReaderContinuableApplication core = null;
+        private final EncodingDirectiveInterceptingIonCursor encodingDirectiveInterceptingCursor = new EncodingDirectiveInterceptingIonCursor();
+        //private IonReaderContinuableApplication core = null;
 
         // TODO should this accept an EncodingDirectiveAwareIonCursor?
         // 'core' is the next-highest-level cursor below the encoding directive-aware cursor (if any). If the encoding
         // directive-aware cursor isn't used, then 'delegate' and 'core' will be the same.
-        ApplicationLevelIonCursor initialize(IonReaderContinuableApplication delegate, IonReaderContinuableApplication core) {
-            setDelegate(delegate);
-            this.core = core;
+        ApplicationLevelIonCursor initialize(IonReaderContinuableApplication core) {
+            setDelegate(core);
+            //this.core = core;
             return this;
+        }
+
+        /**
+         * @return true if current value has a sequence of annotations that begins with `$ion`; otherwise, false.
+         */
+        boolean startsWithIonAnnotation() {
+            if (rawCursor.minorVersion > 0) {
+                Marker marker = rawCursor.annotationTokenMarkers.get(0);
+                return matchesSystemSymbol_1_1(marker, SystemSymbols_1_1.ION);
+            }
+            return false;
+        }
+
+        @Override
+        public String getSymbol(int sid) {
+            // Only symbol IDs declared in Ion 1.1 encoding directives (not Ion 1.0 symbol tables) are resolved by the
+            // core reader. In Ion 1.0, 'symbols' is never populated by the core reader.
+            if (sid > 0 && sid - 1 <= localSymbolMaxOffset) {
+                return symbols[sid - 1];
+            }
+            return null;
+        }
+
+        /**
+         * Returns true if the symbol at `marker`...
+         * <p> * is a system symbol with the same ID as the expected System Symbol
+         * <p> * is an inline symbol with the same utf8 bytes as the expected System Symbol
+         * <p> * is a user symbol that maps to the same text as the expected System Symbol
+         * <p>
+         */
+        boolean matchesSystemSymbol_1_1(Marker marker, SystemSymbols_1_1 systemSymbol) {
+            if (marker.typeId == IonTypeID.SYSTEM_SYMBOL_VALUE) {
+                return systemSymbol.getText().equals(rawCursor.getSystemSymbolToken(marker).getText());
+            } else if (marker.startIndex < 0) {
+                // This is a local symbol whose ID is stored in marker.endIndex.
+                return systemSymbol.getText().equals(getSymbol((int) marker.endIndex));
+            } else {
+                // This is an inline symbol with UTF-8 bytes bounded by the marker.
+                return bytesMatch(systemSymbol.getUtf8Bytes(), rawCursor.buffer, (int) marker.startIndex, (int) marker.endIndex);
+            }
+        }
+
+        /**
+         * @return true if the reader is positioned on an encoding directive; otherwise, false.
+         */
+        private boolean isPositionedOnEncodingDirective() {
+            return rawCursor.event == Event.START_CONTAINER
+                && rawCursor.hasAnnotations
+                && delegate.getType() == IonType.SEXP //valueTid.type == IonType.SEXP
+                //&& parent == null
+                && startsWithIonAnnotation();
         }
 
         /**
@@ -1748,9 +1706,12 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         @Override
         public Event nextValue() {
             Event event = delegate.nextValue();
-            // TODO check for symbol table. If yes, push onto the stack the encoding directive reader and don't yield
-            if (isPositionedOnSymbolTable()) {
-                pushStackFrame().initializeDataSource(symbolTableInterceptingIonCursor.initialize(core));
+            if (isPositionedOnEncodingDirective()) {
+                pushStackFrame().initializeDataSource(encodingDirectiveInterceptingCursor.initialize(delegate)); // TODO argument source?
+                top.yieldByDefault = false;
+                event = Event.NEEDS_INSTRUCTION;
+            } else if (isPositionedOnSymbolTable()) {
+                pushStackFrame().initializeDataSource(symbolTableInterceptingIonCursor.initialize(delegate));
                 top.yieldByDefault = false;
                 event = Event.NEEDS_INSTRUCTION;
             }
@@ -1759,8 +1720,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         @Override
         public Event stepIntoContainer() {
-            pushStackFrame().initializeDataSource(depthOneCursor.initialize(core)); // TODO argumentSource?
-            return core.stepIntoContainer();
+            pushStackFrame().initializeDataSource(depthOneCursor.initialize(delegate)); // TODO argumentSource?
+            return delegate.stepIntoContainer();
         }
 
     }
