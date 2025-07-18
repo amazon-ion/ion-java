@@ -43,6 +43,7 @@ import java.io.InputStream;
  * stream's values risk exceeding the available memory, then continuable reading must not be used.
  * </p>
  */
+// TODO try removing extends Delegating... and just delegating in the IonReader interface method implementations.
 final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApplication implements IonReader, _Private_ReaderWriter {
 
     // True if continuable reading is disabled.

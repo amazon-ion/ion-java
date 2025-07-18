@@ -60,7 +60,7 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl.SharedSymbolTable.getSystemSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 
-public class Interpreter extends DelegatingIonReaderContinuableApplication {
+public final class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     // TODO system-level Ion 1.0 transcoding
     // TODO verbatim macro transcoding (MacroAwareIonReader)
@@ -106,10 +106,10 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     // The text representations of the symbol table that is currently in scope, indexed by symbol ID. If the element at
     // a particular index is null, that symbol has unknown text.
-    protected String[] symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
+    String[] symbols = new String[SYMBOLS_LIST_INITIAL_CAPACITY];
 
     // The maximum offset into the 'symbols' array that points to a valid local symbol.
-    protected int localSymbolMaxOffset = -1;
+    int localSymbolMaxOffset = -1;
 
     // The maximum offset into the macro table that points to a valid local macro.
     private int localMacroMaxOffset = -1;
@@ -119,7 +119,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     final ParsingIonCursorBinary rawCursor;
 
     // Pool for presence bitmap instances.
-    protected final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
+    final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
 
     // TODO everywhere in this class, avoid new*, use pooling
 
@@ -181,14 +181,14 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         );
     }
 
-    private class StackFrame {
+    private final class StackFrame {
 
         private ArgumentSource argumentSource;
         private IonReaderContinuableApplication dataSource;
         private boolean yieldByDefault = true;
 
-        private BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
-        private LazyArgumentSource reusableLazyArgumentSource = new LazyArgumentSource();
+        private final BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
+        private final LazyArgumentSource reusableLazyArgumentSource = new LazyArgumentSource();
 
         StackFrame initializeBytecodeDataSource(Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
             reusableBytecodeCursor.initialize(bytecode, programCounterStart, programCounterLimit, popStackWhenExhausted, parentArguments, fieldName);
@@ -252,7 +252,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     };
 
-    private class ArgumentReference {
+    private final class ArgumentReference {
 
         private int startIndex;
         private int endIndex;
@@ -292,7 +292,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         void close();
     }
 
-    private class BytecodeArgumentSource implements ArgumentSource {
+    private final class BytecodeArgumentSource implements ArgumentSource {
         private Bytecode bytecode;
         private ArgumentReference[] argumentRegisters = new ArgumentReference[8];
         private int numberOfArguments = 0;
@@ -345,7 +345,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     }
 
-    private class LazyArgumentSource implements ArgumentSource {
+    private final class LazyArgumentSource implements ArgumentSource {
 
         private PresenceBitmap presenceBitmap;
         private SymbolResolvingIonCursor dataSource;
@@ -423,7 +423,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     }
 
-    private class LimitedIonCursor extends DelegatingIonReaderContinuableApplication {
+    private final class LimitedIonCursor extends DelegatingIonReaderContinuableApplication {
 
         private IonCursorBinary cursor;
         private int startDepth;
@@ -566,7 +566,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         READING_VALUE, // TODO still necessary/
     }
 
-    private class EncodingDirectiveInterceptingIonCursor extends DelegatingIonReaderContinuableApplication {
+    private final class EncodingDirectiveInterceptingIonCursor extends DelegatingIonReaderContinuableApplication {
         boolean isSymbolTableAppend = false;
         boolean isMacroTableAppend = false;
         List<String> newSymbols = new ArrayList<>(128);
@@ -964,7 +964,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         READING_VALUE // TODO still necessary?
     }
 
-    private class SymbolTableInterceptingIonCursor extends DelegatingIonReaderContinuableApplication {
+    private final class SymbolTableInterceptingIonCursor extends DelegatingIonReaderContinuableApplication {
 
         // The current state.
         private SymbolTableState state = SymbolTableState.READING_VALUE;
@@ -1323,7 +1323,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     };
 
-    private class SymbolResolvingIonCursor extends DelegatingIonReaderContinuableCore implements IonReaderContinuableApplication {
+    private final class SymbolResolvingIonCursor extends DelegatingIonReaderContinuableCore implements IonReaderContinuableApplication {
 
         private ParsingIonCursorBinary cursor;
 
@@ -1345,7 +1345,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         /**
          * Reusable iterator over the annotations on the current value.
          */
-        private class AnnotationMarkerIterator implements Iterator<String> {
+        private final class AnnotationMarkerIterator implements Iterator<String> {
 
             // TODO perf: try splitting into separate iterators for SIDs and FlexSyms
             boolean isSids;
@@ -1609,7 +1609,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     }
 
-    private class ApplicationLevelIonCursor extends DelegatingIonReaderContinuableApplication {
+    private final class ApplicationLevelIonCursor extends DelegatingIonReaderContinuableApplication {
 
         private final SymbolTableInterceptingIonCursor symbolTableInterceptingIonCursor = new SymbolTableInterceptingIonCursor();
         private final DepthOneIonCursor depthOneCursor = new DepthOneIonCursor();
@@ -1797,7 +1797,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
     }
 
-    private class BytecodeCursor implements IonReaderContinuableApplication {
+    private final class BytecodeCursor implements IonReaderContinuableApplication {
 
         private IonType ionType = null;
         private Iterator<String> annotations = Collections.emptyIterator();
@@ -2231,7 +2231,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     /**
      * Read-only snapshot of the local symbol table at the reader's current position.
      */
-    private class LocalSymbolTableSnapshot implements _Private_LocalSymbolTable, SymbolTableAsStruct {
+    private final class LocalSymbolTableSnapshot implements _Private_LocalSymbolTable, SymbolTableAsStruct {
 
         // The system symbol table.
         private final SymbolTable system = getSystemSymbolTable();
@@ -2458,7 +2458,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     /**
      * Grows the `symbols` array to the next power of 2 that will fit the current need.
      */
-    protected void growSymbolsArray(int shortfall) {
+    private void growSymbolsArray(int shortfall) {
         int newSize = IonCursorBinary.nextPowerOfTwo(symbols.length + shortfall);
         String[] resized = new String[newSize];
         System.arraycopy(symbols, 0, resized, 0, localSymbolMaxOffset + 1);
@@ -2469,7 +2469,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
      * Installs the given symbols at the end of the `symbols` array.
      * @param newSymbols the symbols to install.
      */
-    protected void installSymbols(List<String> newSymbols) {
+    void installSymbols(List<String> newSymbols) {
         if (newSymbols != null && !newSymbols.isEmpty()) {
             int numberOfNewSymbols = newSymbols.size();
             int numberOfAvailableSlots = symbols.length - (localSymbolMaxOffset + 1);
@@ -2497,7 +2497,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     }
 
     //@Override
-    protected void resetSymbolTable() {
+    void resetSymbolTable() {
         // super.resetSymbolTable(); // TODO?
         // The following line is not required for correctness, but it frees the references to the old symbols,
         // potentially allowing them to be garbage collected.
@@ -2508,7 +2508,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
 
     //@Override
-    protected void resetImports(int major, int minor) {
+    void resetImports(int major, int minor) {
         if (minor == 0) {
             imports = ION_1_0_IMPORTS;
         } else {
@@ -2521,7 +2521,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
      * Restore a symbol table from a previous point in the stream.
      * @param symbolTable the symbol table to restore.
      */
-    protected void restoreSymbolTable(SymbolTable symbolTable) {
+    void restoreSymbolTable(SymbolTable symbolTable) {
         if (cachedReadOnlySymbolTable == symbolTable) {
             return;
         }
@@ -2573,7 +2573,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
      * @param maxId the max_id of the shared symbol table. This value takes precedence over the actual max_id for the
      *              shared symbol table at the requested version.
      */
-    private SymbolTable createImport(String name, int version, int maxId) {
+    SymbolTable createImport(String name, int version, int maxId) {
         SymbolTable shared = catalog.getTable(name, version);
         if (maxId < 0) {
             if (shared == null || version != shared.getVersion()) {
@@ -2613,7 +2613,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
      * @param localSymbols the symbol table's local symbols.
      * @return a String, which will be null if the requested symbol ID has undefined text.
      */
-    private String getSymbolString(int sid, LocalSymbolTableImports importedSymbols, String[] localSymbols) {
+    String getSymbolString(int sid, LocalSymbolTableImports importedSymbols, String[] localSymbols) {
         if (sid <= importedSymbols.getMaxId()) {
             return importedSymbols.findKnownSymbol(sid);
         }
@@ -2633,7 +2633,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     }
 
     //@Override
-    protected SymbolToken getSymbolToken(int sid) {
+    /*
+    private SymbolToken getSymbolToken(int sid) {
         int symbolTableSize = localSymbolMaxOffset + firstLocalSymbolId + 1; // +1 because the max ID is 0-indexed.
         if (sid >= symbolTableSize) {
             throw new UnknownSymbolException(sid);
@@ -2645,6 +2646,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
         return new SymbolTokenImpl(text, sid);
     }
+
+     */
 
     @Override
     public SymbolTable getSymbolTable() {
@@ -2664,7 +2667,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     }
 
     // The data source may either be an IonCursorBinary over the raw encoding or an interpreter over some bytecode
-    private StackFrame pushStackFrame() {
+    StackFrame pushStackFrame() {
         if (stackFrameIndex >= stack.length) {
             StackFrame[] newStack = new StackFrame[stack.length * 2];
             System.arraycopy(stack, 0, newStack, 0, stack.length);
@@ -2685,7 +2688,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         return stackFrame;
     }
 
-    private void popStackFrame() {
+    void popStackFrame() {
         if (--stackFrameIndex < 0) {
             top = null;
             return;
