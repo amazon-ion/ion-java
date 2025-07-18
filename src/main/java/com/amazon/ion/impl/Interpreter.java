@@ -131,7 +131,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
         // TODO this creates too many layers of delegation, which may impact performance. Look into combining functionality of the cursor types that are independent of the stack.
         //  Probably via inheritance...
-        pushStackFrame(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor), null);
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor));
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -144,7 +144,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         rawCursor.setEncodingContextSupplier(this::getEncodingContext);
         SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
-        pushStackFrame(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor), null);
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(new EncodingDirectiveAwareIonCursor().initialize(coreCursor), coreCursor));
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -188,11 +188,36 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
      */
 
-    private static class StackFrame {
+    private class StackFrame {
 
         private ArgumentSource argumentSource;
         private IonReaderContinuableApplication dataSource;
         private boolean yieldByDefault = true;
+
+        private BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
+        private LazyArgumentSource reusableLazyArgumentSource = new LazyArgumentSource();
+
+        StackFrame initializeBytecodeDataSource(Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
+            reusableBytecodeCursor.initialize(bytecode, programCounterStart, programCounterLimit, popStackWhenExhausted, parentArguments, fieldName);
+            dataSource = reusableBytecodeCursor;
+            setDelegate(dataSource);
+            return this;
+        }
+
+        StackFrame initializeDataSource(IonReaderContinuableApplication source) {
+            dataSource = source;
+            setDelegate(dataSource);
+            return this;
+        }
+
+        void initializeLazyArgumentSource(PresenceBitmap presenceBitmap, SymbolResolvingIonCursor dataSource, List<Macro.Parameter> signature) {
+            reusableLazyArgumentSource.initialize(presenceBitmap, dataSource, signature);
+            argumentSource = reusableLazyArgumentSource;
+        }
+
+        void initializeArgumentSource(ArgumentSource source) {
+            argumentSource = source;
+        }
     }
 
     private final IonReaderContinuableApplication voidCursor = new DelegatingIonReaderContinuableApplication() {
@@ -242,6 +267,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         private ArgumentSource source;
         private ArgumentSource parentArguments;
 
+        private final BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
+
         ArgumentReference initialize(Bytecode bytecode, int startIndex, int endIndex, ArgumentSource parentArguments) {
             this.bytecode = bytecode;
             this.startIndex = startIndex;
@@ -261,7 +288,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         public IonReaderContinuableApplication evaluate(String fieldName) {
             if (source == null) {
-                return new BytecodeCursor().initialize(bytecode, startIndex, endIndex, false, parentArguments, fieldName);
+                return reusableBytecodeCursor.initialize(bytecode, startIndex, endIndex, false, parentArguments, fieldName);
             }
             return source.evaluateArgument(startIndex, fieldName);
         }
@@ -335,6 +362,9 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         private IonTypeID firstArgumentTypeId;
         private int currentArgumentIndex;
 
+        private int numberOfArgumentsRequested;
+        private LimitedIonCursor[] argumentRegisters = new LimitedIonCursor[8];
+
         LazyArgumentSource initialize(PresenceBitmap presenceBitmap, SymbolResolvingIonCursor dataSource, List<Macro.Parameter> signature) {
             this.presenceBitmap = presenceBitmap;
             this.dataSource = dataSource;
@@ -345,7 +375,22 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             firstArgumentEnd = (int) dataSource.cursor.valueMarker.endIndex;
             firstArgumentTypeId = dataSource.cursor.valueMarker.typeId;
             currentArgumentIndex = -1;
+            numberOfArgumentsRequested = 0;
             return this;
+        }
+
+        private LimitedIonCursor addArgument() {
+            if (numberOfArgumentsRequested >= argumentRegisters.length) {
+                LimitedIonCursor[] newArgumentRegisters = new LimitedIonCursor[argumentRegisters.length * 2];
+                System.arraycopy(argumentRegisters, 0, newArgumentRegisters, 0, argumentRegisters.length);
+                argumentRegisters = newArgumentRegisters;
+            }
+            LimitedIonCursor argumentRegister = argumentRegisters[numberOfArgumentsRequested++];
+            if (argumentRegister == null) {
+                argumentRegister = new LimitedIonCursor();
+                argumentRegisters[numberOfArgumentsRequested - 1] = argumentRegister;
+            }
+            return argumentRegister;
         }
 
         @Override
@@ -371,9 +416,9 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             }
 
             if (presence == PresenceBitmap.EXPRESSION) {
-                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), false, fieldName);
+                return addArgument().initialize(dataSource, signature.get(argumentIndex), false, fieldName);
             } else if (presence == PresenceBitmap.GROUP) {
-                return new LimitedIonCursor().initialize(dataSource, signature.get(argumentIndex), true, fieldName);
+                return addArgument().initialize(dataSource, signature.get(argumentIndex), true, fieldName);
             } else {
                 throw new IonException("Illegal presence bits.");
             }
@@ -506,6 +551,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     private class EncodingDirectiveAwareIonCursor extends DelegatingIonReaderContinuableApplication {
 
+        private final EncodingDirectiveInterceptingIonCursor encodingDirectiveInterceptingCursor = new EncodingDirectiveInterceptingIonCursor();
+
         EncodingDirectiveAwareIonCursor initialize(IonReaderContinuableApplication delegate) {
             setDelegate(delegate);
             return this;
@@ -581,7 +628,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         public Event nextValue() {
             Event event = delegate.nextValue();
             if (isPositionedOnEncodingDirective()) {
-                pushStackFrame(new EncodingDirectiveInterceptingIonCursor().initialize(delegate), null); // TODO argument source?
+                pushStackFrame().initializeDataSource(encodingDirectiveInterceptingCursor.initialize(delegate)); // TODO argument source?
                 top.yieldByDefault = false;
                 event = Event.NEEDS_INSTRUCTION;
             }
@@ -1658,6 +1705,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     private class ApplicationLevelIonCursor extends DelegatingIonReaderContinuableApplication {
 
+        private final SymbolTableInterceptingIonCursor symbolTableInterceptingIonCursor = new SymbolTableInterceptingIonCursor();
+        private final DepthOneIonCursor depthOneCursor = new DepthOneIonCursor();
         private IonReaderContinuableApplication core = null;
 
         // TODO should this accept an EncodingDirectiveAwareIonCursor?
@@ -1701,7 +1750,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             Event event = delegate.nextValue();
             // TODO check for symbol table. If yes, push onto the stack the encoding directive reader and don't yield
             if (isPositionedOnSymbolTable()) {
-                pushStackFrame(new SymbolTableInterceptingIonCursor().initialize(core), null);
+                pushStackFrame().initializeDataSource(symbolTableInterceptingIonCursor.initialize(core));
                 top.yieldByDefault = false;
                 event = Event.NEEDS_INSTRUCTION;
             }
@@ -1710,7 +1759,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         @Override
         public Event stepIntoContainer() {
-            pushStackFrame(new DepthOneIonCursor().initialize(core), null); // TODO argumentSource?
+            pushStackFrame().initializeDataSource(depthOneCursor.initialize(core)); // TODO argumentSource?
             return core.stepIntoContainer();
         }
 
@@ -1772,11 +1821,9 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
                     Bytecode bodyBytecode = macro.getBodyBytecode();
                     cursor.stepIntoEExpression();
                     PresenceBitmap presenceBitmap = cursor.loadPresenceBitmap(macro.getSignature(), presenceBitmapPool);
-                    pushStackFrame(
-                        // TODO when should parentArguments be non-null?
-                        new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, null, null),
-                        new LazyArgumentSource().initialize(presenceBitmap, dataSource, macro.getSignature())
-                    );
+                    pushStackFrame()
+                        .initializeBytecodeDataSource(bodyBytecode, 0, bodyBytecode.size(), true, null, null)
+                        .initializeLazyArgumentSource(presenceBitmap, dataSource, macro.getSignature());
                 }
             }
             return event;
@@ -1954,15 +2001,17 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
                         break;
                          */
                         int argumentIndex = opcode & DATA_MASK;
-                        pushStackFrame(top.argumentSource.evaluateArgument(argumentIndex, fieldName), top.argumentSource);
+                        ArgumentSource topArgumentSource = top.argumentSource;
+                        IonReaderContinuableApplication topDataSource = topArgumentSource.evaluateArgument(argumentIndex, fieldName);
+                        pushStackFrame().initializeDataSource(topDataSource).initializeArgumentSource(topArgumentSource);
                         return Event.NEEDS_INSTRUCTION;
                     case BytecodeOpcodes.OP_INVOKE_MACRO:
                         Macro macro = bytecode.getMacro(opcode & DATA_MASK);
                         Bytecode bodyBytecode = macro.getBodyBytecode();
-                        pushStackFrame(
-                            new BytecodeCursor().initialize(bodyBytecode, 0, bodyBytecode.size(), true, top.argumentSource, fieldName),
-                            argumentSource
-                        );
+                        ArgumentSource parentArgumentSource = top.argumentSource;
+                        pushStackFrame()
+                            .initializeBytecodeDataSource(bodyBytecode, 0, bodyBytecode.size(), true, parentArgumentSource, fieldName)
+                            .initializeArgumentSource(argumentSource);
                         return Event.NEEDS_INSTRUCTION;
                     case BytecodeOpcodes.OP_START_ARGUMENT_VALUE: // TODO expression group?
                     case BytecodeOpcodes.OP_END_EXPR_GROUP:
@@ -2653,7 +2702,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
     }
 
     // The data source may either be an IonCursorBinary over the raw encoding or an interpreter over some bytecode
-    private StackFrame pushStackFrame(IonReaderContinuableApplication dataSource, ArgumentSource argumentSource) {
+    private StackFrame pushStackFrame() {
         if (stackFrameIndex >= stack.length) {
             StackFrame[] newStack = new StackFrame[stack.length * 2];
             System.arraycopy(stack, 0, newStack, 0, stack.length);
@@ -2665,11 +2714,11 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             stack[stackFrameIndex] = stackFrame;
         }
         //stackFrameIndex++;
-        stackFrame.argumentSource = argumentSource;
-        stackFrame.dataSource = dataSource;
+        stackFrame.argumentSource = null; //argumentSource;
+        stackFrame.dataSource = null;
+        //stackFrame.dataSource = dataSource;
         stackFrame.yieldByDefault = true;
         top = stackFrame;
-        setDelegate(top.dataSource);
         yield = false;
         return stackFrame;
     }
