@@ -1820,6 +1820,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
                     Macro macro = loadMacro();
                     Bytecode bodyBytecode = macro.getBodyBytecode();
                     cursor.stepIntoEExpression();
+                    presenceBitmapPool.clear(); // TODO is there a better place for this?
                     PresenceBitmap presenceBitmap = cursor.loadPresenceBitmap(macro.getSignature(), presenceBitmapPool);
                     pushStackFrame()
                         .initializeBytecodeDataSource(bodyBytecode, 0, bodyBytecode.size(), true, null, null)
@@ -1854,7 +1855,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         private String stringValue;
         private IntegerSize integerSize;
 
-        private BytecodeArgumentSource argumentSource = new BytecodeArgumentSource();
+        private final BytecodeArgumentSource argumentSource = new BytecodeArgumentSource();
         private ArgumentSource parentArguments;
         private Bytecode bytecode = null;
         private int programCounter;
