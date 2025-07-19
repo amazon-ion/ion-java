@@ -183,9 +183,9 @@ public final class Interpreter extends DelegatingIonReaderContinuableApplication
 
     private final class StackFrame {
 
-        private ArgumentSource argumentSource;
-        private IonReaderContinuableApplication dataSource;
-        private boolean yieldByDefault = true;
+        ArgumentSource argumentSource;
+        IonReaderContinuableApplication dataSource;
+        boolean yieldByDefault = true;
 
         private final BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
         private final LazyArgumentSource reusableLazyArgumentSource = new LazyArgumentSource();
