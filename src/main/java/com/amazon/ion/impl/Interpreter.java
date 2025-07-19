@@ -60,7 +60,7 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl.SharedSymbolTable.getSystemSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 
-public final class Interpreter extends DelegatingIonReaderContinuableApplication {
+public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     // TODO system-level Ion 1.0 transcoding
     // TODO verbatim macro transcoding (MacroAwareIonReader)
@@ -123,9 +123,9 @@ public final class Interpreter extends DelegatingIonReaderContinuableApplication
 
     // TODO everywhere in this class, avoid new*, use pooling
 
-    Interpreter(IonReaderBuilder builder, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen, ParsingIonCursorBinary.PrepareScalarFunction prepareScalarFunction) {
+    Interpreter(IonReaderBuilder builder, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
         // TODO accept an option that allows the user to specify whether to push this core-level reader first, or a top/application level reader
-        rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), inputStream, alreadyRead, alreadyReadOff, alreadyReadLen, prepareScalarFunction);
+        rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
         rawCursor.setEncodingContextSupplier(this::getEncodingContext); // TODO this can go into the constructor
         SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
@@ -138,9 +138,9 @@ public final class Interpreter extends DelegatingIonReaderContinuableApplication
         registerIvmNotificationConsumer((x, y) -> resetEncodingContext());
     }
 
-    Interpreter(IonReaderBuilder builder, byte[] data, int offset, int length, ParsingIonCursorBinary.PrepareScalarFunction prepareScalarFunction) {
+    Interpreter(IonReaderBuilder builder, byte[] data, int offset, int length) {
         // TODO accept an option that allows the user to specify whether to push this core-level reader first, or a top/application level reader
-        rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), data, offset, length, prepareScalarFunction);
+        rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), data, offset, length);
         rawCursor.setEncodingContextSupplier(this::getEncodingContext);
         SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
         IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);

@@ -656,7 +656,7 @@ public class EncodingDirectiveCompilationTest {
         writer.writeInt(42); // Not a macro invocation
         byte[] data = getBytes(writer, out);
 
-        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length, ParsingIonCursorBinary.NullaryVoidFunction::invoke);
+        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length);
         assertEquals(IonCursor.Event.START_CONTAINER, interpreter.nextValue()); // Evaluated struct
         assertEquals(IonType.STRUCT, interpreter.getType());
         assertEquals(IonCursor.Event.NEEDS_INSTRUCTION, interpreter.stepIntoContainer());
@@ -1405,7 +1405,7 @@ public class EncodingDirectiveCompilationTest {
 
         byte[] data = getBytes(writer, out);
 
-        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length, ParsingIonCursorBinary.NullaryVoidFunction::invoke);
+        Interpreter interpreter = new Interpreter(IonReaderBuilder.standard(), data, 0, data.length);
         assertEquals(IonCursor.Event.START_SCALAR, interpreter.nextValue()); // First invocation
         assertEquals(IonType.DECIMAL, interpreter.getType());
         assertEquals(pi, interpreter.bigDecimalValue());

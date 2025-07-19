@@ -115,20 +115,22 @@ class ParsingIonCursorBinary extends IonCursorBinary implements IonReaderContinu
         void prepareScalar(NullaryVoidFunction superPrepareScalar);
     }
 
-    private final PrepareScalarFunction prepareScalarFunction;
+    private PrepareScalarFunction prepareScalarFunction = NullaryVoidFunction::invoke;
     private final NullaryVoidFunction thisPrepareScalar = this::prepareScalarBase;
 
-    ParsingIonCursorBinary(IonBufferConfiguration configuration, byte[] buffer, int offset, int length, PrepareScalarFunction prepareScalarFunction) {
+    ParsingIonCursorBinary(IonBufferConfiguration configuration, byte[] buffer, int offset, int length) {
         super(configuration, buffer, offset, length);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
-        this.prepareScalarFunction = prepareScalarFunction;
     }
 
-    ParsingIonCursorBinary(IonBufferConfiguration configuration, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen, PrepareScalarFunction prepareScalarFunction) {
+    ParsingIonCursorBinary(IonBufferConfiguration configuration, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
         super(configuration, inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
         scalarConverter = new _Private_ScalarConversions.ValueVariant();
         annotationSids = new IntList(ANNOTATIONS_LIST_INITIAL_CAPACITY);
+    }
+
+    void setPrepareScalarFunction(PrepareScalarFunction prepareScalarFunction) {
         this.prepareScalarFunction = prepareScalarFunction;
     }
 

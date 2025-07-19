@@ -44,7 +44,7 @@ import java.io.InputStream;
  * </p>
  */
 // TODO try removing extends Delegating... and just delegating in the IonReader interface method implementations.
-final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApplication implements IonReader, _Private_ReaderWriter {
+final class InterpreterIonReaderBinary extends Interpreter implements IonReader, _Private_ReaderWriter {
 
     // True if continuable reading is disabled.
     private final boolean isNonContinuable;
@@ -62,8 +62,6 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
     // The SymbolTable that was transferred via the last call to pop_passed_symbol_table.
     private SymbolTable symbolTableLastTransferred = null;
 
-    private final Interpreter interpreter;
-
     /**
      * Constructs a new reader from the given input stream.
      * @param builder the builder containing the configuration for the new reader.
@@ -72,8 +70,8 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
      * @param alreadyReadLen the number of bytes already read from `alreadyRead`.
      */
     InterpreterIonReaderBinary(IonReaderBuilder builder, InputStream inputStream, byte[] alreadyRead, int alreadyReadOff, int alreadyReadLen) {
-        interpreter = new Interpreter(builder, inputStream, alreadyRead, alreadyReadOff, alreadyReadLen, this::prepareScalar);
-        setDelegate(interpreter);
+        super(builder, inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
+        rawCursor.setPrepareScalarFunction(this::prepareScalar);
         isNonContinuable = !builder.isIncrementalReadingEnabled();
         isFillRequired = isNonContinuable;
     }
@@ -86,8 +84,8 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
      * @param length the number of bytes to be read from the byte array.
      */
     InterpreterIonReaderBinary(IonReaderBuilder builder, byte[] data, int offset, int length) {
-        interpreter = new Interpreter(builder, data, offset, length, this::prepareScalar); // TODO could we use a more lightweight prepareScalar() here?
-        setDelegate(interpreter);
+        super(builder, data, offset, length); // TODO could we use a more lightweight prepareScalar() here?
+        rawCursor.setPrepareScalarFunction(this::prepareScalar);
         isNonContinuable = !builder.isIncrementalReadingEnabled();
         isFillRequired = false;
     }
@@ -119,16 +117,16 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
      */
     private void nextAndFill() {
         while (true) {
-            if (!isFillingValue && interpreter.nextValue() == IonCursor.Event.NEEDS_DATA) {
+            if (!isFillingValue && nextValue() == IonCursor.Event.NEEDS_DATA) {
                 return;
             }
             isFillingValue = true;
-            if (interpreter.fillValue() == IonCursor.Event.NEEDS_DATA) {
+            if (fillValue() == IonCursor.Event.NEEDS_DATA) {
                 return;
             }
             isFillingValue = false;
-            if (interpreter.getCurrentEvent() != IonCursor.Event.NEEDS_INSTRUCTION) {
-                type = interpreter.getType();
+            if (getCurrentEvent() != IonCursor.Event.NEEDS_INSTRUCTION) {
+                type = super.getType();
                 return;
             }
             // The value was skipped for being too large. Get the next one.
@@ -139,26 +137,26 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
      * Handles the case where the current value extends beyond the end of the reader's internal buffer.
      */
     private void handleIncompleteValue() {
-        if (interpreter.getCurrentEvent() == Event.NEEDS_DATA) {
+        if (getCurrentEvent() == Event.NEEDS_DATA) {
             // The reader has already consumed all bytes from the buffer. If non-continuable, this is the end of the
             // stream. If continuable, continue to return null from next().
             if (isNonContinuable) {
-                interpreter.endStream();
+                endStream();
             }
         } else if (isNonContinuable) {
             // The reader is non-continuable and has not yet consumed all bytes from the buffer, so it can continue
             // reading the incomplete container until the end is reached.
             // Each value contains its own length prefix, so it is safe to reset the incomplete flag before attempting
             // to read the value.
-            interpreter.rawCursor.isValueIncomplete = false;
-            if (interpreter.nextValue() == IonCursor.Event.NEEDS_DATA) {
+            rawCursor.isValueIncomplete = false;
+            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
                 // Attempting to read the partial value required consuming the remaining bytes in the stream, which
                 // is now at its end.
-                interpreter.rawCursor.isValueIncomplete = true;
-                interpreter.endStream();
+                rawCursor.isValueIncomplete = true;
+                endStream();
             } else {
                 // The reader successfully positioned itself on a value within an incomplete container.
-                type = interpreter.getType();
+                type = super.getType();
             }
         }
     }
@@ -167,21 +165,21 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
     public IonType next() {
         // TODO can this be simplified under the stack-based IonCursor architecture? Incorporate this into the Application-level cursor?
         type = null;
-        if (interpreter.rawCursor.isValueIncomplete) {
+        if (rawCursor.isValueIncomplete) {
             handleIncompleteValue();
-        } else if (!interpreter.rawCursor.isSlowMode || isNonContinuable || interpreter.rawCursor.parent != null) {
-            if (interpreter.nextValue() == IonCursor.Event.NEEDS_DATA) {
+        } else if (!rawCursor.isSlowMode || isNonContinuable || rawCursor.parent != null) {
+            if (nextValue() == IonCursor.Event.NEEDS_DATA) {
                 if (isNonContinuable) {
-                    interpreter.endStream();
+                    endStream();
                 }
-            } else if (interpreter.rawCursor.isValueIncomplete && !isNonContinuable) {
+            } else if (rawCursor.isValueIncomplete && !isNonContinuable) {
                 // The value is incomplete and the reader is continuable, so the reader must return null from next().
                 // Setting the event to NEEDS_DATA ensures that if the user attempts to skip past the incomplete
                 // value, null will continue to be returned.
-                interpreter.rawCursor.event = Event.NEEDS_DATA;
+                rawCursor.event = Event.NEEDS_DATA;
             } else {
                 isFillingValue = false;
-                type = interpreter.getType();
+                type = super.getType();
             }
         } else {
             nextAndFill();
@@ -191,13 +189,13 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
 
     @Override
     public void stepIn() {
-        interpreter.stepIntoContainer();
+        stepIntoContainer();
         type = null;
     }
 
     @Override
     public void stepOut() {
-        interpreter.stepOutOfContainer();
+        stepOutOfContainer();
         type = null;
     }
 
@@ -210,17 +208,17 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
      * Prepares a scalar value to be parsed by ensuring it is present in the buffer.
      */
     void prepareScalar(ParsingIonCursorBinary.NullaryVoidFunction superPrepareScalar) {
-        if (!interpreter.rawCursor.isValueIncomplete) {
-            if (!interpreter.rawCursor.isSlowMode || interpreter.rawCursor.event == IonCursor.Event.VALUE_READY) {
+        if (!rawCursor.isValueIncomplete) {
+            if (!rawCursor.isSlowMode || rawCursor.event == IonCursor.Event.VALUE_READY) {
                 superPrepareScalar.invoke();
                 return;
             }
             if (isFillRequired) {
-                if (interpreter.fillValue() == Event.VALUE_READY) {
+                if (fillValue() == Event.VALUE_READY) {
                     superPrepareScalar.invoke();
                     return;
                 }
-                if (interpreter.rawCursor.event == Event.NEEDS_INSTRUCTION) {
+                if (rawCursor.event == Event.NEEDS_INSTRUCTION) {
                     throw new OversizedValueException();
                 }
             } else {
@@ -272,10 +270,10 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
                 throw new IllegalStateException("IonReader isn't positioned on a value");
             }
             return new IonReaderBinarySpan(
-                interpreter.rawCursor.valuePreHeaderIndex,
-                interpreter.rawCursor.valueMarker.endIndex,
-                interpreter.rawCursor.getTotalOffset(),
-                interpreter.getSymbolTable()
+                rawCursor.valuePreHeaderIndex,
+                rawCursor.valueMarker.endIndex,
+                rawCursor.getTotalOffset(),
+                getSymbolTable()
             );
         }
     }
@@ -288,16 +286,16 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
                 throw new IllegalStateException("IonReader isn't positioned on a value");
             }
             return new IonReaderBinarySpan(
-                interpreter.rawCursor.valueMarker.startIndex,
-                interpreter.rawCursor.valueMarker.endIndex,
-                interpreter.rawCursor.valueMarker.startIndex,
+                rawCursor.valueMarker.startIndex,
+                rawCursor.valueMarker.endIndex,
+                rawCursor.valueMarker.startIndex,
                 null
             );
         }
 
         @Override
         public byte[] buffer() {
-            return interpreter.rawCursor.buffer;
+            return rawCursor.buffer;
         }
     }
 
@@ -316,8 +314,8 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
             // of the value to be the end of the stream, in order to comply with the SeekableReader contract. From
             // an implementation perspective, this is not necessary; if we leave the buffer's limit unchanged, the
             // reader can continue after processing the hoisted value.
-            interpreter.restoreSymbolTable(binarySpan.symbolTable);
-            interpreter.rawCursor.slice(binarySpan.bufferOffset, binarySpan.bufferLimit, binarySpan.symbolTable.getIonVersionId());
+            restoreSymbolTable(binarySpan.symbolTable);
+            rawCursor.slice(binarySpan.bufferOffset, binarySpan.bufferLimit, binarySpan.symbolTable.getIonVersionId());
             type = null;
         }
     }
@@ -334,7 +332,7 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
         // first span is requested could lead to buffer overflow for large streams, so there would need to be a way for
         // a user to release a span and allow the reader to reclaim its bytes. This functionality is not included in the
         // existing Span interfaces. See: amzn/ion-java/issues/17
-        if (interpreter.rawCursor.isByteBacked()) {
+        if (rawCursor.isByteBacked()) {
             if (facetType == SeekableReader.class) {
                 return facetType.cast(new SeekableReaderFacet());
             }
@@ -348,8 +346,8 @@ final class InterpreterIonReaderBinary extends DelegatingIonReaderContinuableApp
     @Override
     public void close() {
         if (!isNonContinuable) {
-            interpreter.endStream();
+            endStream();
         }
-        interpreter.close();
+        super.close();
     }
 }
