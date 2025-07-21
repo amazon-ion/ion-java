@@ -322,13 +322,17 @@ public class ResizingPipedInputStream extends InputStream {
     }
 
     /**
-     * Copies all of the available bytes in the buffer without changing the number of bytes available to subsequent
-     * reads.
-     * @param outputStream stream to which the bytes will be copied.
-     * @throws IOException if thrown by {@link OutputStream#write(byte[], int, int)}.
-     */
+    * Copies all of the available bytes in the buffer without changing the number of bytes available to subsequent
+    * reads. Does not write to the output stream if there are no available bytes, avoiding unnecessary calls
+    * to {@link OutputStream#write(byte[], int, int)} which may have side effects for some OutputStream implementations.
+    *
+    * @param outputStream stream to which the bytes will be copied.
+    * @throws IOException if thrown by {@link OutputStream#write(byte[], int, int)}.
+    */
     public void copyTo(final OutputStream outputStream) throws IOException {
-        outputStream.write(buffer, readIndex, available);
+        if (available > 0) {
+             outputStream.write(buffer, readIndex, available);
+        }
     }
 
     /**
