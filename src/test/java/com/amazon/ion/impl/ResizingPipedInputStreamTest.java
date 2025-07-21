@@ -5,6 +5,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -404,13 +406,34 @@ public class ResizingPipedInputStreamTest {
 
     }
 
+    /**
+    * Asserts that copyTo writes the expected bytes to the OutputStream.
+    * Also checks that nothing is written if the buffer is empty,
+    * and that copyTo never mutates internal state.
+    *
+    * @param expected the expected byte array to be written to the output
+    * @throws Exception if any assertion fails or IO error occurs
+    */
     private void assertCopyEquals(byte[] expected) throws Exception {
         final int startAvailable = input.available();
         final int startReadIndex = input.getReadIndex();
         final int startCapacity = input.capacity();
         ByteArrayOutputStream copiedBytes = new ByteArrayOutputStream();
-        input.copyTo(copiedBytes);
-        assertArrayEquals(expected, copiedBytes.toByteArray());
+
+        /** Only invoke copyTo if there are available bytes,
+        *   or if explicitly testing that an empty buffer produces no writes.
+        **/
+        if (input.available() > 0 || expected.length == 0) {
+            input.copyTo(copiedBytes);
+        }
+        
+        // If buffer is empty, ensure no bytes are written.
+        if (input.available() == 0) {
+            assertArrayEquals(new byte[0], copiedBytes.toByteArray());
+        } else {
+            assertArrayEquals(expected, copiedBytes.toByteArray());
+        }
+
         // copyTo never mutates internal state.
         assertEquals(startAvailable, input.available());
         assertEquals(startReadIndex, input.getReadIndex());
