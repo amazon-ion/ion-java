@@ -60,7 +60,7 @@ import static com.amazon.ion.SystemSymbols.VERSION_SID;
 import static com.amazon.ion.impl.SharedSymbolTable.getSystemSymbolTable;
 import static com.amazon.ion.impl._Private_Utils.EMPTY_STRING_ARRAY;
 
-public class Interpreter extends DelegatingIonReaderContinuableApplication {
+public class Interpreter implements IonReaderContinuableApplication {
 
     // TODO system-level Ion 1.0 transcoding
     // TODO verbatim macro transcoding (MacroAwareIonReader)
@@ -118,6 +118,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
     final ParsingIonCursorBinary rawCursor;
 
+    final SymbolResolvingIonCursor applicationCursor;
+
     // Pool for presence bitmap instances.
     final PresenceBitmap.Companion.PooledFactory presenceBitmapPool = new PresenceBitmap.Companion.PooledFactory();
 
@@ -127,11 +129,11 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         // TODO accept an option that allows the user to specify whether to push this core-level reader first, or a top/application level reader
         rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), inputStream, alreadyRead, alreadyReadOff, alreadyReadLen);
         rawCursor.setEncodingContextSupplier(this::getEncodingContext); // TODO this can go into the constructor
-        SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
-        IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
+        applicationCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
+        IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(applicationCursor);
         // TODO this creates too many layers of delegation, which may impact performance. Look into combining functionality of the cursor types that are independent of the stack.
         //  Probably via inheritance...
-        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor));
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor), rawCursor);
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -142,9 +144,9 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         // TODO accept an option that allows the user to specify whether to push this core-level reader first, or a top/application level reader
         rawCursor = new ParsingIonCursorBinary(builder.getBufferConfiguration(), data, offset, length);
         rawCursor.setEncodingContextSupplier(this::getEncodingContext);
-        SymbolResolvingIonCursor symbolResolvingCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
-        IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(symbolResolvingCursor);
-        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor));
+        applicationCursor = new SymbolResolvingIonCursor().initialize(rawCursor);
+        IonReaderContinuableApplication coreCursor = new MacroAwareIonCursorBinary().initialize(applicationCursor);
+        pushStackFrame().initializeDataSource(new ApplicationLevelIonCursor().initialize(coreCursor), rawCursor);
         catalog = builder.getCatalog() == null ?  EMPTY_CATALOG : builder.getCatalog();
         // TODO check the following. Should it go in ApplicationLevelIonCursor?
         resetImports(getIonMajorVersion(), getIonMinorVersion());
@@ -163,7 +165,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
                         if (((ApplicationLevelIonCursor) top.dataSource).startsWithIonSymbolTable()) {
                             // The first annotation on the value is $ion_symbol_table. It may be a symbol table if
                             // its type is not yet known (null); it is definitely a symbol table if its type is STRUCT.
-                            IonType type = super.getType();
+                            IonType type = top.dataSource.getType();
                             mightBeSymbolTable = type == null || type == IonType.STRUCT;
                         } else {
                             // The first annotation on the value is not $ion_symbol_table, so it cannot be a symbol table.
@@ -185,6 +187,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         ArgumentSource argumentSource;
         IonReaderContinuableApplication dataSource;
+        IonReaderContinuableCore rawSource;
+        IonReaderContinuableApplication applicationSource;
         boolean yieldByDefault = true;
 
         private final BytecodeCursor reusableBytecodeCursor = new BytecodeCursor();
@@ -193,13 +197,17 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         StackFrame initializeBytecodeDataSource(Bytecode bytecode, int programCounterStart, int programCounterLimit, boolean popStackWhenExhausted, ArgumentSource parentArguments, String fieldName) {
             reusableBytecodeCursor.initialize(bytecode, programCounterStart, programCounterLimit, popStackWhenExhausted, parentArguments, fieldName);
             dataSource = reusableBytecodeCursor;
-            setDelegate(dataSource);
+            rawSource = reusableBytecodeCursor;
+            applicationSource = reusableBytecodeCursor;
+            //setDelegate(dataSource);
             return this;
         }
 
-        StackFrame initializeDataSource(IonReaderContinuableApplication source) {
+        StackFrame initializeDataSource(IonReaderContinuableApplication source, IonReaderContinuableCore rawSource) {
             dataSource = source;
-            setDelegate(dataSource);
+            //setDelegate(dataSource);
+            this.rawSource = rawSource;
+            applicationSource = source instanceof LimitedIonCursor ? source : applicationCursor; // TODO optimize
             return this;
         }
 
@@ -1435,7 +1443,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         @Override
         public SymbolTable getSymbolTable() {
-            return Interpreter.super.getSymbolTable();
+            return Interpreter.this.getSymbolTable();
         }
 
         @Override
@@ -1707,11 +1715,11 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         public Event nextValue() {
             Event event = delegate.nextValue();
             if (isPositionedOnEncodingDirective()) {
-                pushStackFrame().initializeDataSource(encodingDirectiveInterceptingCursor.initialize(delegate)); // TODO argument source?
+                pushStackFrame().initializeDataSource(encodingDirectiveInterceptingCursor.initialize(delegate), rawCursor); // TODO argument source?
                 top.yieldByDefault = false;
                 event = Event.NEEDS_INSTRUCTION;
             } else if (isPositionedOnSymbolTable()) {
-                pushStackFrame().initializeDataSource(symbolTableInterceptingIonCursor.initialize(delegate));
+                pushStackFrame().initializeDataSource(symbolTableInterceptingIonCursor.initialize(delegate), rawCursor); // TODO rawCursor isn't always right here
                 top.yieldByDefault = false;
                 event = Event.NEEDS_INSTRUCTION;
             }
@@ -1720,7 +1728,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         @Override
         public Event stepIntoContainer() {
-            pushStackFrame().initializeDataSource(depthOneCursor.initialize(delegate)); // TODO argumentSource?
+            pushStackFrame().initializeDataSource(depthOneCursor.initialize(delegate), rawCursor); // TODO argumentSource?
             return delegate.stepIntoContainer();
         }
 
@@ -1965,7 +1973,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
                         int argumentIndex = opcode & DATA_MASK;
                         ArgumentSource topArgumentSource = top.argumentSource;
                         IonReaderContinuableApplication topDataSource = topArgumentSource.evaluateArgument(argumentIndex, fieldName);
-                        pushStackFrame().initializeDataSource(topDataSource).initializeArgumentSource(topArgumentSource);
+                        pushStackFrame().initializeDataSource(topDataSource, topDataSource).initializeArgumentSource(topArgumentSource);
                         return Event.NEEDS_INSTRUCTION;
                     case BytecodeOpcodes.OP_INVOKE_MACRO:
                         Macro macro = bytecode.getMacro(opcode & DATA_MASK);
@@ -2198,7 +2206,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
 
         @Override
         public SymbolTable getSymbolTable() {
-            return Interpreter.super.getSymbolTable();
+            return Interpreter.this.getSymbolTable();
         }
 
         @Override
@@ -2681,6 +2689,8 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         //stackFrameIndex++;
         stackFrame.argumentSource = null; //argumentSource;
         stackFrame.dataSource = null;
+        stackFrame.rawSource = null;
+        stackFrame.applicationSource = null;
         //stackFrame.dataSource = dataSource;
         stackFrame.yieldByDefault = true;
         top = stackFrame;
@@ -2695,7 +2705,7 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
         }
         // TODO top.dataSource.close() ?
         top = stack[stackFrameIndex];
-        setDelegate(top.dataSource);
+        //setDelegate(top.dataSource);
         yield = false;
     }
 
@@ -2707,6 +2717,218 @@ public class Interpreter extends DelegatingIonReaderContinuableApplication {
             event = top.dataSource.nextValue();
         } while (!yield);
         return event;
+    }
+
+    @Override
+    public Event stepIntoContainer() {
+        return top.dataSource.stepIntoContainer();
+    }
+
+    @Override
+    public Event stepOutOfContainer() {
+        return top.dataSource.stepOutOfContainer();
+    }
+
+    // IonReaderContinuableApplication methods
+
+    @Override
+    public String[] getTypeAnnotations() {
+        return top.applicationSource.getTypeAnnotations();
+    }
+
+    @Override
+    public Iterator<String> iterateTypeAnnotations() {
+        return top.applicationSource.iterateTypeAnnotations();
+    }
+
+    @Override
+    public String getFieldName() {
+        return top.applicationSource.getFieldName();
+    }
+
+    @Override
+    public SymbolToken[] getTypeAnnotationSymbols() {
+        return top.applicationSource.getTypeAnnotationSymbols();
+    }
+
+    // IonReaderContinuableCore methods
+
+    @Override
+    public int getDepth() {
+        return top.rawSource.getDepth();
+    }
+
+    @Override
+    public IonType getType() {
+        return top.rawSource.getType();
+    }
+
+    @Override
+    public IonType getEncodingType() {
+        return top.rawSource.getEncodingType();
+    }
+
+    @Override
+    public IntegerSize getIntegerSize() {
+        return top.rawSource.getIntegerSize();
+    }
+
+    @Override
+    public boolean isNullValue() {
+        return top.rawSource.isNullValue();
+    }
+
+    @Override
+    public boolean isInStruct() {
+        return top.rawSource.isInStruct();
+    }
+
+    @Override
+    @Deprecated
+    public int getFieldId() {
+        return top.rawSource.getFieldId();
+    }
+
+    @Override
+    public boolean hasFieldText() {
+        return top.rawSource.hasFieldText();
+    }
+
+    @Override
+    public String getFieldText() {
+        return top.rawSource.getFieldText();
+    }
+
+    @Override
+    public SymbolToken getFieldNameSymbol() {
+        return top.applicationSource.getFieldNameSymbol();
+    }
+
+    @Override
+    @Deprecated
+    public void consumeAnnotationTokens(Consumer<SymbolToken> consumer) {
+        top.rawSource.consumeAnnotationTokens(consumer);
+    }
+
+    @Override
+    public boolean booleanValue() {
+        return top.rawSource.booleanValue();
+    }
+
+    @Override
+    public int intValue() {
+        return top.rawSource.intValue();
+    }
+
+    @Override
+    public long longValue() {
+        return top.rawSource.longValue();
+    }
+
+    @Override
+    public BigInteger bigIntegerValue() {
+        return top.rawSource.bigIntegerValue();
+    }
+
+    @Override
+    public double doubleValue() {
+        return top.rawSource.doubleValue();
+    }
+
+    @Override
+    public BigDecimal bigDecimalValue() {
+        return top.rawSource.bigDecimalValue();
+    }
+
+    @Override
+    public Decimal decimalValue() {
+        return top.rawSource.decimalValue();
+    }
+
+    @Override
+    public Date dateValue() {
+        return top.rawSource.dateValue();
+    }
+
+    @Override
+    public Timestamp timestampValue() {
+        return top.rawSource.timestampValue();
+    }
+
+    @Override
+    public String stringValue() {
+        return top.applicationSource.stringValue();
+    }
+
+    @Override
+    @Deprecated
+    public int symbolValueId() {
+        return top.rawSource.symbolValueId();
+    }
+
+    @Override
+    public boolean hasSymbolText() {
+        return top.rawSource.hasSymbolText();
+    }
+
+    @Override
+    public String getSymbolText() {
+        return top.rawSource.getSymbolText();
+    }
+
+    @Override
+    public SymbolToken symbolValue() {
+        return top.rawSource.symbolValue();
+    }
+
+    @Override
+    public int byteSize() {
+        return top.rawSource.byteSize();
+    }
+
+    @Override
+    public byte[] newBytes() {
+        return top.rawSource.newBytes();
+    }
+
+    @Override
+    public int getBytes(byte[] buffer, int offset, int len) {
+        return top.rawSource.getBytes(buffer, offset, len);
+    }
+
+    @Override
+    public int getIonMajorVersion() {
+        return top.rawSource.getIonMajorVersion();
+    }
+
+    @Override
+    public int getIonMinorVersion() {
+        return top.rawSource.getIonMinorVersion();
+    }
+
+    @Override
+    public void registerIvmNotificationConsumer(IvmNotificationConsumer ivmConsumer) {
+        top.rawSource.registerIvmNotificationConsumer(ivmConsumer);
+    }
+
+    @Override
+    public boolean hasAnnotations() {
+        return top.rawSource.hasAnnotations();
+    }
+
+    @Override
+    public Event fillValue() {
+        return top.rawSource.fillValue();
+    }
+
+    @Override
+    public Event getCurrentEvent() {
+        return top.rawSource.getCurrentEvent();
+    }
+
+    @Override
+    public Event endStream() {
+        return top.rawSource.endStream();
     }
 
     @Override
