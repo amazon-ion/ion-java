@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v3.6.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v3.6.0
         with:
           submodules: recursive
       - name: Validate project version matches tag
@@ -50,7 +50,7 @@ jobs:
             11
             17
             21
-      - uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96
+      - uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3
         with:
           validate-wrappers: true
       - name: Build Release Artifacts
