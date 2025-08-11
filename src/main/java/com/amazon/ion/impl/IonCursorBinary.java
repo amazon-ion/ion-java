@@ -1981,6 +1981,8 @@ class IonCursorBinary implements IonCursor {
             case FlexSym:
                 uncheckedReadFlexSym_1_1(valueMarker);
                 break;
+            default:
+                return;
         }
     }
 

@@ -3,7 +3,9 @@
 package com.amazon.ion.impl
 
 import com.amazon.ion.*
+import com.amazon.ion.eexp.*
 import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.*
+import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.EExpression
 import com.amazon.ion.impl.IonRawTextWriter_1_1.ContainerType.List
 import com.amazon.ion.impl.bin.*
 import com.amazon.ion.impl.macro.*

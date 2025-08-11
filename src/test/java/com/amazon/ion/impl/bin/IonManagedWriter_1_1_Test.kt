@@ -4,6 +4,7 @@ package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
 import com.amazon.ion.IonEncodingVersion.*
+import com.amazon.ion.eexp.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.macro.*
 import com.amazon.ion.impl.macro.ExpressionBuilderDsl.Companion.templateBody
@@ -51,7 +52,12 @@ internal class IonManagedWriter_1_1_Test {
                 .withSymbolInliningStrategy(symbolInliningStrategy)
                 .apply { if (pretty) withPrettyPrinting() }
                 .build(appendable) as IonManagedWriter_1_1
-            writer.apply(block)
+            try {
+                writer.apply(block)
+            } catch (e: Exception) {
+                println(appendable.toString().trim())
+                throw e
+            }
             if (closeWriter) writer.close()
             return appendable.toString().trim()
         }
@@ -114,6 +120,26 @@ internal class IonManagedWriter_1_1_Test {
                 stepOut()
             }
         )
+    }
+
+    @Test
+    fun `write a struct with a list field`() {
+        val expected = """
+            $ion_1_1
+            {foo:[1,2]}
+        """.trimIndent()
+
+        val actual = write {
+            stepIn(IonType.STRUCT)
+            setFieldName("foo")
+            stepIn(IonType.LIST)
+            writeInt(1)
+            writeInt(2)
+            stepOut()
+            stepOut()
+        }
+
+        assertEquals(expected, actual)
     }
 
     private fun newSystemReader(input: ByteArray): IonReader {
@@ -911,10 +937,11 @@ internal class IonManagedWriter_1_1_Test {
 
     @Test
     fun `writeObject() should write something with nested macro representation`() {
+        // TODO: See if we can get rid of the expression group around "Blue".
         val expected = """
             $ion_1_1
             (:$ion::set_macros (:: (macro null (x*) (%x)) (macro Polygon (vertices+ flex_sym::fill?) {vertices:[(%vertices)],fill:(.0 (%fill))}) (macro Point2D (x y) {x:(%x),y:(%y)})))
-            (:Polygon (:: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) Blue)
+            (:Polygon (:: (:Point2D 0 0) (:Point2D 0 1) (:Point2D 1 1) (:Point2D 1 0)) (:: Blue))
         """.trimIndent()
 
         val data = Polygon(
@@ -978,15 +1005,18 @@ internal class IonManagedWriter_1_1_Test {
             }
         }
 
-        override fun writeToMacroAware(writer: MacroAwareIonWriter) {
-            with(writer) {
-                startMacro(MACRO_NAME, MACRO)
-                startExpressionGroup()
-                vertices.forEach { writer.writeObject(it) }
-                endExpressionGroup()
-                fill?.let { writeObject(it) }
-                endMacro()
-            }
+        override fun writeWithEExpression(builder: EExpressionBuilder): EExpression? {
+            return builder
+                .withName(MACRO_NAME)
+                .withMacro(MACRO)
+                .withArgument { w ->
+                    vertices.forEachIndexed { i, it ->
+                        println("$i; depth=${w.depth}")
+                        w.writeObject(it)
+                    }
+                }
+                .withArgument { w -> fill?.let { w.writeObject(it) } }
+                .build()
         }
     }
 
@@ -1011,13 +1041,12 @@ internal class IonManagedWriter_1_1_Test {
             )
         }
 
-        override fun writeToMacroAware(writer: MacroAwareIonWriter) {
-            with(writer) {
-                startMacro(MACRO_NAME, MACRO)
-                writeInt(x)
-                writeInt(y)
-                endMacro()
-            }
+        override fun writeWithEExpression(builder: EExpressionBuilder): EExpression? {
+            return builder.withName(MACRO_NAME)
+                .withMacro(MACRO)
+                .withIntArgument(x)
+                .withIntArgument(y)
+                .build()
         }
 
         override fun writeTo(writer: IonWriter) {

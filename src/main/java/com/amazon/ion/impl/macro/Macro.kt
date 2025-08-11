@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.macro
 
+import com.amazon.ion.eexp.*
 import com.amazon.ion.impl.TaglessEncoding
 
 /**
@@ -11,6 +12,9 @@ sealed interface Macro {
     val signature: List<Parameter>
     val body: List<Expression.TemplateBodyExpression>?
     val dependencies: Iterable<Macro>
+
+    fun createInvocation(): EExpressionArgumentBuilder<PreparedEExpression> = PreparedEExpressionArgumentBuilder(null, this)
+    fun createInvocation(name: String): EExpressionArgumentBuilder<PreparedEExpression> = PreparedEExpressionArgumentBuilder(name, this)
 
     data class Parameter(val variableName: String, val type: ParameterEncoding, val cardinality: ParameterCardinality) {
         override fun toString() = "$type::$variableName${cardinality.sigil}"
@@ -33,6 +37,7 @@ sealed interface Macro {
         Float16("float16", TaglessEncoding.FLOAT16),
         Float32("float32", TaglessEncoding.FLOAT32),
         Float64("float64", TaglessEncoding.FLOAT64),
+        FlexString("flex_string", TaglessEncoding.FLEX_STRING),
         FlexSym("flex_sym", TaglessEncoding.FLEX_SYM),
         ;
         companion object {
@@ -51,6 +56,7 @@ sealed interface Macro {
                 TaglessEncoding.FLOAT16 -> Float16
                 TaglessEncoding.FLOAT32 -> Float32
                 TaglessEncoding.FLOAT64 -> Float64
+                TaglessEncoding.FLEX_STRING -> FlexString
                 TaglessEncoding.FLEX_SYM -> FlexSym
             }
         }

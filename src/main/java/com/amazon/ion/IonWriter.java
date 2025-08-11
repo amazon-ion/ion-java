@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
+import com.amazon.ion.eexp.EExpression;
 import com.amazon.ion.facet.Faceted;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import com.amazon.ion.util.IonStreamUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -204,6 +206,7 @@ public interface IonWriter
      */
     public void setFieldNameSymbol(SymbolToken name);
 
+    public boolean isFieldNameSet();
 
     /**
      * Sets the full list of pending annotations to the given text symbols.
@@ -279,6 +282,8 @@ public interface IonWriter
      */
     public void stepOut() throws IOException;
 
+
+    public int getDepth();
 
     /**
      * Determines whether values are being written as fields of a struct.
@@ -508,5 +513,9 @@ public interface IonWriter
 
     public default void writeObject(WriteAsIon obj) {
         obj.writeTo(this);
+    }
+
+    public default void writeEExpression(EExpression eExpression) {
+        throw new UnsupportedOperationException("writeEExpression not supported by Ion 1.0 writers.");
     }
 }
