@@ -4,6 +4,7 @@ package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
 import com.amazon.ion.SymbolTable.*
+import com.amazon.ion.eexp.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl._Private_IonWriter.*
 import com.amazon.ion.impl.bin.LengthPrefixStrategy.*
@@ -27,7 +28,7 @@ import java.util.*
  *
  * See also [ManagedWriterOptions_1_1], [SymbolInliningStrategy], and [LengthPrefixStrategy].
  */
-internal class IonManagedWriter_1_1(
+class IonManagedWriter_1_1 private constructor(
     private val userData: IonRawWriter_1_1,
     private val systemData: PrivateIonRawWriter_1_1,
     private val options: ManagedWriterOptions_1_1,
@@ -872,8 +873,17 @@ internal class IonManagedWriter_1_1(
         }
     }
 
-    override fun writeObject(obj: WriteAsIon) {
-        obj.writeToMacroAware(this)
+    override fun writeObject(objekt: WriteAsIon) {
+        val builder = DirectEExpressionBuilder(this)
+        val eExpression = objekt.writeWithEExpression(builder)
+        if (eExpression == null) {
+            objekt.writeTo(this)
+        } else if (eExpression == DirectEExpression) {
+            // It was already written as the builder methods were being invoked.
+        } else {
+            eExpression as PreparedEExpression
+            eExpression.writeWithEExpression(builder)
+        }
     }
 
     /**

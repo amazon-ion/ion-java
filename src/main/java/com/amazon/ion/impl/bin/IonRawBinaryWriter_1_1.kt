@@ -3,6 +3,7 @@
 package com.amazon.ion.impl.bin
 
 import com.amazon.ion.*
+import com.amazon.ion.eexp.*
 import com.amazon.ion.impl.*
 import com.amazon.ion.impl.bin.IonEncoder_1_1.*
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.*
@@ -606,6 +607,12 @@ class IonRawBinaryWriter_1_1 internal constructor(
     override fun writeBlob(value: ByteArray, start: Int, length: Int) = writeScalar { writeBlobValue(buffer, value, start, length) }
 
     override fun writeClob(value: ByteArray, start: Int, length: Int) = writeScalar { writeClobValue(buffer, value, start, length) }
+
+    fun writeTaglessArgumentBytes(action: WriteBuffer.() -> Int) {
+        val bytesWritten = buffer.action()
+        currentContainer.length += bytesWritten
+        currentContainer.numChildren++
+    }
 
     override fun stepInList(usingLengthPrefix: Boolean) {
         openValue {

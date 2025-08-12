@@ -1460,6 +1460,7 @@ public final class WriteBuffer implements Closeable
      * either one as long as we provide the correct number of bytes needed to encode the value.
      */
     private int _writeFixedIntOrUInt(final long value, final int numBytes) {
+        // TODO: Rewrite this using switch with fallthrough
         writeByte((byte) value);
         if (numBytes > 1) {
             writeByte((byte) (value >> 8));

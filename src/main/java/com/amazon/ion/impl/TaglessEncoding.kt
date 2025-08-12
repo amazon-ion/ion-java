@@ -23,5 +23,6 @@ enum class TaglessEncoding(@JvmField internal val typeID: IonTypeID, @JvmField v
     FLOAT16(IonTypeID.TYPE_IDS_1_1[0x6B], false),
     FLOAT32(IonTypeID.TYPE_IDS_1_1[0x6C], false),
     FLOAT64(IonTypeID.TYPE_IDS_1_1[0x6D], false),
-    FLEX_SYM(IonTypeID.TYPE_IDS_1_1[0xFA], false)
+    FLEX_STRING(IonTypeID.TYPE_IDS_1_1[0xF9], false),
+    FLEX_SYM(IonTypeID.TYPE_IDS_1_1[0xFA], false),
 }

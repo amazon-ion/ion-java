@@ -8,18 +8,21 @@ import com.amazon.ion.impl.macro.*
  * Extension of the IonWriter interface that supports writing macros.
  *
  * TODO: Consider exposing this as a Facet.
- *
- * TODO: See if we can have some sort of safe reference to a macro.
  */
 interface MacroAwareIonWriter : IonWriter {
 
     /**
+     * TODO: This should be internal-only, I think.
+     *
      * Starts a new encoding segment with an Ion version marker, flushing
      * the previous segment (if any) and resetting the encoding context.
      */
     fun startEncodingSegmentWithIonVersionMarker()
 
     /**
+     *
+     * TODO: This should be internal-only, I think.
+     *
      * Starts a new encoding segment with an encoding directive, flushing
      * the previous segment (if any).
      * @param macros the macros added in the new segment.
