@@ -162,11 +162,23 @@ class MacroizeSpec {
      * Match values from the given source against the macro matchers supplied by the spec. Logs the number of
      * occurrences of each macro match and assembles suggested signatures for each matcher with at least one match.
      * @param source the source data.
+     * @param limit if non-null, limits the source to the first 'limit' number of values.
      * @param log the log to receive messages about occurrences.
      * @return a map from macro name to suggested signature for each name with at least one match.
      * @throws IOException if thrown when logging occurrences.
      */
-    Map<String, SuggestedSignature> matchMacros(IonDatagram source, Appendable log) throws IOException {
+    Map<String, SuggestedSignature> matchMacros(IonDatagram source, Integer limit, Appendable log) throws IOException {
+        if (limit != null) {
+            IonDatagram limitedSource = source.getSystem().newDatagram();
+            int count = 0;
+            for (IonValue value : source) {
+                if (count >= limit) break;
+                limitedSource.add(value.clone());
+                count++;
+            }
+            source = limitedSource;
+        }
+
         Map<String, Integer> customMacroMatches = new HashMap<>();
         Map<String, SuggestedSignature> suggestedSignatures = new HashMap<>();
         recursiveMatch(source, customMacroMatches);

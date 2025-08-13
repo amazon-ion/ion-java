@@ -23,6 +23,11 @@ import com.amazon.ion.impl.bin.WriteBuffer;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
+import com.amazon.ion.IonEncodingVersion;
+import com.amazon.ion.MacroAwareIonReader;
+import com.amazon.ion.MacroAwareIonWriter;
+import com.amazon.ion.impl._Private_IonReaderBuilder;
+
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,9 +59,17 @@ public class Macroize {
         // TODO replace argument handling with a library like pico CLI
         String specFile = null;
         boolean outputBinary = false;
+        boolean verbatim = false;
+        Integer limit = null;
         int i;
         for (i = 0; i < args.length; i++) {
             switch (args[i]) {
+                case "--verbatim": // TODO currently only works for binary input
+                    verbatim = true;
+                    break;
+                case "--limit":
+                    limit = Integer.parseInt(args[++i]);
+                    break;
                 case "--spec":
                     specFile = args[++i];
                     break;
@@ -75,7 +88,7 @@ public class Macroize {
                 case "--help":
                 case "-h":
                     System.out.println("IonJava Macroize Tool v0.1");
-                    System.out.println("Usage:\n--spec <spec_file> [--format <text|binary>] <input_file>");
+                    System.out.println("Usage:\n--spec <spec_file> [--format <text|binary>] [--limit <number>] <input_file>");
                     System.exit(0);
                     break;
                 default:
@@ -86,11 +99,18 @@ public class Macroize {
                     throw new IllegalArgumentException("Unrecognized option: " + args[i]);
             }
         }
+        String inputFileWithSuffix = args[args.length - 1];
+        if (verbatim) {
+            if (specFile != null) {
+                throw new IllegalArgumentException("Verbatim transcoding doesn't use a spec file.");
+            }
+            verbatimTranscode(inputFileWithSuffix, outputBinary, limit);
+            return;
+        }
         if (specFile == null) {
             throw new IllegalArgumentException("Expected a spec file to be provided via the --spec option.");
         }
 
-        String inputFileWithSuffix = args[args.length - 1];
         Path inputPath = checkPath(inputFileWithSuffix);
         String outputFileSuffix = outputBinary ? ".10n" : ".ion";
         String inputName = inputPath.toFile().getName();
@@ -117,6 +137,7 @@ public class Macroize {
             () -> appendCopy(headlessPath, convertedPath),
             () -> IonReaderBuilder.standard().build(Files.newInputStream(specPath)),
             outputBinary,
+            limit,
             System.out
         );
         System.out.println("Ion 1.1 file written to: " + convertedPath.toAbsolutePath());
@@ -144,6 +165,7 @@ public class Macroize {
         ThrowingProcedure assembleFullOutput,
         ThrowingSupplier<IonReader> specReaderSupplier,
         boolean outputBinary,
+        Integer limit,
         Appendable log
     ) throws IOException {
         // Read the input data into memory.
@@ -162,7 +184,7 @@ public class Macroize {
         // Using the spec, produce a marked up text Ion 1.0 representation of the input that
         // indicates which structs should be replaced with macro invocations.
         try (IonWriter writer = invocationsWriterSupplier.get()) {
-            writeMacroMatchesUsingMarkedUpIon10(writer, source, spec, log);
+            writeMacroMatchesUsingMarkedUpIon10(writer, source, spec, limit, log);
         }
 
         // Go through the marked up invocations and re-write to Ion 1.1, intercepting the special marked up
@@ -170,8 +192,10 @@ public class Macroize {
         log.append("\n\nConverting to 1.1\n");
         IonRawWriter_1_1 writer = newRawWriter_1_1(headlessOutputSupplier.get(), outputBinary);
         try (IonReader reader = invocationsReaderSupplier.get()) {
-            while (reader.next() != null) {
+            int count = 0;
+            while (reader.next() != null && (limit == null || count < limit)) {
                 replaceMatchesWithInvocations(reader, writer, context, outputBinary, spec.textPatterns);
+                count++;
             }
         } finally {
             writer.close();
@@ -205,10 +229,12 @@ public class Macroize {
         IonWriter writer,
         IonDatagram source,
         MacroizeSpec spec,
+        Integer limit,
         Appendable log
     ) throws IOException {
-        Map<String, SuggestedSignature> suggestedSignatures = spec.matchMacros(source, log);
-        for (int topLevelValueIndex = 0; topLevelValueIndex < source.size(); topLevelValueIndex++) {
+        Map<String, SuggestedSignature> suggestedSignatures = spec.matchMacros(source, limit, log);
+        int maxIndex = limit != null ? Math.min(limit, source.size()) : source.size();
+        for (int topLevelValueIndex = 0; topLevelValueIndex < maxIndex; topLevelValueIndex++) {
             IonValue topLevelValue = source.get(topLevelValueIndex);
             if (!IonType.isContainer(topLevelValue.getType())) {
                 topLevelValue.writeTo(writer);
@@ -595,5 +621,64 @@ public class Macroize {
             return null;
         }
         return sanitizeName(shapeName);
+    }
+
+    /**
+     * Performs a verbatim transcode using MacroAwareIonReader and MacroAwareIonWriter.
+     * @param inputFile the input file path.
+     * @param outputBinary true if output should be binary; false for text.
+     * @param limit optional limit on number of values to transcode.
+     * @throws IOException if an I/O error occurs.
+     */
+    private static void verbatimTranscode(String inputFile, boolean outputBinary, Integer limit) throws IOException {
+        Path inputPath = checkPath(inputFile);
+        String inputName = inputPath.toFile().getName();
+        int dotIndex = inputName.lastIndexOf('.');
+        String inputNameWithoutSuffix = (dotIndex < 0) ? inputName : inputName.substring(0, dotIndex);
+        String outputFileSuffix = outputBinary ? ".10n" : ".ion";
+        Path parentDirectory = inputPath.toAbsolutePath().getParent();
+        if (parentDirectory == null) {
+            throw new IllegalArgumentException("Invalid input path: " + inputPath);
+        }
+        Path outputPath = parentDirectory.resolve(inputNameWithoutSuffix + "-transcoded" + outputFileSuffix);
+
+        verbatimTranscode(
+            () -> ((_Private_IonReaderBuilder) IonReaderBuilder.standard()).buildMacroAware(Files.newInputStream(inputPath)),
+            () -> Files.newOutputStream(outputPath),
+            outputBinary,
+            limit
+        );
+
+        System.out.println("Transcoded file written to: " + outputPath.toAbsolutePath());
+    }
+
+    /**
+     * Performs a verbatim transcode using MacroAwareIonReader and MacroAwareIonWriter.
+     * @param readerSupplier supplies a MacroAwareIonReader over the input data.
+     * @param outputSupplier supplies an OutputStream for the transcoded output.
+     * @param outputBinary true if output should be binary; false for text.
+     * @param limit optional limit on number of values to transcode.
+     * @throws IOException if an I/O error occurs.
+     */
+    static void verbatimTranscode(
+        ThrowingSupplier<MacroAwareIonReader> readerSupplier,
+        ThrowingSupplier<OutputStream> outputSupplier,
+        boolean outputBinary,
+        Integer limit
+    ) throws IOException {
+        try (MacroAwareIonReader reader = readerSupplier.get();
+             MacroAwareIonWriter writer = outputBinary ?
+                 (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.binaryWriterBuilder().build(outputSupplier.get()) :
+                 (MacroAwareIonWriter) IonEncodingVersion.ION_1_1.textWriterBuilder().build(outputSupplier.get())) {
+
+            if (limit == null) {
+                reader.transcodeAllTo(writer);
+            } else {
+                reader.prepareTranscodeTo(writer);
+                for (int i = 0; i < limit && reader.transcodeNext(); i++) {
+                    // transcodeNext() handles the transcoding
+                }
+            }
+        }
     }
 }
