@@ -41,12 +41,17 @@ jobs:
         run: cd ion-java && echo `git rev-parse --short=7 HEAD` && echo "main=`git rev-parse --short=7 HEAD`" >> $GITHUB_ENV
 
       - name: Get current commit sha
-        run: cd ion-java && echo `git rev-parse --short=7 ${{ github.event.pull_request.head.sha }}`
-          && echo "cur=`git rev-parse --short=7 ${{ github.event.pull_request.head.sha }}`" >> $GITHUB_ENV
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: cd ion-java && echo `git rev-parse --short=7 $PR_HEAD_SHA`
+          && echo "cur=`git rev-parse --short=7 $PR_HEAD_SHA`" >> $GITHUB_ENV
 
       - name: Run ion-test-driver
+        env:
+          PR_HEAD_REPO_URL: ${{ github.event.pull_request.head.repo.html_url }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 ion-test-driver/amazon/iontest/ion_test_driver.py -o output
-          -i ion-java,${{ github.event.pull_request.head.repo.html_url }},${{ github.event.pull_request.head.sha }}
+          -i ion-java,$PR_HEAD_REPO_URL,$PR_HEAD_SHA
           --replace ion-java,https://github.com/amazon-ion/ion-java.git,$main
 
       - name: Upload result
