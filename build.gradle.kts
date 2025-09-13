@@ -605,9 +605,11 @@ publishing {
 
 nexusPublishing {
     // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v1.3.0/README.md
+    // Updated for Central Portal migration
     this.repositories {
         sonatype {
-            nexusUrl.set(uri("https://aws.oss.sonatype.org/service/local/"))
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
             // For CI environments, the username and password should be stored in
             // ORG_GRADLE_PROJECT_sonatypeUsername and ORG_GRADLE_PROJECT_sonatypePassword respectively.
             if (!isCI) {
