@@ -45,7 +45,7 @@ import java.io.InputStream;
  * stream's values risk exceeding the available memory, then continuable reading must not be used.
  * </p>
  */
-final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableApplicationBinary implements IonReader, _Private_ReaderWriter {
+final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableApplicationBinary implements IonReader, _Private_ReaderWriter, _Private_ByteTransferReader {
 
     // True if continuable reading is disabled.
     private final boolean isNonContinuable;
@@ -316,12 +316,13 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         }
     }
 
-    private class ByteTransferReaderFacet implements _Private_ByteTransferReader {
-
-        @Override
-        public void transferCurrentValue(_Private_ByteTransferSink writer) throws IOException {
-            writer.writeBytes(buffer, (int) valuePreHeaderIndex, (int) (valueMarker.endIndex - valuePreHeaderIndex));
+    @Override
+    public boolean transferCurrentValue(_Private_ByteTransferSink writer) throws IOException {
+        if (hasAnnotations || !isByteBacked() || isInStruct()) {
+            return false;
         }
+        writer.writeBytes(buffer, (int) valuePreHeaderIndex, (int) (valueMarker.endIndex - valuePreHeaderIndex));
+        return true;
     }
 
     @Override
@@ -342,11 +343,6 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             }
             if (facetType == RawValueSpanProvider.class) {
                 return facetType.cast(new RawValueSpanProviderFacet());
-            }
-            if (facetType == _Private_ByteTransferReader.class) {
-                if (!hasAnnotations && !isInStruct()) {
-                    return facetType.cast(new ByteTransferReaderFacet());
-                }
             }
         }
         return null;

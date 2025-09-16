@@ -54,18 +54,15 @@ import java.util.Date;
     {
         final IonType type = reader.getType();
 
-        if (isStreamCopyOptimized())
+        if (isStreamCopyOptimized() && reader instanceof _Private_ByteTransferReader)
         {
-            final _Private_ByteTransferReader transferReader =
-                reader.asFacet(_Private_ByteTransferReader.class);
-
-            if (transferReader != null
-                && (_Private_Utils.isNonSymbolScalar(type)
-                 || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
+            if (_Private_Utils.isNonSymbolScalar(type)
+                || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable()))
             {
                 // we have something we can pipe over
-                transferReader.transferCurrentValue(this);
-                return;
+                if (((_Private_ByteTransferReader) reader).transferCurrentValue(this)) {
+                    return;
+                }
             }
         }
 
