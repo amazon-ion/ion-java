@@ -17,6 +17,7 @@ import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonReaderBuilder;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -315,6 +316,14 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
         }
     }
 
+    private class ByteTransferReaderFacet implements _Private_ByteTransferReader {
+
+        @Override
+        public void transferCurrentValue(_Private_ByteTransferSink writer) throws IOException {
+            writer.writeBytes(buffer, (int) valuePreHeaderIndex, (int) (valueMarker.endIndex - valuePreHeaderIndex));
+        }
+    }
+
     @Override
     public <T> T asFacet(Class<T> facetType) {
         if (facetType == SpanProvider.class) {
@@ -333,6 +342,11 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             }
             if (facetType == RawValueSpanProvider.class) {
                 return facetType.cast(new RawValueSpanProviderFacet());
+            }
+            if (facetType == _Private_ByteTransferReader.class) {
+                if (!hasAnnotations && !isInStruct()) {
+                    return facetType.cast(new ByteTransferReaderFacet());
+                }
             }
         }
         return null;

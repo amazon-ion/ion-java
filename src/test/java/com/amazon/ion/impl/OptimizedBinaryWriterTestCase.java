@@ -180,10 +180,7 @@ public abstract class OptimizedBinaryWriterTestCase
 
         // TODO amazon-ion/ion-java/issues/16 - Currently, doesn't copy annotations or field names,
         //      so we always expect no transfer of raw bytes
-        // TODO amazon-ion/ion-java/issues/381 - IonReaderBinaryIncremental currently doesn't support the byte transfer
-        //      facet. Once this is fixed, remove the `asFacet` check below.
-        if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0
-            || ir.asFacet(_Private_ByteTransferReader.class) == null)
+        if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0)
         {
             expectedTransferInvoked = false;
         }
