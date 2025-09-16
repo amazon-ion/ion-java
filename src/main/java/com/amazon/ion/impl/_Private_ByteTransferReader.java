@@ -24,6 +24,12 @@ import java.io.IOException;
  */
 public interface _Private_ByteTransferReader
 {
-    public void transferCurrentValue(_Private_ByteTransferSink writer)
+    /**
+     * Copies the raw bytes representing the current value, excluding any field name or annotations, if possible.
+     * @param writer the sink for the bytes
+     * @return true if the byte transfer occurred; false if it was not possible.
+     * @throws IOException if thrown by the sink during transfer.
+     */
+    public boolean transferCurrentValue(_Private_ByteTransferSink writer)
         throws IOException;
 }
