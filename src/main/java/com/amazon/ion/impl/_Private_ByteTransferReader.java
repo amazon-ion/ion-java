@@ -16,6 +16,8 @@
 package com.amazon.ion.impl;
 
 import com.amazon.ion.IonReader;
+import com.amazon.ion.SymbolTable;
+
 import java.io.IOException;
 
 /**
@@ -32,4 +34,12 @@ public interface _Private_ByteTransferReader
      */
     public boolean transferCurrentValue(_Private_ByteTransferSink writer)
         throws IOException;
+
+    /**
+     * Determines whether the reader's symbol table is compatible (i.e., a subset of) the given symbol table. When
+     * true, values can be transferred from the reader to the writer verbatim.
+     * @param symbolTable the symbol table active in the writer.
+     * @return true if the reader's symbol table is compatible; otherwise, false.
+     */
+    public boolean isSymbolTableCompatible(SymbolTable symbolTable);
 }
