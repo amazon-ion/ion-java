@@ -326,6 +326,11 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
     }
 
     @Override
+    public boolean isSymbolTableCompatible(SymbolTable symbolTable) {
+        return isSymbolTableSubsetOf(symbolTable);
+    }
+
+    @Override
     public <T> T asFacet(Class<T> facetType) {
         if (facetType == SpanProvider.class) {
             return facetType.cast(new SpanProviderFacet());

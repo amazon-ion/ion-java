@@ -2,7 +2,10 @@ package com.amazon.ion.impl;
 
 import com.amazon.ion.SymbolTable;
 
-interface _Private_LocalSymbolTable extends SymbolTable {
+import java.util.Collection;
+import java.util.List;
+
+public interface _Private_LocalSymbolTable extends SymbolTable {
 
     /**
      * @return a mutable copy of the symbol table.
@@ -22,4 +25,25 @@ interface _Private_LocalSymbolTable extends SymbolTable {
      * @see SymbolTable#getImportedTables()
      */
     SymbolTable[] getImportedTablesNoCopy();
+
+    /**
+     * Returns the imported symbol tables as a List without making a copy (if possible).
+     * Like {@link #getImportedTables()}, the list does not include the system symbol table.
+     *
+     * @return the imported symbol tables. Does not include the system symbol table.
+     *
+     * @see SymbolTable#getImportedTables()
+     */
+    List<SymbolTable> getImportedTablesAsList();
+
+    /**
+     * Returns a collection containing the local symbols, without making a copy.
+     * @return the local symbols.
+     */
+    Collection<String> getLocalSymbolsNoCopy();
+
+    /**
+     * @return the number of local symbols, which do not include the imported or system symbols.
+     */
+    int getNumberOfLocalSymbols();
 }

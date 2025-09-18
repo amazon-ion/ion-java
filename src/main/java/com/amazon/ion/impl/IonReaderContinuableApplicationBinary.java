@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,7 @@ import static com.amazon.ion.SystemSymbols.MAX_ID_SID;
 import static com.amazon.ion.SystemSymbols.NAME_SID;
 import static com.amazon.ion.SystemSymbols.SYMBOLS_SID;
 import static com.amazon.ion.SystemSymbols.VERSION_SID;
+import static com.amazon.ion.impl._Private_Utils.safeEquals;
 
 /**
  * An IonCursor capable of application-level parsing of binary Ion streams.
@@ -81,6 +83,12 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
     // The cached SymbolTable representation of the current local symbol table. Invalidated whenever a local
     // symbol table is encountered in the stream.
     private SymbolTable cachedReadOnlySymbolTable = null;
+
+    // The cached SymbolTable that was determined to be a superset of the reader's current symbol table during a call
+    // to 'isSymbolTableSubsetOf'. This is set to null whenever the reader encounters a new symbol table. Therefore,
+    // when non-null, determining whether the reader's symbol table is a subset of a given table is as simple as
+    // checking whether that table is the same as 'lastSupersetSymbolTable'.
+    private SymbolTable lastSupersetSymbolTable = null;
 
     // The reusable annotation iterator.
     private final AnnotationSequenceIterator annotationIterator = new AnnotationSequenceIterator();
@@ -204,6 +212,110 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         // 'majorVersion' cannot be used to look up the system symbol table; both 'majorVersion' and 'minorVersion'
         // will need to be used.
         return SharedSymbolTable.getSystemSymbolTable(getIonMajorVersion());
+    }
+
+    boolean compareSymbolTableImportsArrayToList(SymbolTable[] arr, int arrayLength, List<SymbolTable> list) {
+        // Note: the array variant must begin with a system symbol table, while the list variant must not.
+        if (arrayLength - 1 != list.size()) {
+            return false;
+        }
+        for (int i = 1; i < arrayLength; i++) {
+            // TODO amazon-ion/ion-java/issues/18 Currently, we check imports by their references, which
+            //  is overly strict; imports that have different references but the same symbols should pass the check.
+            //  However, this is a cheaper check and is compatible with how common Catalog implementations handle
+            //  shared tables.
+            if (list.get(i - 1) != arr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    boolean compareSymbolsArrayToCollection(String[] arr, int arrayLength, Collection<String> collection) {
+        // Precondition: the collection contains at least as many elements as the array.
+        Iterator<String> collectionIterator = collection.iterator();
+        for (int i = 0; i < arrayLength; i++) {
+            if (!safeEquals(arr[i], collectionIterator.next())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Determines whether the symbol table active at the reader's current position is a subset of another symbol table,
+     * meaning that every symbol in the reader's symbol table is present and has the same symbol ID in the other
+     * table.
+     * @param other another symbol table.
+     * @return true if the reader's symbol table is a subset of the other table; otherwise, false.
+     */
+    boolean isSymbolTableSubsetOf(SymbolTable other)
+    {
+        if (lastSupersetSymbolTable != null) {
+            // lastSupersetSymbolTable is reset when the reader's symbol table changes, so we know the reader's symbol
+            // table is the same as it was when last compared. This is an optimization that avoids the more expensive
+            // comparisons when this method is called repetitively within the same symbol table contexts. This
+            // commonly happens during repetitive calls to IonWriter.writeValue(IonReader), which is used directly
+            // by users and by the looping wrapper IonWriter.writeValues(IonReader).
+            return other == lastSupersetSymbolTable && other.getMaxId() == lastSupersetSymbolTable.getMaxId();
+        }
+
+        int numberOfLocalSymbols = localSymbolMaxOffset + 1;
+        int maxId = imports.getMaxId() + numberOfLocalSymbols;
+
+        // Note: the first imported table is always the system symbol table.
+        boolean isSystemSymbolTable = numberOfLocalSymbols == 0 && imports.getImportedTablesNoCopy().length == 1;
+        boolean otherHasPrivateAttributes = other instanceof _Private_LocalSymbolTable;
+        _Private_LocalSymbolTable otherLocal = otherHasPrivateAttributes ? (_Private_LocalSymbolTable) other : null;
+        if (isSystemSymbolTable) {
+            if (other.isSystemTable() && maxId == other.getMaxId()) {
+                // Both represent the same system table.
+                lastSupersetSymbolTable = other;
+                return true;
+            }
+            // The other symbol table might not literally be the system symbol table, but if it's a local symbol table
+            // with zero local symbols and zero imports, that counts.
+            if (otherHasPrivateAttributes && otherLocal.getNumberOfLocalSymbols() == 0 && otherLocal.getImportedTablesAsList().isEmpty()) {
+                lastSupersetSymbolTable = other;
+                return true;
+            }
+            return false;
+        }
+        if (!otherHasPrivateAttributes) {
+            // The reader's symbol table is not a system symbol table, but the other is. Other cannot be a superset.
+            return false;
+        }
+        if (maxId > otherLocal.getMaxId()) return false;
+
+        // NOTE: the following uses of _Private_LocalSymbolTable utilize knowledge of the implementation used by
+        // the binary writer, which has the only known use case for this method. Specifically, we call the interface
+        // method variants that return lists instead of arrays because we know this matches the binary writer's symbol
+        // table's internal representation and therefore does not require copying. If this method ends up being used
+        // for other symbol table implementations, which is unlikely, we should add logic to choose the most efficient
+        // variant to call for the particular implementation (such as by adding something like a `boolean usesArrays()`
+        // method to the interface).
+
+        SymbolTable[] readerImports = imports.getImportedTablesNoCopy();
+        if (!compareSymbolTableImportsArrayToList(readerImports, readerImports.length, otherLocal.getImportedTablesAsList())) {
+            return false;
+        }
+
+        // Superset extends subset if subset doesn't have any declared symbols.
+        if (numberOfLocalSymbols == 0) {
+            lastSupersetSymbolTable = other;
+            return true;
+        }
+
+        // Superset must have same/more declared (local) symbols than subset.
+        if (numberOfLocalSymbols > otherLocal.getNumberOfLocalSymbols()) return false;
+
+        Collection<String> otherSymbols = otherLocal.getLocalSymbolsNoCopy();
+        if (!compareSymbolsArrayToCollection(symbols, numberOfLocalSymbols, otherSymbols)) {
+            return false;
+        }
+
+        lastSupersetSymbolTable = other;
+        return true;
     }
 
     /**
@@ -431,6 +543,21 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         public SymbolTable[] getImportedTablesNoCopy() {
             return importedTables.getImportedTablesNoCopy();
         }
+
+        @Override
+        public List<SymbolTable> getImportedTablesAsList() {
+            throw new UnsupportedOperationException("Call getImportedTablesNoCopy() instead.");
+        }
+
+        @Override
+        public List<String> getLocalSymbolsNoCopy() {
+            throw new UnsupportedOperationException("If this is needed, add a no-copy variant that returns an array.");
+        }
+
+        @Override
+        public int getNumberOfLocalSymbols() {
+            return idToText.length;
+        }
     }
 
     /**
@@ -442,6 +569,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
         Arrays.fill(symbols, 0, localSymbolMaxOffset + 1, null);
         localSymbolMaxOffset = -1;
         cachedReadOnlySymbolTable = null;
+        lastSupersetSymbolTable = null;
     }
 
     /**
@@ -474,6 +602,7 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
             }
             localSymbolMaxOffset = snapshot.maxId - firstLocalSymbolId;
             System.arraycopy(snapshot.idToText, 0, symbols, 0, snapshot.idToText.length);
+            lastSupersetSymbolTable = null;
         } else {
             // Note: this will only happen when `symbolTable` is the system symbol table.
             resetSymbolTable();
@@ -626,6 +755,9 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
                 }
                 localSymbolMaxOffset += newSymbols.size();
             }
+            // Note: last superset table is reset even if new symbols were simply appended because there's no
+            // guarantee those symbols are reflected in the superset table.
+            lastSupersetSymbolTable = null;
             state = State.READING_VALUE;
         }
 
