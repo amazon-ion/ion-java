@@ -37,6 +37,7 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.UnknownSymbolException;
+import com.amazon.ion.impl._Private_LocalSymbolTable;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamCloseMode;
 import com.amazon.ion.impl.bin.IonRawBinaryWriter.StreamFlushMode;
 import java.io.IOException;
@@ -45,6 +46,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -548,7 +550,7 @@ import java.util.Map;
     private static final SymbolTable[] EMPTY_SYMBOL_TABLE_ARRAY = new SymbolTable[0];
 
     /** View over the internal local symbol table state as a symbol table. */
-    private class LocalSymbolTableView extends AbstractSymbolTable
+    private class LocalSymbolTableView extends AbstractSymbolTable implements _Private_LocalSymbolTable
     {
         public LocalSymbolTableView()
         {
@@ -636,6 +638,33 @@ import java.util.Map;
         public void makeReadOnly()
         {
             localsLocked = true;
+        }
+
+        @Override
+        public _Private_LocalSymbolTable makeCopy() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public SymbolTable[] getImportedTablesNoCopy() {
+            throw new UnsupportedOperationException("Call getImportedTablesAsList() instead.");
+        }
+
+        @Override
+        public List<SymbolTable> getImportedTablesAsList() {
+            return imports.parents;
+        }
+
+        @Override
+        public Collection<String> getLocalSymbolsNoCopy() {
+            // Note: this is correct because `locals` is a LinkedHashMap, which orders keys in order of insertion.
+            // Therefore, the returned collection will return symbols in symbol ID order.
+            return locals.keySet();
+        }
+
+        @Override
+        public int getNumberOfLocalSymbols() {
+            return locals.size();
         }
     }
 

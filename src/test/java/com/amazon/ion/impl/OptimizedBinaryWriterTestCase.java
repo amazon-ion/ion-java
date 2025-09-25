@@ -46,7 +46,7 @@ public abstract class OptimizedBinaryWriterTestCase
 
     /**
      * Denotes whether the
-     * {@link _Private_ByteTransferReader#transferCurrentValue(IonWriterSystemBinary)}
+     * {@link _Private_ByteTransferReader#transferCurrentValue(_Private_ByteTransferSink)}
      * has been called after an {@link IonWriter#writeValue(IonReader)}.
      */
     private boolean isTransferCurrentValueInvoked = false;
@@ -107,60 +107,28 @@ public abstract class OptimizedBinaryWriterTestCase
         return bytes;
     }
 
-    private class TransferCurrentValueWatchingReader
-        implements _Private_ByteTransferReader
-    {
-        private final _Private_ByteTransferReader myDelegate;
-
-        TransferCurrentValueWatchingReader(_Private_ByteTransferReader byteTransferReader)
-        {
-            myDelegate = byteTransferReader;
-        }
-
-        public void transferCurrentValue(_Private_ByteTransferSink sink)
-            throws IOException
-        {
-            OptimizedBinaryWriterTestCase.this.isTransferCurrentValueInvoked = true;
-            myDelegate.transferCurrentValue(sink);
-        }
-    }
-
     /**
      * Obtains a dynamic proxy of {@link IonReader} over the passed in byte[],
      * with an invocation handler hook over {@link _Private_ByteTransferReader} facet,
-     * so as to verify whether the transferCurrentValue() method is actually
+     * to verify whether the transferCurrentValue() method is actually
      * being called.
-     *
-     * @see TransferCurrentValueWatchingReader
      */
     protected IonReader makeReaderProxy(byte[] bytes)
     {
         final IonReader reader = system().newReader(bytes);
 
-        InvocationHandler handler = new InvocationHandler()
-        {
-            public Object invoke(Object proxy, Method method, Object[] args)
-                throws Throwable
+        InvocationHandler handler = (proxy, method, args) -> {
+            if (method.getName().equals("transferCurrentValue"))
             {
-                if (method.getName().equals("asFacet") &&
-                    args.length == 1 &&
-                    args[0] == _Private_ByteTransferReader.class)
-                {
-                    _Private_ByteTransferReader transferReader =
-                        (_Private_ByteTransferReader) method.invoke(reader, args);
-
-                    if (transferReader == null)
-                        return null;
-
-                    return new TransferCurrentValueWatchingReader(transferReader);
-                }
-
+                OptimizedBinaryWriterTestCase.this.isTransferCurrentValueInvoked = (boolean) method.invoke(reader, args);
+                return isTransferCurrentValueInvoked;
+            } else {
                 return method.invoke(reader, args);
             }
         };
 
         return (IonReader) newProxyInstance(reader.getClass().getClassLoader(),
-                                            new Class[] { IonReader.class },
+                                            new Class[] { IonReader.class, _Private_ByteTransferReader.class },
                                             handler);
     }
 
@@ -180,10 +148,7 @@ public abstract class OptimizedBinaryWriterTestCase
 
         // TODO amazon-ion/ion-java/issues/16 - Currently, doesn't copy annotations or field names,
         //      so we always expect no transfer of raw bytes
-        // TODO amazon-ion/ion-java/issues/381 - IonReaderBinaryIncremental currently doesn't support the byte transfer
-        //      facet. Once this is fixed, remove the `asFacet` check below.
-        if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0
-            || ir.asFacet(_Private_ByteTransferReader.class) == null)
+        if (ir.isInStruct() || ir.getTypeAnnotationSymbols().length > 0)
         {
             expectedTransferInvoked = false;
         }

@@ -29,12 +29,11 @@ import java.util.Date;
     }
 
     /** The cache for copy optimization checks--null if not copy optimized. */
-    private final _Private_SymtabExtendsCache symtabExtendsCache;
+    private final boolean isStreamCopyOptimized;
 
     /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
     {
-        this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
-            ? new _Private_SymtabExtendsCache() : null;
+        this.isStreamCopyOptimized = optimization == WriteValueOptimization.COPY_OPTIMIZED;
     }
 
     public final void writeValue(final IonValue value) throws IOException
@@ -54,18 +53,14 @@ import java.util.Date;
     {
         final IonType type = reader.getType();
 
-        if (isStreamCopyOptimized())
+        if (isStreamCopyOptimized() && reader instanceof _Private_ByteTransferReader)
         {
-            final _Private_ByteTransferReader transferReader =
-                reader.asFacet(_Private_ByteTransferReader.class);
-
-            if (transferReader != null
-                && (_Private_Utils.isNonSymbolScalar(type)
-                 || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
+            _Private_ByteTransferReader byteTransferReader = (_Private_ByteTransferReader) reader;
+            if (_Private_Utils.isNonSymbolScalar(type) || byteTransferReader.isSymbolTableCompatible(getSymbolTable()))
             {
-                // we have something we can pipe over
-                transferReader.transferCurrentValue(this);
-                return;
+                if (byteTransferReader.transferCurrentValue(this)) {
+                    return;
+                }
             }
         }
 
@@ -223,7 +218,7 @@ import java.util.Date;
 
     public final boolean isStreamCopyOptimized()
     {
-        return symtabExtendsCache != null;
+        return isStreamCopyOptimized;
     }
 
     @SuppressWarnings("deprecation")

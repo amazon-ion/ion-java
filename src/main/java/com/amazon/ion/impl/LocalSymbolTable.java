@@ -38,6 +38,7 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -608,6 +609,21 @@ class LocalSymbolTable
     public SymbolTable[] getImportedTablesNoCopy()
     {
         return myImportsList.getImportedTablesNoCopy();
+    }
+
+    @Override
+    public List<SymbolTable> getImportedTablesAsList() {
+        throw new UnsupportedOperationException("Call getImportedTablesNoCopy() instead.");
+    }
+
+    @Override
+    public Collection<String> getLocalSymbolsNoCopy() {
+        throw new UnsupportedOperationException("If this is needed, add a no-copy variant that returns an array.");
+    }
+
+    @Override
+    public int getNumberOfLocalSymbols() {
+        return mySymbolsCount;
     }
 
     public void writeTo(IonWriter writer) throws IOException
