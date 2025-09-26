@@ -5,9 +5,9 @@ package com.amazon.ion.bytecode.ir
 /**
  * Enumeration of all supported bytecode instructions with their metadata.
  *
- * Each instruction entry contains the operation code, data type information,
- * and operand requirements. This enum serves as the central registry for
- * instruction definitions used in Ion bytecode generation and execution.
+ * Each instruction entry contains the operation code, data type information, and operand requirements.
+ * This enum is effectively the definition of the bytecode instruction set, but it should rarely be used directly.
+ * Performance sensitive code should use the helper functions in [Instructions] and [Operation] instead.
  *
  * See `com/amazon/ion/bytecode/ir/instruction_reference.md` for more details about the instruction set.
  *
