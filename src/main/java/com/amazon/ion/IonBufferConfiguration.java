@@ -186,6 +186,18 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
     }
 
     /**
+     * Requires that the maximum buffer size not be limited.
+     */
+    @Override
+    protected void requireMaximumBufferSize() {
+        try {
+            super.requireMaximumBufferSize();
+        } catch(IllegalArgumentException e) {
+            throw new IllegalArgumentException("Must specify both an OversizedValueHandler and OversizedSymbolTableHandler when a custom maximum buffer size is specified.");
+        }
+    }
+
+    /**
      * @return the handler that will be notified when oversized symbol tables are encountered.
      */
     public OversizedSymbolTableHandler getOversizedSymbolTableHandler() {
