@@ -231,7 +231,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
     /**
      * Requires that the maximum buffer size not be limited.
      */
-    protected void requireMaximumBufferSize() {
+    private void requireMaximumBufferSize() {
         if (maximumBufferSize < _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
             throw new IllegalArgumentException(
                 "Must specify an OversizedValueHandler when a custom maximum buffer size is specified."
