@@ -1,8 +1,44 @@
-# Bytecode Reference Table
+# Bytecode Reference
 
-View the rendered version [on GitHub](https://github.com/amazon-ion/ion-java/tree/master/src/main/java/com/amazon/ion/bytecode/ir/instruction_reference.md).
+View the rendered version of this file [on GitHub](https://github.com/amazon-ion/ion-java/tree/master/src/main/java/com/amazon/ion/bytecode/ir/instruction_reference.md).
 
-* K: InstructionKind
+## Bytecode IR
+
+The bytecode intermediate representation (IR) is a sequence of _instructions_ and _operands_, each represented by a 32-bit integer.
+* An **instruction** is composed of 8 bits of _operation_, 2 bits of _operand count_, and 22 bits of _data_. 
+* An **operation** tells the Bytecode interpreter what to do. It is composed of 5 bits representing the _operation kind_ and 3 bits representing the _operation variant_.
+* **Operation Kind** is the general category of the operation (Is it a String, Int, Bool, Struct, IVM, Directive, etc.) and is used for general control flow.
+* **Operation Variant** denotes the specific variant of an operation.
+* **Operand Count** is 2 bits that describes the number of operands for the instruction (so that no lookup table is required when advancing past an instruction and its operands).
+  When the value is `11`, the instruction can be said to "contain" other instructions (i.e. it is a container) and the value of _data_ indicates the number of 
+  instructions and operands to skip. Otherwise (`00`, `01`, `10`) it is the number of operands for that instruction.
+  Operations that cannot be skipped have an operand count of `00`.
+* The **data** is 22 bits of operation-specific information that can be embedded directly into the instruction. See the operation table for the interpretation of _data_. 
+* Each **operand** itself is an Integer in (i.e. one line of) the bytecode.
+
+## Constant Pool
+
+The constant pool is an `Array<Object>` (or `Array<Any>` in Kotlin).
+Instructions with constant pool indices have the index stored in the _data_ component of the instruction.
+
+## Example
+
+```
+  ┌── Operation Kind = String
+  │     ┌── Operation Variant 0
+  │     │    ┌── Operand Count = 0
+  │     │    │            ┌── CP_INDEX = 5 
+┌─┴─┐  ┌┴┐  ┌┤  ┌─────────┴──────────┐
+00111  000  00  0000000000000000000101
+└────┬───┘
+     └── Operation 0x38: STRING_CP
+```
+This instruction indicates that there is a String value, and the text of the string is in the constant pool at index 5.
+
+
+## Operation Reference Table
+
+* K: Operation Kind
 * V: Variant
 * O: Operand Count Bits
 
@@ -41,11 +77,11 @@ View the rendered version [on GitHub](https://github.com/amazon-ion/ion-java/tre
 | BLOB_CP               | `0x50` | `01010` | `000` | `00` | cp_index (u22)        | -            | Blob ([ByteSlice]) from constant pool                           |
 | BLOB_REF              | `0x51` | `01010` | `001` | `01` | ref_length (u22)      | offset (u32) |                                                                 |
 | NULL_BLOB             | `0x57` | `01010` | `111` | `00` | -                     | -            |                                                                 |
-| LIST_START            | `0x58` | `01011` | `000` | `00` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |
+| LIST_START            | `0x58` | `01011` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |
 | NULL_LIST             | `0x5F` | `01011` | `111` | `00` | -                     | -            |                                                                 |
-| SEXP_START            | `0x60` | `01100` | `000` | `00` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
+| SEXP_START            | `0x60` | `01100` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
 | NULL_SEXP             | `0x67` | `01100` | `111` | `00` | -                     | -            |                                                                 |
-| STRUCT_START          | `0x68` | `01101` | `000` | `00` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
+| STRUCT_START          | `0x68` | `01101` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
 | NULL_STRUCT           | `0x6F` | `01101` | `111` | `00` | -                     | -            |                                                                 |
 | ANNOTATION_CP         | `0x70` | `01110` | `000` | `00` | cp_index (u22)        | -            | Non-null [String] in constant pool                              |
 | ANNOTATION_REF        | `0x71` | `01110` | `001` | `01` | ref_length (u22)      | offset (u32) | Reference to UTF-8 bytes                                        |
@@ -61,9 +97,8 @@ View the rendered version [on GitHub](https://github.com/amazon-ion/ion-java/tre
 | DIRECTIVE_USE         | `0x8C` | `10001` | `100` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
 | DIRECTIVE_MODULE      | `0x8D` | `10001` | `101` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
 | DIRECTIVE_ENCODING    | `0x8E` | `10001` | `110` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
-| PLACEHOLDER           | `0x90` | `10010` | `000` | `00` | -                     | -            | Required, tagged parameter.                                     |
-| PLACEHOLDER_OPT       | `0x91` | `10010` | `001` | `00` | bytecode_length (u22) | -            | Optional tagged macro parameter.[^0x91]                         |
-| PLACEHOLDER_TAGLESS   | `0x92` | `10010` | `010` | `00` | opcode (u8)           | -            | Tagless macro parameter                                         |
+| PLACEHOLDER_TAGGED    | `0x90` | `10010` | `000` | `11` | bytecode_length (u22) | -            | Optional tagged macro parameter.[^0x91]                         |
+| PLACEHOLDER_TAGLESS   | `0x91` | `10010` | `001` | `00` | opcode (u8)           | -            | Tagless macro parameter                                         |
 | ARGUMENT_NONE         | `0x98` | `10011` | `000` | `00` | -                     | -            | Represents an argument that is absent.                          |
 | INVOKE                | `0xA0` | `10100` | `000` | `00` | macro_id (u22)        | -            | Only used when bypassing macro evaluation.[^0xA0]               |
 | REFILL                | `0xA8` | `10101` | `000` | `00` | -                     | -            | End of bytecode, reader must request refill of bytecode buffer  |

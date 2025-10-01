@@ -3,15 +3,15 @@
 package com.amazon.ion.bytecode.ir
 
 /**
- * Constants defining the different categories of bytecode instructions.
+ * Constants defining the different categories of operations for the bytecode instruction set.
  *
- * Each instruction kind represents a high-level category of operations that can be
+ * Each operation kind represents a high-level category of operations that can be
  * performed in Ion bytecode. These constants are used to classify instructions
  * and determine their general behavior and purpose.
  *
  * See `com/amazon/ion/bytecode/ir/instruction_reference.md` for more details about the instruction set.
  */
-internal object InstructionKind {
+internal object OperationKind {
     /** Uninitialized or invalid instruction kind */
     const val UNSET = 0
     /** Null value instructions */
@@ -71,30 +71,30 @@ internal object InstructionKind {
     @JvmStatic
     fun nameOf(instructionKind: Int): String {
         return when (instructionKind) {
-            0 -> "UNSET"
-            1 -> "NULL"
-            2 -> "BOOL"
-            3 -> "INT"
-            4 -> "FLOAT"
-            5 -> "DECIMAL"
-            6 -> "TIMESTAMP"
-            7 -> "STRING"
-            8 -> "SYMBOL"
-            9 -> "CLOB"
-            10 -> "BLOB"
-            11 -> "LIST"
-            12 -> "SEXP"
-            13 -> "STRUCT"
-            14 -> "ANNOTATIONS"
-            15 -> "FIELD_NAME"
-            16 -> "IVM"
-            17 -> "DIRECTIVE"
-            18 -> "PLACEHOLDER"
-            19 -> "ARGUMENT"
-            20 -> "INVOKE_TEMPLATE"
-            21 -> "REFILL"
-            22 -> "END"
-            23 -> "METADATA"
+            UNSET -> "UNSET"
+            NULL -> "NULL"
+            BOOL -> "BOOL"
+            INT -> "INT"
+            FLOAT -> "FLOAT"
+            DECIMAL -> "DECIMAL"
+            TIMESTAMP -> "TIMESTAMP"
+            STRING -> "STRING"
+            SYMBOL -> "SYMBOL"
+            CLOB -> "CLOB"
+            BLOB -> "BLOB"
+            LIST -> "LIST"
+            SEXP -> "SEXP"
+            STRUCT -> "STRUCT"
+            ANNOTATIONS -> "ANNOTATIONS"
+            FIELD_NAME -> "FIELD_NAME"
+            IVM -> "IVM"
+            DIRECTIVE -> "DIRECTIVE"
+            PLACEHOLDER -> "PLACEHOLDER"
+            ARGUMENT -> "ARGUMENT"
+            INVOKE_TEMPLATE -> "INVOKE_TEMPLATE"
+            REFILL -> "REFILL"
+            END -> "END"
+            METADATA -> "METADATA"
             else -> throw IllegalArgumentException("Not a valid instruction kind: $instructionKind")
         }
     }

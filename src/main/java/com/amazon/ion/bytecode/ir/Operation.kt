@@ -20,7 +20,7 @@ internal object Operation {
      * @return The instruction kind portion of the operation code
      */
     @JvmStatic
-    fun toInstructionKind(operation: Int): Int = operation ushr OPERATION_KIND_OFFSET
+    fun toOperationKind(operation: Int): Int = operation ushr OPERATION_KIND_OFFSET
 
     /** Variant identifier used for null value operations */
     private const val NULL_VARIANT = 7
@@ -31,91 +31,90 @@ internal object Operation {
     // Each constant combines an instruction kind with a variant identifier
     // Format: (instruction_kind << OPERATION_KIND_OFFSET) + variant
 
-    const val OP_NULL_NULL = (InstructionKind.NULL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_NULL_NULL = (OperationKind.NULL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_BOOL = InstructionKind.BOOL shl OPERATION_KIND_OFFSET
-    const val OP_NULL_BOOL = (InstructionKind.BOOL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_BOOL = OperationKind.BOOL shl OPERATION_KIND_OFFSET
+    const val OP_NULL_BOOL = (OperationKind.BOOL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_INT_I16 = InstructionKind.INT shl OPERATION_KIND_OFFSET
-    const val OP_INT_I32 = (InstructionKind.INT shl OPERATION_KIND_OFFSET) + 1
-    const val OP_INT_I64 = (InstructionKind.INT shl OPERATION_KIND_OFFSET) + 2
-    const val OP_INT_CP = (InstructionKind.INT shl OPERATION_KIND_OFFSET) + 3
-    const val OP_INT_REF = (InstructionKind.INT shl OPERATION_KIND_OFFSET) + 4
-    const val OP_NULL_INT = (InstructionKind.INT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_INT_I16 = OperationKind.INT shl OPERATION_KIND_OFFSET
+    const val OP_INT_I32 = (OperationKind.INT shl OPERATION_KIND_OFFSET) + 1
+    const val OP_INT_I64 = (OperationKind.INT shl OPERATION_KIND_OFFSET) + 2
+    const val OP_INT_CP = (OperationKind.INT shl OPERATION_KIND_OFFSET) + 3
+    const val OP_INT_REF = (OperationKind.INT shl OPERATION_KIND_OFFSET) + 4
+    const val OP_NULL_INT = (OperationKind.INT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_FLOAT_F32 = (InstructionKind.FLOAT shl OPERATION_KIND_OFFSET)
-    const val OP_FLOAT_F64 = (InstructionKind.FLOAT shl OPERATION_KIND_OFFSET) + 1
-    const val OP_NULL_FLOAT = (InstructionKind.FLOAT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_FLOAT_F32 = (OperationKind.FLOAT shl OPERATION_KIND_OFFSET)
+    const val OP_FLOAT_F64 = (OperationKind.FLOAT shl OPERATION_KIND_OFFSET) + 1
+    const val OP_NULL_FLOAT = (OperationKind.FLOAT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_DECIMAL_CP = (InstructionKind.DECIMAL shl OPERATION_KIND_OFFSET)
-    const val OP_DECIMAL_REF = (InstructionKind.DECIMAL shl OPERATION_KIND_OFFSET) + 1
-    const val OP_NULL_DECIMAL = (InstructionKind.DECIMAL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_DECIMAL_CP = (OperationKind.DECIMAL shl OPERATION_KIND_OFFSET)
+    const val OP_DECIMAL_REF = (OperationKind.DECIMAL shl OPERATION_KIND_OFFSET) + 1
+    const val OP_NULL_DECIMAL = (OperationKind.DECIMAL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_TIMESTAMP_CP = (InstructionKind.TIMESTAMP shl OPERATION_KIND_OFFSET)
-    const val OP_SHORT_TIMESTAMP_REF = (InstructionKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + 1
-    const val OP_TIMESTAMP_REF = (InstructionKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + 2
-    const val OP_NULL_TIMESTAMP = (InstructionKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_TIMESTAMP_CP = (OperationKind.TIMESTAMP shl OPERATION_KIND_OFFSET)
+    const val OP_SHORT_TIMESTAMP_REF = (OperationKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + 1
+    const val OP_TIMESTAMP_REF = (OperationKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + 2
+    const val OP_NULL_TIMESTAMP = (OperationKind.TIMESTAMP shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_STRING_CP = (InstructionKind.STRING shl OPERATION_KIND_OFFSET)
-    const val OP_STRING_REF = (InstructionKind.STRING shl OPERATION_KIND_OFFSET) + 1
-    const val OP_NULL_STRING = (InstructionKind.STRING shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_STRING_CP = (OperationKind.STRING shl OPERATION_KIND_OFFSET)
+    const val OP_STRING_REF = (OperationKind.STRING shl OPERATION_KIND_OFFSET) + 1
+    const val OP_NULL_STRING = (OperationKind.STRING shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_SYMBOL_CP = (InstructionKind.SYMBOL shl OPERATION_KIND_OFFSET)
-    const val OP_SYMBOL_REF = (InstructionKind.SYMBOL shl OPERATION_KIND_OFFSET) + 1
-    const val OP_SYMBOL_SID = (InstructionKind.SYMBOL shl OPERATION_KIND_OFFSET) + 2
-    const val OP_SYMBOL_CHAR = (InstructionKind.SYMBOL shl OPERATION_KIND_OFFSET) + 3
-    const val OP_NULL_SYMBOL = (InstructionKind.SYMBOL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_SYMBOL_CP = (OperationKind.SYMBOL shl OPERATION_KIND_OFFSET)
+    const val OP_SYMBOL_REF = (OperationKind.SYMBOL shl OPERATION_KIND_OFFSET) + 1
+    const val OP_SYMBOL_SID = (OperationKind.SYMBOL shl OPERATION_KIND_OFFSET) + 2
+    const val OP_SYMBOL_CHAR = (OperationKind.SYMBOL shl OPERATION_KIND_OFFSET) + 3
+    const val OP_NULL_SYMBOL = (OperationKind.SYMBOL shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_BLOB_CP = (InstructionKind.BLOB shl OPERATION_KIND_OFFSET)
-    const val OP_BLOB_REF = (InstructionKind.BLOB shl OPERATION_KIND_OFFSET) + 1
-    const val OP_NULL_BLOB = (InstructionKind.BLOB shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_BLOB_CP = (OperationKind.BLOB shl OPERATION_KIND_OFFSET)
+    const val OP_BLOB_REF = (OperationKind.BLOB shl OPERATION_KIND_OFFSET) + 1
+    const val OP_NULL_BLOB = (OperationKind.BLOB shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_CLOB_CP = (InstructionKind.CLOB shl OPERATION_KIND_OFFSET)
-    const val OP_CLOB_REF = (InstructionKind.CLOB shl OPERATION_KIND_OFFSET) + 1
-    const val OP_NULL_CLOB = (InstructionKind.CLOB shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_CLOB_CP = (OperationKind.CLOB shl OPERATION_KIND_OFFSET)
+    const val OP_CLOB_REF = (OperationKind.CLOB shl OPERATION_KIND_OFFSET) + 1
+    const val OP_NULL_CLOB = (OperationKind.CLOB shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_LIST_START = InstructionKind.LIST shl OPERATION_KIND_OFFSET
-    const val OP_NULL_LIST = (InstructionKind.LIST shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_LIST_START = OperationKind.LIST shl OPERATION_KIND_OFFSET
+    const val OP_NULL_LIST = (OperationKind.LIST shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_SEXP_START = InstructionKind.SEXP shl OPERATION_KIND_OFFSET
-    const val OP_NULL_SEXP = (InstructionKind.SEXP shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_SEXP_START = OperationKind.SEXP shl OPERATION_KIND_OFFSET
+    const val OP_NULL_SEXP = (OperationKind.SEXP shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_STRUCT_START = InstructionKind.STRUCT shl OPERATION_KIND_OFFSET
-    const val OP_NULL_STRUCT = (InstructionKind.STRUCT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
+    const val OP_STRUCT_START = OperationKind.STRUCT shl OPERATION_KIND_OFFSET
+    const val OP_NULL_STRUCT = (OperationKind.STRUCT shl OPERATION_KIND_OFFSET) + NULL_VARIANT
 
-    const val OP_FIELD_NAME_CP = (InstructionKind.FIELD_NAME shl OPERATION_KIND_OFFSET)
-    const val OP_FIELD_NAME_REF = (InstructionKind.FIELD_NAME shl OPERATION_KIND_OFFSET) + 1
-    const val OP_FIELD_NAME_SID = (InstructionKind.FIELD_NAME shl OPERATION_KIND_OFFSET) + 2
+    const val OP_FIELD_NAME_CP = (OperationKind.FIELD_NAME shl OPERATION_KIND_OFFSET)
+    const val OP_FIELD_NAME_REF = (OperationKind.FIELD_NAME shl OPERATION_KIND_OFFSET) + 1
+    const val OP_FIELD_NAME_SID = (OperationKind.FIELD_NAME shl OPERATION_KIND_OFFSET) + 2
 
-    const val OP_ANNOTATION_CP = (InstructionKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 0
-    const val OP_ANNOTATION_REF = (InstructionKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 1
-    const val OP_ANNOTATION_SID = (InstructionKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 2
+    const val OP_ANNOTATION_CP = (OperationKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 0
+    const val OP_ANNOTATION_REF = (OperationKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 1
+    const val OP_ANNOTATION_SID = (OperationKind.ANNOTATIONS shl OPERATION_KIND_OFFSET) + 2
 
-    const val OP_PLACEHOLDER = (InstructionKind.PLACEHOLDER shl OPERATION_KIND_OFFSET)
-    const val OP_PLACEHOLDER_OPT = (InstructionKind.PLACEHOLDER shl OPERATION_KIND_OFFSET) + 1
-    const val OP_PLACEHOLDER_TAGLESS = (InstructionKind.PLACEHOLDER shl OPERATION_KIND_OFFSET) + 2
+    const val OP_PLACEHOLDER_TAGGED = (OperationKind.PLACEHOLDER shl OPERATION_KIND_OFFSET)
+    const val OP_PLACEHOLDER_TAGLESS = (OperationKind.PLACEHOLDER shl OPERATION_KIND_OFFSET) + 1
 
-    const val OP_ARGUMENT_NONE = (InstructionKind.ARGUMENT shl OPERATION_KIND_OFFSET)
+    const val OP_ARGUMENT_NONE = (OperationKind.ARGUMENT shl OPERATION_KIND_OFFSET)
 
-    const val OP_IVM = (InstructionKind.IVM shl OPERATION_KIND_OFFSET)
+    const val OP_IVM = (OperationKind.IVM shl OPERATION_KIND_OFFSET)
 
-    const val OP_DIRECTIVE_SET_SYMBOLS = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET)
-    const val OP_DIRECTIVE_ADD_SYMBOLS = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 1
-    const val OP_DIRECTIVE_SET_MACROS = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 2
-    const val OP_DIRECTIVE_ADD_MACROS = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 3
-    const val OP_DIRECTIVE_USE = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 4
-    const val OP_DIRECTIVE_MODULE = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 5
-    const val OP_DIRECTIVE_ENCODING = (InstructionKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 6
+    const val OP_DIRECTIVE_SET_SYMBOLS = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET)
+    const val OP_DIRECTIVE_ADD_SYMBOLS = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 1
+    const val OP_DIRECTIVE_SET_MACROS = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 2
+    const val OP_DIRECTIVE_ADD_MACROS = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 3
+    const val OP_DIRECTIVE_USE = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 4
+    const val OP_DIRECTIVE_MODULE = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 5
+    const val OP_DIRECTIVE_ENCODING = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 6
 
-    const val OP_INVOKE = (InstructionKind.INVOKE_TEMPLATE shl OPERATION_KIND_OFFSET)
+    const val OP_INVOKE = (OperationKind.INVOKE_TEMPLATE shl OPERATION_KIND_OFFSET)
 
-    const val OP_REFILL = (InstructionKind.REFILL shl OPERATION_KIND_OFFSET)
+    const val OP_REFILL = (OperationKind.REFILL shl OPERATION_KIND_OFFSET)
 
-    const val OP_END_TEMPLATE = InstructionKind.END shl OPERATION_KIND_OFFSET
-    const val OP_END_OF_INPUT = (InstructionKind.END shl OPERATION_KIND_OFFSET) + 1
-    const val OP_END_CONTAINER = (InstructionKind.END shl OPERATION_KIND_OFFSET) + 2
+    const val OP_END_TEMPLATE = OperationKind.END shl OPERATION_KIND_OFFSET
+    const val OP_END_OF_INPUT = (OperationKind.END shl OPERATION_KIND_OFFSET) + 1
+    const val OP_END_CONTAINER = (OperationKind.END shl OPERATION_KIND_OFFSET) + 2
 
-    const val OP_META_OFFSET = InstructionKind.METADATA shl OPERATION_KIND_OFFSET
-    const val OP_META_ROWCOL = (InstructionKind.METADATA shl OPERATION_KIND_OFFSET) + 1
-    const val OP_META_COMMENT = (InstructionKind.METADATA shl OPERATION_KIND_OFFSET) + 2
+    const val OP_META_OFFSET = OperationKind.METADATA shl OPERATION_KIND_OFFSET
+    const val OP_META_ROWCOL = (OperationKind.METADATA shl OPERATION_KIND_OFFSET) + 1
+    const val OP_META_COMMENT = (OperationKind.METADATA shl OPERATION_KIND_OFFSET) + 2
 }
