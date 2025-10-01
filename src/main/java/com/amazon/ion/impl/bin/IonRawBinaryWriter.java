@@ -33,7 +33,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_RecyclingQueue;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
@@ -42,7 +41,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
