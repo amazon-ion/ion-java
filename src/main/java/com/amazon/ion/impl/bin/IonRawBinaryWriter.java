@@ -34,7 +34,6 @@ import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
 import com.amazon.ion.impl._Private_RecyclingQueue;
-import com.amazon.ion.impl._Private_RecyclingStack;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
@@ -42,8 +41,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.ListIterator;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -333,7 +332,9 @@ import java.util.ListIterator;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
     private final _Private_RecyclingQueue<PatchPoint> patchPoints;
-    private final _Private_RecyclingStack<ContainerInfo> containers;
+    private final ArrayList<ContainerInfo> containers;
+    private int containerIndex;
+    private ContainerInfo topContainer;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
@@ -381,14 +382,9 @@ import java.util.ListIterator;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
         this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
-        this.containers        = new _Private_RecyclingStack<ContainerInfo>(
-            10,
-            new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
-                public ContainerInfo newElement() {
-                    return new ContainerInfo();
-                }
-            }
-        );
+        this.containers        = new ArrayList<>(10);
+        this.containerIndex    = -1;
+        topContainer = null;
         this.depth                            = 0;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
@@ -545,39 +541,44 @@ import java.util.ListIterator;
 
     private void updateLength(long length)
     {
-        if (containers.isEmpty())
+        if (containerIndex < 0)
         {
             return;
         }
 
-        containers.peek().length += length;
+        topContainer.length += length;
     }
 
     private void pushContainer(final ContainerType type)
     {
         // XXX we push before writing the type of container
-        containers.push(c -> c.initialize(type, buffer.position() + 1));
+        containerIndex++;
+        final ContainerInfo existingElement = containerIndex > -1 && containerIndex < containers.size() ? containers.get(containerIndex) : null;
+        if (existingElement != null) {
+            existingElement.initialize(type, buffer.position() + 1);
+            topContainer = existingElement;
+        } else {
+            topContainer = new ContainerInfo().initialize(type, buffer.position() + 1);
+            containers.add(topContainer);
+        }
     }
 
     private void addPatchPoint(final ContainerInfo container, final long position, final int oldLength, final long value)
     {
-        // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
-        // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
-        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and reset the cursor every time we track back to the ancestors.
-        ListIterator<ContainerInfo> stackIterator = containers.iterator();
-        // Walk down the stack until we find an ancestor which already has a patch point
-        while (stackIterator.hasNext() && stackIterator.next().patchIndex == -1);
-
-        // The iterator cursor is now positioned on an ancestor container that has a patch point
-        // Ascend back up the stack, fixing the ancestors which need a patch point assigned before us
-        while (stackIterator.hasPrevious()) {
-            ContainerInfo ancestor = stackIterator.previous();
-            if (ancestor.patchIndex == -1) {
-                ancestor.patchIndex = patchPoints.push(PatchPoint::clear);
+        if(containerIndex >= 0) {
+            int index;
+            for(index = containerIndex; index >= 0; index--) {
+                if(containers.get(index).patchIndex != -1) {
+                    break;
+                }
+            }
+            for(int i = index + 1; i <= containerIndex; i++) {
+                containers.get(i).patchIndex = patchPoints.push(PatchPoint::clear);
             }
         }
 
-        // record the size of the length data.
+        
+
         final int patchLength = WriteBuffer.varUIntLength(value);
         container.appendPatch(position, oldLength, value);
         updateLength(patchLength - oldLength);
@@ -585,7 +586,9 @@ import java.util.ListIterator;
 
     private ContainerInfo popContainer()
     {
-        final ContainerInfo currentContainer = containers.pop();
+        final ContainerInfo currentContainer = topContainer;
+        containerIndex--;
+        topContainer = containerIndex > -1 ? containers.get(containerIndex) : null;
         if (currentContainer == null)
         {
             throw new IllegalStateException("Tried to pop container state without said container");
@@ -718,7 +721,7 @@ import java.util.ListIterator;
     /** Closes out annotations. */
     private void finishValue() throws IOException
     {
-        if (!containers.isEmpty() && containers.peek().type == ContainerType.ANNOTATION)
+        if (containerIndex > -1 && topContainer.type == ContainerType.ANNOTATION)
         {
             // close out and patch the length
             popContainer();
@@ -756,7 +759,7 @@ import java.util.ListIterator;
         {
             throw new IonException("Cannot step out with field name set");
         }
-        if (containers.isEmpty() || !containers.peek().type.allowedInStepOut)
+        if (containerIndex < 0 || !topContainer.type.allowedInStepOut)
         {
             throw new IonException("Cannot step out when not in container");
         }
@@ -769,7 +772,7 @@ import java.util.ListIterator;
 
     public boolean isInStruct()
     {
-        return !containers.isEmpty() && containers.peek().type == ContainerType.STRUCT;
+        return containerIndex > -1 && topContainer.type == ContainerType.STRUCT;
     }
 
     // Write Value Methods
@@ -1359,7 +1362,7 @@ import java.util.ListIterator;
         {
             return;
         }
-        if (!containers.isEmpty() || depth > 0)
+        if (containerIndex > -1 || depth > 0)
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
