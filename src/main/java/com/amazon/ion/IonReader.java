@@ -63,6 +63,44 @@ import java.util.Iterator;
  * {@link IonValue} hierarchy.  For example, to get the text of a symbol one
  * would use {@link #stringValue()}, mirroring {@link IonSymbol#stringValue()}.
  *
+ * <h2>Obtaining and Usage</h2>
+ * Instances of {@code IonReader} may be constructed through builders, which
+ * implement {@code IonReaderBuilder}. An {@code IonReaderBuilder} with the
+ * default configuration may be constructed as follows. This builder will
+ * construct {@code IonReader} instances which can read both text and binary
+ * Ion data.
+ * {@snippet :
+ * IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+ * }
+ * See {@link com.amazon.ion.system.IonReaderBuilder} for more information
+ * on configuring {@code IonReaderBuilder}.
+ * <p>
+ * An {@code IonReader} may be obtained from this builder by calling
+ * {@code build} over the appropriate data source. Below is an example of
+ * a reader being constructed over a string containing Ion text.
+ * {@snippet :
+ * final String helloWorld = "{hello: \"world\"}";
+ * try (final IonReader reader = readerBuilder.build(helloWorld)) {
+ *     reader.next();
+ *     reader.stepIn();
+ *     reader.next();
+ *     System.out.println(reader.getFieldName() + " " + reader.stringValue());  // prints "hello world"
+ * }
+ * }
+ * Below is an example of a reader being constructed over a byte array
+ * containing the same data in Ion binary.
+ * {@snippet :
+ * final byte[] helloWorld = new byte[] { (byte) 0xe0, 0x01, /* ... *​/, 0x6c, 0x64 };
+ * try (final IonReader reader = readerBuilder.build(helloWorld)) {
+ *     reader.next();
+ *     reader.stepIn();
+ *     reader.next();
+ *     System.out.println(reader.getFieldName() + " " + reader.stringValue());  // prints "hello world"
+ * }
+ * }
+ * See {@link com.amazon.ion.system.IonReaderBuilder} to obtain a reader
+ * over other data sources.
+ * 
  * <h2>Exception Handling</h2>
  * {@code IonReader} is a generic interface for traversing Ion data, and it's
  * not possible to fully specify the set of exceptions that could be thrown
