@@ -254,10 +254,30 @@ import java.util.Iterator;
         {
             if (patchIndex == -1) {
                 // We have no assigned patch point, we need to make our own
-                patchIndex = patchPoints.push(p -> p.initialize(oldPosition, oldLength, length));
+                patchPointsLength++;
+                patchIndex = patchPointsLength - 1;
+                if (patchIndex < patchPoints.size()) {
+                    final PatchPoint existingPatchPoint = patchPoints.get(patchIndex);
+                    if (existingPatchPoint != null) {
+                        existingPatchPoint.initialize(oldPosition, oldLength, length);
+                    } else {
+                        patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
+                    }
+                } else {
+                    patchPoints.ensureCapacity(patchPointsLength);
+                    for (int i = patchPoints.size(); i < patchPointsLength - 1; i++) {
+                        patchPoints.add(null);
+                    }
+                    patchPoints.add(new PatchPoint().initialize(oldPosition, oldLength, length));
+                }                
             } else {
                 // We have an assigned patch point already, but we need to overwrite it with the correct data
-                patchPoints.get(patchIndex).initialize(oldPosition, oldLength, length);
+                final PatchPoint patchPoint = patchPoints.get(patchIndex);
+                if (patchPoint != null) {
+                    patchPoints.get(patchIndex).initialize(oldPosition, oldLength, length);
+                } else {
+                    patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
+                }
             }
         }
 
@@ -331,7 +351,8 @@ import java.util.Iterator;
     private final PreallocationMode             preallocationMode;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
-    private final _Private_RecyclingQueue<PatchPoint> patchPoints;
+    private final ArrayList<PatchPoint> patchPoints;
+    private int patchPointsLength;
     private final ArrayList<ContainerInfo> containers;
     private int containerIndex;
     private ContainerInfo topContainer;
@@ -381,7 +402,8 @@ import java.util.Iterator;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
-        this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
+        this.patchPoints       = new ArrayList<>(512);
+        this.patchPointsLength = 0;
         this.containers        = new ArrayList<>(10);
         this.containerIndex    = -1;
         topContainer = null;
@@ -565,7 +587,7 @@ import java.util.Iterator;
 
     private void addPatchPoint(final ContainerInfo container, final long position, final int oldLength, final long value)
     {
-        if(containerIndex >= 0) {
+        if (containerIndex >= 0) {
             int index;
             for(index = containerIndex; index >= 0; index--) {
                 if(containers.get(index).patchIndex != -1) {
@@ -573,11 +595,14 @@ import java.util.Iterator;
                 }
             }
             for(int i = index + 1; i <= containerIndex; i++) {
-                containers.get(i).patchIndex = patchPoints.push(PatchPoint::clear);
+                // if (patchPointsLength < patchPoints.size()) {
+                //     patchPoints.set(patchPointsLength, null);
+                // } else {
+                //     patchPoints.add(null);
+                // }
+                containers.get(i).patchIndex = patchPointsLength++;
             }
         }
-
-        
 
         final int patchLength = WriteBuffer.varUIntLength(value);
         container.appendPatch(position, oldLength, value);
@@ -1340,17 +1365,14 @@ import java.util.Iterator;
     {
         buffer.truncate(position);
         // TODO decide if it is worth making this faster than O(N)
-        Iterator<PatchPoint> patchIterator = patchPoints.iterate();
-        int i = 0;
-        while (patchIterator.hasNext()) {
-            PatchPoint patchPoint = patchIterator.next();
-            if (patchPoint.length > -1) {
+        for (int i = 0; i < patchPointsLength; i++) {
+            final PatchPoint patchPoint = patchPoints.get(i);
+            if (patchPoint != null && patchPoint.length > -1) {
                 if (patchPoint.oldPosition >= position) {
-                    patchPoints.truncate(i - 1);
+                    patchPointsLength = i;
                     break;
                 }
             }
-            i++;
         }
     }
 
@@ -1366,7 +1388,7 @@ import java.util.Iterator;
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
-        if (patchPoints.isEmpty())
+        if (patchPointsLength == 0)
         {
             // nothing to patch--write 'em out!
             buffer.writeTo(out);
@@ -1374,11 +1396,10 @@ import java.util.Iterator;
         else
         {
             long bufferPosition = 0;
-            Iterator<PatchPoint> iterator = patchPoints.iterate();
-            while (iterator.hasNext())
+            for (int i = 0; i < patchPointsLength; i++)
             {
-                PatchPoint patch = iterator.next();
-                if (patch.length < 0) {
+                final PatchPoint patch = patchPoints.get(i);
+                if (patch == null || patch.length < 0) {
                     continue;
                 }
                 // write up to the thing to be patched
@@ -1394,7 +1415,7 @@ import java.util.Iterator;
             }
             buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
         }
-        patchPoints.clear();
+        patchPointsLength = 0;
         buffer.reset();
 
         if (streamFlushMode == StreamFlushMode.FLUSH)
