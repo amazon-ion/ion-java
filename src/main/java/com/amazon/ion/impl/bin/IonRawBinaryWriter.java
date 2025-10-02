@@ -248,6 +248,26 @@ import java.util.ArrayList;
             patchIndex = -1;
         }
 
+        /**
+         * Set the data in the patch point assigned to this container.
+         * 
+         * PatchPoint instances in {@link #patchPoints} are reused across the lifecycle of the writer, so
+         * there is a chance that a patch point already exists at {@link #patchIndex} with stale data
+         * that needs to be replaced. However, PatchPoints are not constructed until their first use,
+         * meaning the slot pointed to by {@link #patchIndex} may be null, in which case we have to
+         * create our own. This can occur if a child container ends up needing a patch point and some
+         * of its ancestors are missing patch points; the parents are assigned indices into {@link #patchPoints}
+         * but the patch point object itself was not constructed until now.
+         */
+        private void setPatchPointData(final long oldPosition, final int oldLength, final long length) {
+            final PatchPoint existingPatchPoint = patchPoints.get(patchIndex);
+            if (existingPatchPoint != null) {
+                existingPatchPoint.initialize(oldPosition, oldLength, length);
+            } else {
+                patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
+            }
+        }
+
         public void appendPatch(final long oldPosition, final int oldLength, final long length)
         {
             if (patchIndex == -1) {
@@ -255,13 +275,12 @@ import java.util.ArrayList;
                 patchPointsLength++;
                 patchIndex = patchPointsLength - 1;
                 if (patchIndex < patchPoints.size()) {
-                    final PatchPoint existingPatchPoint = patchPoints.get(patchIndex);
-                    if (existingPatchPoint != null) {
-                        existingPatchPoint.initialize(oldPosition, oldLength, length);
-                    } else {
-                        patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
-                    }
+                    // The patch point ArrayList is large enough, the index of this patch point is in bounds
+                    setPatchPointData(oldPosition, oldLength, length);
                 } else {
+                    // The patch point ArrayList is not large enough. It needs to grow to accomodate this
+                    // patch point. No need to call setPatchPointData since we know the PatchPoint instance
+                    // is missing.
                     patchPoints.ensureCapacity(patchPointsLength);
                     for (int i = patchPoints.size(); i < patchPointsLength - 1; i++) {
                         patchPoints.add(null);
@@ -270,12 +289,7 @@ import java.util.ArrayList;
                 }                
             } else {
                 // We have an assigned patch point already, but we need to overwrite it with the correct data
-                final PatchPoint patchPoint = patchPoints.get(patchIndex);
-                if (patchPoint != null) {
-                    patchPoints.get(patchIndex).initialize(oldPosition, oldLength, length);
-                } else {
-                    patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
-                }
+                setPatchPointData(oldPosition, oldLength, length);
             }
         }
 
@@ -404,7 +418,7 @@ import java.util.ArrayList;
         this.patchPointsLength = 0;
         this.containers        = new ArrayList<>(10);
         this.containerIndex    = -1;
-        topContainer = null;
+        this.topContainer      = null;
         this.depth                            = 0;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
