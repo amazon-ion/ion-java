@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.util
 
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -13,48 +17,48 @@ class ConstantPoolTest {
     @Test
     fun `constructor creates empty constant pool with correct initial capacity`() {
         val pool = ConstantPool(5)
-        Assertions.assertEquals(0, pool.size)
-        Assertions.assertTrue(pool.isEmpty())
+        assertEquals(0, pool.size)
+        assertTrue(pool.isEmpty())
     }
 
     @Test
     fun `size returns correct number of elements`() {
         val constantPool = ConstantPool(10)
-        Assertions.assertEquals(0, constantPool.size)
+        assertEquals(0, constantPool.size)
 
         constantPool.add("test")
-        Assertions.assertEquals(1, constantPool.size)
+        assertEquals(1, constantPool.size)
 
         constantPool.add(42)
-        Assertions.assertEquals(2, constantPool.size)
+        assertEquals(2, constantPool.size)
     }
 
     @Test
     fun `isEmpty returns true for empty pool and false for non-empty pool`() {
         val constantPool = ConstantPool(10)
-        Assertions.assertTrue(constantPool.isEmpty())
+        assertTrue(constantPool.isEmpty())
 
         constantPool.add("test")
-        Assertions.assertFalse(constantPool.isEmpty())
+        assertFalse(constantPool.isEmpty())
 
         constantPool.clear()
-        Assertions.assertTrue(constantPool.isEmpty())
+        assertTrue(constantPool.isEmpty())
     }
 
     @Test
     fun `add returns correct index and stores value`() {
         val constantPool = ConstantPool(10)
         val index1 = constantPool.add("first")
-        Assertions.assertEquals(0, index1)
-        Assertions.assertEquals("first", constantPool.get(0))
+        assertEquals(0, index1)
+        assertEquals("first", constantPool.get(0))
 
         val index2 = constantPool.add("second")
-        Assertions.assertEquals(1, index2)
-        Assertions.assertEquals("second", constantPool.get(1))
+        assertEquals(1, index2)
+        assertEquals("second", constantPool.get(1))
 
         val index3 = constantPool.add(null)
-        Assertions.assertEquals(2, index3)
-        Assertions.assertNull(constantPool.get(2))
+        assertEquals(2, index3)
+        assertNull(constantPool.get(2))
     }
 
     @Test
@@ -65,10 +69,10 @@ class ConstantPoolTest {
         val listIndex = constantPool.add(listOf(1, 2, 3))
         val nullIndex = constantPool.add(null)
 
-        Assertions.assertEquals("string", constantPool.get(stringIndex))
-        Assertions.assertEquals(42, constantPool.get(intIndex))
-        Assertions.assertEquals(listOf(1, 2, 3), constantPool.get(listIndex))
-        Assertions.assertNull(constantPool.get(nullIndex))
+        assertEquals("string", constantPool.get(stringIndex))
+        assertEquals(42, constantPool.get(intIndex))
+        assertEquals(listOf(1, 2, 3), constantPool.get(listIndex))
+        assertNull(constantPool.get(nullIndex))
     }
 
     @Test
@@ -79,7 +83,7 @@ class ConstantPoolTest {
         val exception = assertThrows<IndexOutOfBoundsException> {
             constantPool.get(-1)
         }
-        Assertions.assertTrue(exception.message!!.contains("Invalid index -1"))
+        assertTrue(exception.message!!.contains("Invalid index -1"))
     }
 
     @Test
@@ -90,12 +94,12 @@ class ConstantPoolTest {
         val exception = assertThrows<IndexOutOfBoundsException> {
             constantPool.get(1)
         }
-        Assertions.assertTrue(exception.message!!.contains("Invalid index 1"))
+        assertTrue(exception.message!!.contains("Invalid index 1"))
 
         val exception2 = assertThrows<IndexOutOfBoundsException> {
             constantPool.get(10)
         }
-        Assertions.assertTrue(exception2.message!!.contains("Invalid index 10"))
+        assertTrue(exception2.message!!.contains("Invalid index 10"))
     }
 
     @Test
@@ -104,7 +108,7 @@ class ConstantPoolTest {
         val exception = assertThrows<IndexOutOfBoundsException> {
             constantPool.get(0)
         }
-        Assertions.assertTrue(exception.message!!.contains("Invalid index 0"))
+        assertTrue(exception.message!!.contains("Invalid index 0"))
     }
 
     @Test
@@ -113,17 +117,17 @@ class ConstantPoolTest {
         constantPool.add("test1")
         constantPool.add("test2")
         constantPool.add("test3")
-        Assertions.assertEquals(3, constantPool.size)
-        Assertions.assertFalse(constantPool.isEmpty())
+        assertEquals(3, constantPool.size)
+        assertFalse(constantPool.isEmpty())
 
         constantPool.clear()
-        Assertions.assertEquals(0, constantPool.size)
-        Assertions.assertTrue(constantPool.isEmpty())
+        assertEquals(0, constantPool.size)
+        assertTrue(constantPool.isEmpty())
 
         // Should be able to add new items starting from index 0
         val index = constantPool.add("new item")
-        Assertions.assertEquals(0, index)
-        Assertions.assertEquals("new item", constantPool.get(0))
+        assertEquals(0, index)
+        assertEquals("new item", constantPool.get(0))
     }
 
     @Test
@@ -133,12 +137,12 @@ class ConstantPoolTest {
         constantPool.add("item1")
         constantPool.add("item2")
         constantPool.add("item3")
-        Assertions.assertEquals(4, constantPool.size)
+        assertEquals(4, constantPool.size)
 
         constantPool.truncate(2)
-        Assertions.assertEquals(2, constantPool.size)
-        Assertions.assertEquals("item0", constantPool.get(0))
-        Assertions.assertEquals("item1", constantPool.get(1))
+        assertEquals(2, constantPool.size)
+        assertEquals("item0", constantPool.get(0))
+        assertEquals("item1", constantPool.get(1))
 
         // Should throw exception when trying to access truncated items
         assertThrows<IndexOutOfBoundsException> {
@@ -147,8 +151,8 @@ class ConstantPoolTest {
 
         // Should be able to add new items starting from truncated size
         val newIndex = constantPool.add("new item")
-        Assertions.assertEquals(2, newIndex)
-        Assertions.assertEquals("new item", constantPool.get(2))
+        assertEquals(2, newIndex)
+        assertEquals("new item", constantPool.get(2))
     }
 
     @Test
@@ -158,8 +162,8 @@ class ConstantPoolTest {
         constantPool.add("item2")
 
         constantPool.truncate(0)
-        Assertions.assertEquals(0, constantPool.size)
-        Assertions.assertTrue(constantPool.isEmpty())
+        assertEquals(0, constantPool.size)
+        assertTrue(constantPool.isEmpty())
     }
 
     @Test
@@ -171,7 +175,7 @@ class ConstantPoolTest {
         val exception = assertThrows<IllegalArgumentException> {
             constantPool.truncate(3)
         }
-        Assertions.assertEquals("length exceeds number of values", exception.message)
+        assertEquals("length exceeds number of values", exception.message)
     }
 
     @Test
@@ -182,7 +186,7 @@ class ConstantPoolTest {
 
         // Should not throw exception
         constantPool.truncate(2)
-        Assertions.assertEquals(2, constantPool.size)
+        assertEquals(2, constantPool.size)
     }
 
     @Test
@@ -192,14 +196,14 @@ class ConstantPoolTest {
         // Add items beyond initial capacity
         for (i in 0..5) {
             val index = smallPool.add("item$i")
-            Assertions.assertEquals(i, index)
+            assertEquals(i, index)
         }
 
-        Assertions.assertEquals(6, smallPool.size)
+        assertEquals(6, smallPool.size)
 
         // Verify all items are accessible
         for (i in 0..5) {
-            Assertions.assertEquals("item$i", smallPool.get(i))
+            assertEquals("item$i", smallPool.get(i))
         }
     }
 
@@ -207,13 +211,13 @@ class ConstantPoolTest {
     @ValueSource(ints = [1, 5, 10, 100, 1000])
     fun `pool handles various initial capacities`(initialCapacity: Int) {
         val pool = ConstantPool(initialCapacity)
-        Assertions.assertTrue(pool.isEmpty())
-        Assertions.assertEquals(0, pool.size)
+        assertTrue(pool.isEmpty())
+        assertEquals(0, pool.size)
 
         // Add one item to verify it works
         val index = pool.add("test")
-        Assertions.assertEquals(0, index)
-        Assertions.assertEquals("test", pool.get(0))
+        assertEquals(0, index)
+        assertEquals("test", pool.get(0))
     }
 
     @Test
@@ -224,21 +228,21 @@ class ConstantPoolTest {
         constantPool.add(null)
 
         val array = constantPool.toArray()
-        Assertions.assertEquals(3, array.size)
-        Assertions.assertEquals("item1", array[0])
-        Assertions.assertEquals("item2", array[1])
-        Assertions.assertNull(array[2])
+        assertEquals(3, array.size)
+        assertEquals("item1", array[0])
+        assertEquals("item2", array[1])
+        assertNull(array[2])
 
         // Verify it's a defensive copy by modifying the returned array
         array[0] = "modified"
-        Assertions.assertEquals("item1", constantPool.get(0)) // Original should be unchanged
+        assertEquals("item1", constantPool.get(0)) // Original should be unchanged
     }
 
     @Test
     fun `toArray returns empty array for empty pool`() {
         val constantPool = ConstantPool(10)
         val array = constantPool.toArray()
-        Assertions.assertEquals(0, array.size)
+        assertEquals(0, array.size)
     }
 
     @Test
@@ -250,29 +254,26 @@ class ConstantPoolTest {
         val array = constantPool.unsafeGetArray()
 
         // Array should contain the items
-        Assertions.assertEquals("item1", array[0])
-        Assertions.assertEquals("item2", array[1])
+        assertEquals("item1", array[0])
+        assertEquals("item2", array[1])
 
-        // Array size should be capacity, not just the number of items
-        Assertions.assertTrue(array.size >= constantPool.size)
+        // If we make changes it should be reflected in the BytecodeBuffer
+        // DON'T ACTUALLY DO THIS OUTSIDE OF TEST CODE!
+        array[0] = "item3"
+        assertEquals("item3", constantPool.get(0))
     }
 
     @Test
     fun `toString returns correct string representation`() {
         val constantPool = ConstantPool(10)
         val emptyString = constantPool.toString()
-        Assertions.assertEquals("ConstantPool(data=[])", emptyString)
+        assertEquals("ConstantPool(data=[])", emptyString)
 
         constantPool.add("test")
         constantPool.add(42)
-        constantPool.add(null)
 
         val string = constantPool.toString()
-        Assertions.assertTrue(string.startsWith("ConstantPool(data=["))
-        Assertions.assertTrue(string.contains("test,"))
-        Assertions.assertTrue(string.contains("42,"))
-        Assertions.assertTrue(string.contains("null,"))
-        Assertions.assertTrue(string.endsWith("])"))
+        assertEquals("ConstantPool(data=[test,42,])", string)
     }
 
     @Test
@@ -281,7 +282,7 @@ class ConstantPoolTest {
         val pool2 = ConstantPool(10) // Different capacity
 
         // Empty pools should be equal
-        Assertions.assertEquals(pool1, pool2)
+        assertEquals(pool1, pool2)
 
         // Add same items to both
         pool1.add("test")
@@ -292,7 +293,7 @@ class ConstantPoolTest {
         pool2.add(42)
         pool2.add(null)
 
-        Assertions.assertEquals(pool1, pool2)
+        assertEquals(pool1, pool2)
     }
 
     @Test
@@ -303,7 +304,7 @@ class ConstantPoolTest {
         pool1.add("test1")
         pool2.add("test2")
 
-        Assertions.assertNotEquals(pool1, pool2)
+        assertNotEquals(pool1, pool2)
     }
 
     @Test
@@ -315,21 +316,21 @@ class ConstantPoolTest {
         pool2.add("test")
         pool2.add("extra")
 
-        Assertions.assertNotEquals(pool1, pool2)
+        assertNotEquals(pool1, pool2)
     }
 
     @Test
     fun `equals returns true for same instance`() {
         val constantPool = ConstantPool(10)
-        Assertions.assertEquals(constantPool, constantPool)
+        assertEquals(constantPool, constantPool)
     }
 
     @Test
     fun `equals returns false for null and different types`() {
         val constantPool = ConstantPool(10)
-        Assertions.assertNotEquals(constantPool, null)
-        Assertions.assertNotEquals(constantPool, "not a constant pool")
-        Assertions.assertNotEquals(constantPool, listOf<Any>())
+        assertNotEquals(constantPool, null)
+        assertNotEquals(constantPool, "not a constant pool")
+        assertNotEquals(constantPool, listOf<Any>())
     }
 
     @Test
@@ -338,7 +339,7 @@ class ConstantPoolTest {
         val pool2 = ConstantPool(10)
 
         // Empty pools
-        Assertions.assertEquals(pool1.hashCode(), pool2.hashCode())
+        assertEquals(pool1.hashCode(), pool2.hashCode())
 
         // Add same content
         pool1.add("test")
@@ -347,7 +348,7 @@ class ConstantPoolTest {
         pool2.add("test")
         pool2.add(42)
 
-        Assertions.assertEquals(pool1.hashCode(), pool2.hashCode())
+        assertEquals(pool1.hashCode(), pool2.hashCode())
     }
 
     @Test
@@ -358,7 +359,7 @@ class ConstantPoolTest {
         pool1.add("test1")
         pool2.add("test2")
 
-        Assertions.assertNotEquals(pool1.hashCode(), pool2.hashCode())
+        assertNotEquals(pool1.hashCode(), pool2.hashCode())
     }
 
     @Test
@@ -367,8 +368,8 @@ class ConstantPoolTest {
         val view: AppendableConstantPoolView = constantPool
 
         val index = view.add("test")
-        Assertions.assertEquals(0, index)
-        Assertions.assertEquals("test", view.get(0))
+        assertEquals(0, index)
+        assertEquals("test", view.get(0))
     }
 
     @Test
@@ -381,13 +382,13 @@ class ConstantPoolTest {
         smallPool.add("item2") // This should trigger growth
 
         // Verify both items are accessible
-        Assertions.assertEquals("item1", smallPool.get(0))
-        Assertions.assertEquals("item2", smallPool.get(1))
-        Assertions.assertEquals(2, smallPool.size)
+        assertEquals("item1", smallPool.get(0))
+        assertEquals("item2", smallPool.get(1))
+        assertEquals(2, smallPool.size)
 
         // The backing array should have grown by GROWTH_MULTIPLIER
         val backingArray = smallPool.unsafeGetArray()
-        Assertions.assertTrue(backingArray.size >= 2) // Should be at least 2 (1 * GROWTH_MULTIPLIER)
+        assertTrue(backingArray.size >= 2) // Should be at least 2 (1 * GROWTH_MULTIPLIER)
     }
 
     @Test
@@ -398,14 +399,14 @@ class ConstantPoolTest {
         // Add many items
         for (i in 0 until itemCount) {
             val index = largePool.add("item$i")
-            Assertions.assertEquals(i, index)
+            assertEquals(i, index)
         }
 
-        Assertions.assertEquals(itemCount, largePool.size)
+        assertEquals(itemCount, largePool.size)
 
         // Verify all items can be retrieved
         for (i in 0 until itemCount) {
-            Assertions.assertEquals("item$i", largePool.get(i))
+            assertEquals("item$i", largePool.get(i))
         }
     }
 
@@ -416,15 +417,15 @@ class ConstantPoolTest {
         val index2 = constantPool.add("not null")
         val index3 = constantPool.add(null)
 
-        Assertions.assertEquals(0, index1)
-        Assertions.assertEquals(1, index2)
-        Assertions.assertEquals(2, index3)
+        assertEquals(0, index1)
+        assertEquals(1, index2)
+        assertEquals(2, index3)
 
-        Assertions.assertNull(constantPool.get(0))
-        Assertions.assertEquals("not null", constantPool.get(1))
-        Assertions.assertNull(constantPool.get(2))
+        assertNull(constantPool.get(0))
+        assertEquals("not null", constantPool.get(1))
+        assertNull(constantPool.get(2))
 
-        Assertions.assertEquals(3, constantPool.size)
+        assertEquals(3, constantPool.size)
     }
 
     @Test
@@ -433,22 +434,22 @@ class ConstantPoolTest {
         // Add some items
         constantPool.add("item1")
         constantPool.add("item2")
-        Assertions.assertEquals(2, constantPool.size)
+        assertEquals(2, constantPool.size)
 
         // Clear and verify
         constantPool.clear()
-        Assertions.assertEquals(0, constantPool.size)
-        Assertions.assertTrue(constantPool.isEmpty())
+        assertEquals(0, constantPool.size)
+        assertTrue(constantPool.isEmpty())
 
         // Add new items after clear
         val index1 = constantPool.add("new1")
         val index2 = constantPool.add("new2")
 
-        Assertions.assertEquals(0, index1)
-        Assertions.assertEquals(1, index2)
-        Assertions.assertEquals("new1", constantPool.get(0))
-        Assertions.assertEquals("new2", constantPool.get(1))
-        Assertions.assertEquals(2, constantPool.size)
+        assertEquals(0, index1)
+        assertEquals(1, index2)
+        assertEquals("new1", constantPool.get(0))
+        assertEquals("new2", constantPool.get(1))
+        assertEquals(2, constantPool.size)
     }
 
     @Test
@@ -459,22 +460,22 @@ class ConstantPoolTest {
         constantPool.add("item2")
         constantPool.add("item3")
         constantPool.add("item4")
-        Assertions.assertEquals(4, constantPool.size)
+        assertEquals(4, constantPool.size)
 
         // Truncate to 2
         constantPool.truncate(2)
-        Assertions.assertEquals(2, constantPool.size)
+        assertEquals(2, constantPool.size)
 
         // Add new items after truncate
         val index1 = constantPool.add("new1")
         val index2 = constantPool.add("new2")
 
-        Assertions.assertEquals(2, index1)
-        Assertions.assertEquals(3, index2)
-        Assertions.assertEquals("item1", constantPool.get(0))
-        Assertions.assertEquals("item2", constantPool.get(1))
-        Assertions.assertEquals("new1", constantPool.get(2))
-        Assertions.assertEquals("new2", constantPool.get(3))
-        Assertions.assertEquals(4, constantPool.size)
+        assertEquals(2, index1)
+        assertEquals(3, index2)
+        assertEquals("item1", constantPool.get(0))
+        assertEquals("item2", constantPool.get(1))
+        assertEquals("new1", constantPool.get(2))
+        assertEquals("new2", constantPool.get(3))
+        assertEquals(4, constantPool.size)
     }
 }

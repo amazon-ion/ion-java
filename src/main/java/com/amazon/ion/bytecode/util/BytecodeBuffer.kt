@@ -7,8 +7,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 /**
  * This is a custom collection that allows unsafe access to the backing array for storing bytecode instructions.
  *
+ * It allows us to build up the bytecode with the convenience of appending to a list, but when it comes time to read
+ * the bytecode, we can read it with the access efficiency of an array.
+ *
  * It provides specialized methods for adding single values, pairs, triples, and slices of bytecode instructions
  * efficiently. The buffer automatically grows as needed using a growth multiplier strategy.
+ *
+ * This class looks very similar to [ConstantPool], but this class is backed by an array of primitive integers
+ * rather
  *
  * Potential Performance Improvement: Consider exposing raw, `@JvmField`-annotated fields for `size` and `capacity` if it will improve the performance.
  */
@@ -187,6 +193,7 @@ internal class BytecodeBuffer private constructor(
     }
 
     private fun grow(minCapacity: Int): IntArray {
+        // TODO: Consider making it grow to the next power of 2 instead of just growing to double the required capacity.
         val newCapacity = minCapacity * GROWTH_MULTIPLIER
         val newData = IntArray(newCapacity)
         System.arraycopy(data, 0, newData, 0, capacity)

@@ -9,6 +9,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
  *
  * It has a specialized [add] method that allows adding something to a [ConstantPool] and getting the CP_INDEX all in
  * one method call.
+ * This class also manages the growth of the backing array, making it easy to add to the constant pool, but when we need
+ * to read the bytecode, we can access the backing array directly for more efficiency.
  */
 internal class ConstantPool private constructor(
     private var data: Array<Any?>,
@@ -68,6 +70,7 @@ internal class ConstantPool private constructor(
         val data: Array<Any?> = this.data
         val capacity = data.size
         if (minCapacity > capacity) {
+            // TODO: Consider making it grow to the next power of 2 instead of just growing to double the required capacity.
             val newCapacity = minCapacity * GROWTH_MULTIPLIER
             val newData: Array<Any?> = arrayOfNulls(newCapacity)
             System.arraycopy(data, 0, newData, 0, capacity)
