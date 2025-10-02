@@ -275,7 +275,8 @@ import java.util.ArrayList;
                 patchPointsLength++;
                 patchIndex = patchPointsLength - 1;
                 if (patchIndex < patchPoints.size()) {
-                    // The patch point ArrayList is large enough, the index of this patch point is in bounds
+                    // The patch point ArrayList is large enough, the index of this patch point is in bounds.
+                    // A stale reusable patch point instance may be waiting for us here, or this may be a null slot.
                     setPatchPointData(oldPosition, oldLength, length);
                 } else {
                     // The patch point ArrayList is not large enough. It needs to grow to accomodate this
@@ -364,9 +365,14 @@ import java.util.ArrayList;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
     private final ArrayList<PatchPoint> patchPoints;
+    /** The length of the patch point queue. Some elements in the queue may be null or not yet have the correct data. */
     private int patchPointsLength;
     private final ArrayList<ContainerInfo> containers;
+    /**
+     * The index in {@link #containers} of the element at the top of the stack, or -1 if the stack is empty.
+     * Always one less than the length of the stack itself. */
     private int containerIndex;
+    /** The container at the top of the container stack, or null if the container stack is empty */
     private ContainerInfo topContainer;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
@@ -599,23 +605,23 @@ import java.util.ArrayList;
 
     private void addPatchPoint(final ContainerInfo container, final long position, final int oldLength, final long value)
     {
+        // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
+        // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
         if (containerIndex >= 0) {
             int index;
+            // Walk down the stack until we find an ancestor which already has a patch point
             for(index = containerIndex; index >= 0; index--) {
                 if(containers.get(index).patchIndex != -1) {
                     break;
                 }
             }
+            // index is now positioned on an ancestor container that has a patch point
             for(int i = index + 1; i <= containerIndex; i++) {
-                // if (patchPointsLength < patchPoints.size()) {
-                //     patchPoints.set(patchPointsLength, null);
-                // } else {
-                //     patchPoints.add(null);
-                // }
                 containers.get(i).patchIndex = patchPointsLength++;
             }
         }
 
+        // record the size of the length data.
         final int patchLength = WriteBuffer.varUIntLength(value);
         container.appendPatch(position, oldLength, value);
         updateLength(patchLength - oldLength);
