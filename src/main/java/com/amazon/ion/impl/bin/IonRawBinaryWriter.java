@@ -338,10 +338,6 @@ import java.util.ArrayList;
             this.length = length;
             return this;
         }
-
-        public PatchPoint clear() {
-            return initialize(-1, -1, -1);
-        }
     }
 
     /*package*/ enum StreamCloseMode
