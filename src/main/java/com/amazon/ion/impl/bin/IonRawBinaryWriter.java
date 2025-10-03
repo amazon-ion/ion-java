@@ -594,11 +594,17 @@ import java.util.ArrayList;
     {
         // XXX we push before writing the type of container
         containerIndex++;
-        final ContainerInfo existingElement = containerIndex > -1 && containerIndex < containers.size() ? containers.get(containerIndex) : null;
-        if (existingElement != null) {
+        if (containerIndex < containers.size()) {
+            // The container stack array is large enough, the index of this container is in bounds.
+            // A stale reusable container instance is waiting for us here to recycle.
+            // Note: the element at this container cannot be null. The only way for the container stack
+            // to grow is to push a container, and this always happens in order. Unlike patch points, we
+            // will never push a container at an index without its ancestors already being in the stack.
+            final ContainerInfo existingElement = containers.get(containerIndex);
             existingElement.initialize(type, buffer.position() + 1);
             topContainer = existingElement;
         } else {
+            // The container stack is not large enough. It needs to grow to accomodate this container.
             topContainer = new ContainerInfo().initialize(type, buffer.position() + 1);
             containers.add(topContainer);
         }
