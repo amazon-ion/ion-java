@@ -82,6 +82,9 @@ dependencies {
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
     testImplementation("com.github.luben:zstd-jni:1.5.6-5")
+
+    // For @SuppressFBWarning annotation. Only needed for SpotBugs static analysis.
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.5")
 }
 
 group = "com.amazon.ion"

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.ir
 
-import com.amazon.ion._private_.SuppressFBWarnings
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.util.function.Consumer
 
 /**
