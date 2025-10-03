@@ -132,11 +132,11 @@ internal object OpCode {
     const val VARIABLE_LENGTH_CLOB = 0xFF
 
     const val TE_FLEX_INT = 0x60
+    const val TE_SMALL_DECIMAL = 0x70
     const val TE_FLEX_UINT = 0xE0
     const val TE_UINT_8 = 0xE1
     const val TE_UINT_16 = 0xE2
     const val TE_UINT_32 = 0xE4
     const val TE_UINT_64 = 0xE8
-    const val TE_SYMBOL_SID = 0xEA
     const val TE_SYMBOL_FS = 0xEE
 }

@@ -50,7 +50,7 @@ plugins {
 }
 
 jacoco {
-    toolVersion = "0.8.10+"
+    toolVersion = "0.8.13+"
 }
 
 repositories {
@@ -60,7 +60,7 @@ repositories {
 
 // This list should be kept up to date to include all LTS versions of Corretto.
 // These are the versions that we guarantee are supported by `ion-java`, though it can probably run on other versions too.
-val SUPPORTED_JRE_VERSIONS = listOf(8, 11, 17, 21)
+val SUPPORTED_JRE_VERSIONS = listOf(8, 11, 17, 21, 25)
 
 java {
     toolchain {
@@ -76,7 +76,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
-    testCompileOnly("junit:junit:4.13")
+    testCompileOnly("junit:junit:4.13.1")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
