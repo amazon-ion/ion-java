@@ -864,8 +864,6 @@ abstract class IonValueLite
             for (int i = 0; i < _annotations.length; i++) {
                 if (_annotations[i] != null) {
                     count++;
-                } else {
-                    break;
                 }
             }
         }
