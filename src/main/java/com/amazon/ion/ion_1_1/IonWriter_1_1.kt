@@ -37,14 +37,7 @@ interface IonWriter_1_1 : IonWriter {
      *
      * See [stepIn] for additional information.
      */
-    fun stepInTaglessElementList(macro: Macro)
-
-    /**
-     * Starts an Ion List that has homogeneous, macro-shaped children.
-     *
-     * See [stepIn] for additional information.
-     */
-    fun stepInTaglessElementList(name: String, macro: Macro)
+    fun stepInTaglessElementList(name: String?, macro: Macro)
 
     /**
      * Starts an Ion List that has homogeneous, tagless-primitive-encoded children.
@@ -58,14 +51,7 @@ interface IonWriter_1_1 : IonWriter {
      *
      * See [stepIn] for additional information.
      */
-    fun stepInTaglessElementSExp(macro: Macro)
-
-    /**
-     * Starts an Ion SExp that has homogeneous, macro-shaped children.
-     *
-     * See [stepIn] for additional information.
-     */
-    fun stepInTaglessElementSExp(name: String, macro: Macro)
+    fun stepInTaglessElementSExp(name: String?, macro: Macro)
 
     /**
      * Starts an Ion SExp that has homogeneous, tagless-primitive-encoded children.
