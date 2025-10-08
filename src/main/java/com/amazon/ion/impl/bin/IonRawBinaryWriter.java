@@ -275,11 +275,10 @@ import java.util.ArrayList;
                 // We have no assigned patch point, we need to make our own
                 patchIndex = patchPointsLength++;
                 if (patchIndex >= patchPoints.size()) {
-                    // The patch point ArrayList is not large enough. It needs to grow to accomodate this
-                    // patch point. No need to call setPatchPointData since we know the PatchPoint instance
-                    // is missing.
+                    // The patch point ArrayList is not large enough.
+                    // It needs to grow to accomodate this patch point.
                     patchPoints.ensureCapacity(patchPointsLength);
-                    for (int i = patchPoints.size(); i < patchPointsLength ; i++) {
+                    for (int i = patchPoints.size(); i < patchPointsLength; i++) {
                         patchPoints.add(null);
                     }
                 } 
@@ -414,8 +413,14 @@ import java.util.ArrayList;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
+        // Patch point list initial capacity of 512 is fairly arbitrary and subject to tuning.
+        // When patch points are required, they are often required in bulk, since all ancestors of
+        // containers with large content require one.
+        // Some tuning has shown performance impacts - see https://github.com/amazon-ion/ion-java/issues/1095
         this.patchPoints       = new ArrayList<>(512);
         this.patchPointsLength = 0;
+        // Container stack initial capacity of 10 is fairly arbitrary. A max depth of
+        // 10 containers seems reasonable for common data. Subject to tuning.
         this.containers        = new ArrayList<>(10);
         this.containerIndex    = -1;
         this.topContainer      = null;
