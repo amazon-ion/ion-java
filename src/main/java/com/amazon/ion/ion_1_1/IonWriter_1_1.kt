@@ -27,7 +27,7 @@ interface IonWriter_1_1 : IonWriter {
 
     /**
      * Writes an "absent argument".
-     * 
+     *
      * @throws com.amazon.ion.IonException if called when not stepped into an E-Expression (macro invocation).
      */
     fun absentArgument()
@@ -55,7 +55,7 @@ interface IonWriter_1_1 : IonWriter {
 
     /**
      * Starts an Ion SExp that has homogeneous, macro-shaped children.
-     * 
+     *
      * See [stepIn] for additional information.
      */
     fun stepInTaglessElementSExp(macro: Macro)
