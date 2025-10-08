@@ -273,22 +273,19 @@ import java.util.ArrayList;
         {
             if (patchIndex == -1) {
                 // We have no assigned patch point, we need to make our own
-                patchPointsLength++;
-                patchIndex = patchPointsLength - 1;
-                if (patchIndex < patchPoints.size()) {
-                    // The patch point ArrayList is large enough, the index of this patch point is in bounds.
-                    // A stale reusable patch point instance may be waiting for us here, or this may be a null slot.
-                    setPatchPointData(oldPosition, oldLength, length);
-                } else {
+                patchIndex = patchPointsLength++;
+                if (patchIndex >= patchPoints.size()) {
                     // The patch point ArrayList is not large enough. It needs to grow to accomodate this
                     // patch point. No need to call setPatchPointData since we know the PatchPoint instance
                     // is missing.
                     patchPoints.ensureCapacity(patchPointsLength);
-                    for (int i = patchPoints.size(); i < patchPointsLength - 1; i++) {
+                    for (int i = patchPoints.size(); i < patchPointsLength ; i++) {
                         patchPoints.add(null);
                     }
-                    patchPoints.add(new PatchPoint().initialize(oldPosition, oldLength, length));
-                }                
+                } 
+
+                // A stale reusable patch point instance may be waiting for us here, or this may be a null slot.
+                setPatchPointData(oldPosition, oldLength, length);            
             } else {
                 // We have an assigned patch point already, but we need to overwrite it with the correct data
                 setPatchPointData(oldPosition, oldLength, length);
