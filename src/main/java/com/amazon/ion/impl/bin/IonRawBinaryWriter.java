@@ -281,14 +281,12 @@ import java.util.ArrayList;
                     for (int i = patchPoints.size(); i < patchPointsLength; i++) {
                         patchPoints.add(null);
                     }
-                } 
-
-                // A stale reusable patch point instance may be waiting for us here, or this may be a null slot.
-                setPatchPointData(oldPosition, oldLength, length);            
-            } else {
-                // We have an assigned patch point already, but we need to overwrite it with the correct data
-                setPatchPointData(oldPosition, oldLength, length);
+                }
             }
+
+            // A stale reusable patch point instance may be waiting for us here that we need to overwrite with 
+            // the correct data, or this may be a null slot. If we just extended the ArrayList, then it is definitely null.
+            setPatchPointData(oldPosition, oldLength, length);
         }
 
         public ContainerInfo initialize(final ContainerType type, final long offset) {
