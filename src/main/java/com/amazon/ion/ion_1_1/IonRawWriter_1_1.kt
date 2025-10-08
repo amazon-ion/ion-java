@@ -25,14 +25,12 @@ import java.util.function.Consumer
 interface IonRawWriter_1_1 {
 
     /**
-     * Indicates that writing is completed and all buffered data should be written and flushed as if this were the end
-     * of the Ion data stream. For example, an Ion binary writer will finalize any local symbol table, write all
-     * top-level values, and then flush.
+     * Flushes all buffered data to the output of the raw writer.
+     * This method may only be called when not stepped into any top-level values.
      *
-     * This method may only be called when all top-level values are completely written and (`stepped out`)[stepOut].
+     * If the implementation is unbuffered, this should be a no-op.
      *
-     * Implementations should allow the application to continue writing further top-level values following the semantics
-     * for concatenating Ion data streams.
+     * Implementations should allow the application to continue writing further top-level values.
      */
     fun flush()
 
@@ -45,63 +43,68 @@ interface IonRawWriter_1_1 {
      */
     fun close()
 
-    /** Returns true if the writer is currently in a struct (indicating that field names are required). */
+    /** Returns true if the writer is currently in a struct (indicating that field names are required before every value). */
     fun isInStruct(): Boolean
 
-    /** Returns the current depth of containers the writer is at. This is 0 if the writer is at top-level. */
+    /** Returns the current depth the writer is at. This is 0 if the writer is at top-level. The depth _includes_ E-Expressions. */
     fun depth(): Int
 
     /**
      * Writes the Ion 1.1 IVM. IVMs can only be written at the top level of an Ion stream.
-     * @throws com.amazon.ion.IonException if in any container.
+     *
+     * This writes the IVM into the raw writer's buffer without flushing the buffer.
+     *
+     * Caller is responsible for ensuring that this is called at the top level of the stream, and with no annotations.
      */
     fun writeIVM()
 
     /**
-     * Writes one annotation for the next value.
+     * Writes one annotation SID for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotation0: Int)
 
     /**
-     * Writes two annotations for the next value.
+     * Writes two annotation SIDs for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotation0: Int, annotation1: Int)
 
     /**
-     * Writes any number of annotations for the next value.
+     * Writes any number of annotation SIDs for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotations: IntArray)
 
     /**
-     * Writes one annotation for the next value.
+     * Writes one annotation with inline text for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotation0: CharSequence)
 
     /**
-     * Writes two annotations for the next value.
+     * Writes two annotations with inline text for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotation0: CharSequence, annotation1: CharSequence)
 
     /**
-     * Writes any number of annotations for the next value.
+     * Writes any number of annotations with inline text for the next value.
      * [writeAnnotations] may be called more than once to build up a list of annotations.
      */
     fun writeAnnotations(annotations: Array<CharSequence>)
 
     /**
-     * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
-     * @throws com.amazon.ion.IonException if annotations are already written for the value or if not in a struct.
+     * Writes the field name with inline text for the next value. Must be called while in a struct and must be called before [writeAnnotations].
+     *
+     * Caller is responsible for ensuring that it is legal to write a field name.
      */
     fun writeFieldName(text: CharSequence)
 
     /**
-     * Writes the field name for the next value. Must be called while in a struct and must be called before [writeAnnotations].
-     * @throws com.amazon.ion.IonException if annotations are already written for the value or if not in a struct.
+     * Writes the field name SID for the next value. Must be called while in a struct and must be called before [writeAnnotations].
+     *
+     * Caller is responsible for ensuring that it is legal to write a field name.
      */
     fun writeFieldName(sid: Int)
 
@@ -141,6 +144,12 @@ interface IonRawWriter_1_1 {
      */
     fun stepInEExp(id: Int, usingLengthPrefix: Boolean)
 
+    /**
+     * Writes an "absent argument" token to this writer's buffer.
+     *
+     * Caller is responsible to ensure that this is only called while stepped into an E-Expression, and that the
+     * current parameter is a tagged parameter (thus allowing an absent argument).
+     */
     fun writeAbsentArgument()
 
     /**
@@ -148,22 +157,29 @@ interface IonRawWriter_1_1 {
      */
     fun stepOut()
 
-    // TODO: Doc comments for the uninteresting functions
-
+    /** Writes a tagged `null.null` value. */
     fun writeNull()
+    /** Writes a tagged Ion null value for any [IonType] in the Ion data model. */
     fun writeNull(type: IonType)
 
+    /** Writes a tagged, non-null Ion boolean value */
     fun writeBool(value: Boolean)
-
+    /** Writes a tagged, non-null Ion integer value */
     fun writeInt(value: Long)
+    /** Writes a tagged, non-null Ion integer value */
     fun writeInt(value: BigInteger)
 
+    /** Writes a tagged, non-null Ion float value */
     fun writeFloat(value: Float)
+    /** Writes a tagged, non-null Ion float value */
     fun writeFloat(value: Double)
 
+    /** Writes a tagged, non-null Ion decimal value */
     fun writeDecimal(value: BigDecimal)
 
     /**
+     * Writes a tagged, non-null Ion timestamp value
+     *
      * TODO: Consider adding a function for writing a timestamp that doesn't require creating a [Timestamp] instance, so
      *       that users don't have to allocate an intermediate between their data type and the Ion writer. E.g.:
      * ```
@@ -176,40 +192,156 @@ interface IonRawWriter_1_1 {
      */
     fun writeTimestamp(value: Timestamp)
 
+    /** Writes a tagged, non-null, symbol value as a SID */
     fun writeSymbol(id: Int)
+    /** Writes a tagged, non-null, symbol value with inline text */
     fun writeSymbol(text: CharSequence)
 
+    /** Writes a tagged non-null Ion string value */
     fun writeString(value: CharSequence)
 
+    /** Writes a tagged non-null Ion blob value */
     fun writeBlob(value: ByteArray) = writeBlob(value, 0, value.size)
+    /** Writes a tagged non-null Ion blob value */
     fun writeBlob(value: ByteArray, start: Int, length: Int)
 
+    /** Writes a tagged non-null Ion clob value */
     fun writeClob(value: ByteArray) = writeClob(value, 0, value.size)
+    /** Writes a tagged non-null Ion clob value */
     fun writeClob(value: ByteArray, start: Int, length: Int)
 
-    fun stepInTaglessElementList(type: Int)
+    /**
+     * Starts a tagless-element list, using the given opcode for its child elements.
+     *
+     * Callers are responsible to make sure that [taglessEncodingOpcode] is a valid opcode in [TaglessScalarType].
+     */
+    fun stepInTaglessElementList(taglessEncodingOpcode: Int)
+
+    /**
+     * Starts a tagless-element list, using the given macro for its child elements.
+     *
+     * If [macroName] is non-null, and the implementation supports invoking macros by name, then the implementation
+     * MUST write the macro name rather than the macro id.
+     */
     fun stepInTaglessElementList(macroId: Int, macroName: String?)
 
-    fun stepInTaglessElementSExp(type: Int)
+    /**
+     * Starts a tagless-element s-exp, using the given opcode for its child elements.
+     *
+     * Callers are responsible to make sure that [taglessEncodingOpcode] is a valid opcode in [TaglessScalarType].
+     */
+    fun stepInTaglessElementSExp(taglessEncodingOpcode: Int)
+
+    /**
+     * Starts a tagless-element list, using the given macro for its child elements.
+     *
+     * If [macroName] is non-null, and the implementation supports invoking macros by name, then the implementation
+     * MUST write the macro name rather than the macro id.
+     */
     fun stepInTaglessElementSExp(macroId: Int, macroName: String?)
 
+    /**
+     * Steps into a tagless E-Expression.
+     *
+     * Caller is responsible to ensure this is called only when it is valid to write a tagless e-expression.
+     */
     fun stepInTaglessEExp()
 
+    /**
+     * Writes an integer value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless int value.
+     */
     fun writeTaglessInt(implicitOpcode: Int, value: Int)
+
+    /**
+     * Writes an integer value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless int value.
+     */
     fun writeTaglessInt(implicitOpcode: Int, value: Long)
+
+    /**
+     * Writes an integer value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless int value.
+     */
     fun writeTaglessInt(implicitOpcode: Int, value: BigInteger)
+
+    /**
+     * Writes a float value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless float value.
+     */
     fun writeTaglessFloat(implicitOpcode: Int, value: Float)
+
+    /**
+     * Writes a float value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless float value.
+     */
     fun writeTaglessFloat(implicitOpcode: Int, value: Double)
+
+    /**
+     * Writes a decimal value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless decimal value.
+     */
     fun writeTaglessDecimal(implicitOpcode: Int, value: BigDecimal)
+
+    /**
+     * Writes a timestamp value without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless timestamp value.
+     */
     fun writeTaglessTimestamp(implicitOpcode: Int, value: Timestamp)
+
+    /**
+     * Writes a symbol value as SID without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless symbol value as SID.
+     */
     fun writeTaglessSymbol(implicitOpcode: Int, id: Int)
+
+    /**
+     * Writes a symbol value with inline text without writing the opcode, using the [implicitOpcode] to determine the correct
+     * encoding for the value payload.
+     *
+     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless symbol value with inline text.
+     */
     fun writeTaglessSymbol(implicitOpcode: Int, text: CharSequence)
 
+    /**
+     * Writes a tagged placeholder to the buffer.
+     */
     fun writeTaggedPlaceholder()
 
+    /**
+     * Writes a tagged placeholder and its default value to the buffer.
+     *
+     * Callers are responsible to ensure that exactly one default value is written.
+     */
     fun writeTaggedPlaceholderWithDefault(default: Consumer<IonRawWriter_1_1>)
 
+    /**
+     * Writes a tagless placeholder along with the [taglessEncodingOpcode].
+     *
+     * Callers are responsible to make sure that [taglessEncodingOpcode] is a valid opcode in [TaglessScalarType].
+     */
     fun writeTaglessPlaceholder(taglessEncodingOpcode: Int)
 
-    fun stepInDirective(directive: Int) {}
+    /**
+     * Steps into an Ion 1.1 directive.
+     *
+     * Callers are responsible to make sure that [directiveOpcode] is a valid opcode for an Ion 1.1 directive.
+     */
+    fun stepInDirective(directiveOpcode: Int)
 }
