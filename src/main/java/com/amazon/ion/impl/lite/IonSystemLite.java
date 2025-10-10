@@ -749,11 +749,6 @@ final class IonSystemLite
                 return false;
             }
             SymbolToken token = reader.getFieldNameSymbol();
-            String text = token.getText();
-            if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID)
-            {
-                token = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-            }
             value.setFieldNameSymbol(token);
             return true;
         }
@@ -767,17 +762,7 @@ final class IonSystemLite
             if (annotations.length == 0) {
                 return false;
             }
-
-            for (int i = 0; i < annotations.length; i++)
-            {
-                SymbolToken token = annotations[i];
-                String text = token.getText();
-                if (text != null && token.getSid() != UNKNOWN_SYMBOL_ID )
-                {
-                    annotations[i] = newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-                }
-            }
-            value.setTypeAnnotationSymbols(annotations);
+            value.setTypeAnnotationSymbolsNoCopy(annotations);
             return true;
         }
 

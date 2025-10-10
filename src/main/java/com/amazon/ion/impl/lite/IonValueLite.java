@@ -864,6 +864,10 @@ abstract class IonValueLite
             for (int i = 0; i < _annotations.length; i++) {
                 if (_annotations[i] != null) {
                     count++;
+                } else {
+                    // null indicates the end of the array.
+                    // This assumption is also present in IonValueLite(IonValueLite existing, IonContext context) constructor.
+                    break;
                 }
             }
         }
@@ -921,6 +925,26 @@ abstract class IonValueLite
         else
         {
             _annotations = annotations.clone();
+            checkAnnotationsForSids();
+        }
+    }
+
+    // Sets type annotations for this value, assuming modifications to passed array
+    // are safe and the array will not be modified after call to this method.
+    // Prevents an unnecessary array copy if the array being passed in is newly-created
+    // for the call to this method.
+    protected void setTypeAnnotationSymbolsNoCopy(SymbolToken... annotations)
+    {
+        checkForLock();
+
+        if (annotations == null || annotations.length == 0)
+        {
+            // Normalize all empty lists to the same instance.
+            _annotations = SymbolToken.EMPTY_ARRAY;
+        }
+        else
+        {
+            _annotations = annotations;
             checkAnnotationsForSids();
         }
     }

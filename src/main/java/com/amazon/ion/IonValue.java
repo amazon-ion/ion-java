@@ -310,6 +310,8 @@ public interface IonValue
 
     /**
      * Gets this value's user type annotations as interned symbols (text + ID).
+     * Implementations are guaranteed to return a new array that is safe for
+     * the caller to modify.
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.

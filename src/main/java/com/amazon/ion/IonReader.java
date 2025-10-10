@@ -252,6 +252,8 @@ public interface IonReader
 
     /**
      * Gets the current value's annotations as symbol tokens (text + ID).
+     * Implementations are guaranteed to return a new array that is safe
+     * for the caller to modify.
      *
      * @return the (ordered) annotations on the current value, or an empty
      * array (not {@code null}) if there are none.
