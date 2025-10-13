@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.ir
 
+import com.amazon.ion.bytecode.ir.Operation.OPERATION_KIND_OFFSET
+
 /**
  * Utility object for working with packed instruction formats and instruction constants.
  *
@@ -21,6 +23,12 @@ internal object Instructions {
      */
     @JvmStatic
     fun toOperation(instruction: Int) = instruction ushr OPERATION_OFFSET
+
+    /**
+     * Given an [OperationKind] value that represents an Ion type, returns the appropriate NULL variant operation.
+     */
+    @JvmStatic
+    fun typedNullFromOperationKind(operationKind: Int): Int = (operationKind.shl(OPERATION_KIND_OFFSET) + Operation.NULL_VARIANT).shl(OPERATION_OFFSET)
 
     /**
      * Extracts the operand count bits from a packed instruction.

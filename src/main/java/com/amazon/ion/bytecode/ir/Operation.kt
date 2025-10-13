@@ -23,9 +23,9 @@ internal object Operation {
     fun toOperationKind(operation: Int): Int = operation ushr OPERATION_KIND_OFFSET
 
     /** Variant identifier used for null value operations */
-    private const val NULL_VARIANT = 7
+    const val NULL_VARIANT = 7
     /** Bit offset for extracting instruction kind from operation codes */
-    private const val OPERATION_KIND_OFFSET = 3
+    const val OPERATION_KIND_OFFSET = 3
 
     // Operation code constants
     // Each constant combines an instruction kind with a variant identifier
@@ -104,7 +104,8 @@ internal object Operation {
     const val OP_DIRECTIVE_ADD_MACROS = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 3
     const val OP_DIRECTIVE_USE = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 4
     const val OP_DIRECTIVE_MODULE = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 5
-    const val OP_DIRECTIVE_ENCODING = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 6
+    const val OP_DIRECTIVE_IMPORT = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 6
+    const val OP_DIRECTIVE_ENCODING = (OperationKind.DIRECTIVE shl OPERATION_KIND_OFFSET) + 7
 
     const val OP_INVOKE = (OperationKind.INVOKE_TEMPLATE shl OPERATION_KIND_OFFSET)
 

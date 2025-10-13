@@ -75,6 +75,11 @@ internal object Debugger {
         var indent = ""
         var i = start
         while (i < end) {
+            if (bytecode[i] == 0) {
+                i++
+                continue
+            }
+
             if (useNumbers) write(line(i))
 
             val instruction = bytecode[i++]
@@ -100,8 +105,11 @@ internal object Debugger {
             // Write the operation name, and any data carried in the instruction
             write(indent)
             write(instructionInfo.name)
-            write(" ")
-            write(instructionInfo.dataType.formatter(Instructions.getData(instruction)).toString())
+
+            if (instructionInfo.dataType != InstructionInfo.DataInfo.NO_DATA) {
+                write(" ")
+                write(instructionInfo.dataType.formatter(Instructions.getData(instruction)).toString())
+            }
 
             // If we have symbol table or constant pool available, add in supplemental information
             if (constantPool != null && instructionInfo.dataType == InstructionInfo.DataInfo.CP_INDEX) {
@@ -154,6 +162,7 @@ internal object Debugger {
                 InstructionInfo.DIRECTIVE_ADD_MACROS,
                 InstructionInfo.DIRECTIVE_USE,
                 InstructionInfo.DIRECTIVE_MODULE,
+                InstructionInfo.DIRECTIVE_IMPORT,
                 InstructionInfo.DIRECTIVE_ENCODING,
                 InstructionInfo.LIST_START,
                 InstructionInfo.SEXP_START,
@@ -162,7 +171,6 @@ internal object Debugger {
             }
 
             when (instructionInfo) {
-                InstructionInfo.REFILL,
                 InstructionInfo.END_OF_INPUT -> break
                 else -> continue
             }

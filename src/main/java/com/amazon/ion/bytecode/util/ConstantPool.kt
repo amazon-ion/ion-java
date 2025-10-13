@@ -22,7 +22,7 @@ internal class ConstantPool private constructor(
 
     constructor(initialCapacity: Int) : this(data = arrayOfNulls(initialCapacity), numberOfValues = 0)
 
-    val size: Int
+    override val size: Int
         get() = numberOfValues
 
     fun isEmpty(): Boolean = numberOfValues == 0

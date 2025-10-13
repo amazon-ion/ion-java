@@ -10,4 +10,6 @@ interface AppendableConstantPoolView {
     fun add(value: Any?): Int
     /** Retrieves a value from the constant pool. */
     fun get(i: Int): Any?
+
+    val size: Int
 }
