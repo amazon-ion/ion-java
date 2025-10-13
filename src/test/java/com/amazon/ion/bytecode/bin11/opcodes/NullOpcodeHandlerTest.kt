@@ -1,6 +1,6 @@
 package com.amazon.ion.bytecode.bin11.opcodes
 
-import com.amazon.ion.bytecode.ir.Operation
+import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.byteToInt
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -20,7 +20,7 @@ class NullOpcodeHandlerTest {
             0,
             buffer
         )
-        assertEquals(Operation.OP_NULL_NULL, buffer.get(0))
+        assertEquals(Instructions.I_NULL_NULL, buffer.get(0))
         assertEquals(1, bytesRead)
     }
 

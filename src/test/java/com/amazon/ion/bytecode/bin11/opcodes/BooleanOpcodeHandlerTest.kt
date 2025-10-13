@@ -1,7 +1,7 @@
 package com.amazon.ion.bytecode.bin11.opcodes
 
+import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
-import com.amazon.ion.bytecode.ir.Operation
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.byteToInt
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +22,7 @@ class BooleanOpcodeHandlerTest {
             0,
             buffer
         )
-        val trueInstruction = Operation.OP_BOOL.packInstructionData(1)
+        val trueInstruction = Instructions.I_BOOL.packInstructionData(1)
         assertEquals(trueInstruction, buffer.get(0))
         assertEquals(1, bytesRead)
     }
@@ -37,7 +37,7 @@ class BooleanOpcodeHandlerTest {
             0,
             buffer
         )
-        val falseInstruction = Operation.OP_BOOL.packInstructionData(0)
+        val falseInstruction = Instructions.I_BOOL.packInstructionData(0)
         assertEquals(falseInstruction, buffer.get(0))
         assertEquals(1, bytesRead)
     }

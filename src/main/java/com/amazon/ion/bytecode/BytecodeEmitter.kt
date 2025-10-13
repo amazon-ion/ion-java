@@ -1,8 +1,9 @@
 package com.amazon.ion.bytecode
 
-import com.amazon.ion.*
+import com.amazon.ion.IonException
+import com.amazon.ion.IonType
+import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
-import com.amazon.ion.bytecode.ir.Operation
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
 /**
@@ -13,19 +14,19 @@ internal object BytecodeEmitter {
     @JvmStatic
     fun emitNullValue(destination: BytecodeBuffer, nullType: IonType) {
         val instruction = when (nullType) {
-            IonType.NULL      -> Operation.OP_NULL_NULL
-            IonType.BOOL      -> Operation.OP_NULL_BOOL
-            IonType.INT       -> Operation.OP_NULL_INT
-            IonType.FLOAT     -> Operation.OP_NULL_FLOAT
-            IonType.DECIMAL   -> Operation.OP_NULL_DECIMAL
-            IonType.TIMESTAMP -> Operation.OP_NULL_TIMESTAMP
-            IonType.SYMBOL    -> Operation.OP_NULL_SYMBOL
-            IonType.STRING    -> Operation.OP_NULL_STRING
-            IonType.CLOB      -> Operation.OP_NULL_CLOB
-            IonType.BLOB      -> Operation.OP_NULL_BLOB
-            IonType.LIST      -> Operation.OP_NULL_LIST
-            IonType.SEXP      -> Operation.OP_NULL_SEXP
-            IonType.STRUCT    -> Operation.OP_NULL_STRUCT
+            IonType.NULL      -> Instructions.I_NULL_NULL
+            IonType.BOOL      -> Instructions.I_NULL_BOOL
+            IonType.INT       -> Instructions.I_NULL_INT
+            IonType.FLOAT     -> Instructions.I_NULL_FLOAT
+            IonType.DECIMAL   -> Instructions.I_NULL_DECIMAL
+            IonType.TIMESTAMP -> Instructions.I_NULL_TIMESTAMP
+            IonType.SYMBOL    -> Instructions.I_NULL_SYMBOL
+            IonType.STRING    -> Instructions.I_NULL_STRING
+            IonType.CLOB      -> Instructions.I_NULL_CLOB
+            IonType.BLOB      -> Instructions.I_NULL_BLOB
+            IonType.LIST      -> Instructions.I_NULL_LIST
+            IonType.SEXP      -> Instructions.I_NULL_SEXP
+            IonType.STRUCT    -> Instructions.I_NULL_STRUCT
             IonType.DATAGRAM  -> throw IonException("Unexpected DATAGRAM as IonType")
         }
         destination.add(instruction)
@@ -33,7 +34,7 @@ internal object BytecodeEmitter {
 
     @JvmStatic
     fun emitBoolValue(destination: BytecodeBuffer, bool: Boolean) {
-        destination.add(Operation.OP_BOOL.packInstructionData(if (bool) 1 else 0));
+        destination.add(Instructions.I_BOOL.packInstructionData(if (bool) 1 else 0));
     }
     
 }
