@@ -1,5 +1,8 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
 /**
@@ -23,7 +26,25 @@ internal fun interface OpcodeToBytecodeHandler {
         /** The position of the next unread byte in [source] */
         position: Int,
         /** The destination bytecode buffer this handler is expected to write to */
-        destination: BytecodeBuffer
+        destination: BytecodeBuffer,
+        /** Container holding instances of eagerly materialized values, such as those in template definitions */
+        constantPool: AppendableConstantPoolView,
+        /** Bytecode for each macro in the effective macro table */
+        macroSrc: IntArray,
+        /**
+         * A lookup table indicating for each macro address, where to find the first
+         * instruction for that macro in [macroSrc]. That is, for the macro with address `i`,
+         * `macroSrc[macroIndices[i]]` is its first instruction. For example, to read the bytecode
+         * for the macro, you would do something like this:
+         * ```
+         * var i = macroIndices[macroAddress]
+         * var currentInstruction = macroSrc[i++]
+         * // ...
+         * ```
+         */
+        macroIndices: IntArray,
+        /** The current symbol table */
+        symbolTable: Array<String?>,
     ): Int
 }
 
@@ -37,7 +58,7 @@ internal object OpcodeHandlerTable {
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
-            else -> OpcodeToBytecodeHandler { _, _, _, _ ->
+            else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
             }
         }

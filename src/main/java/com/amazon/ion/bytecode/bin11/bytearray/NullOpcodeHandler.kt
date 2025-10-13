@@ -1,7 +1,10 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.IonType
 import com.amazon.ion.bytecode.BytecodeEmitter
+import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
 /**
@@ -12,7 +15,11 @@ internal object NullOpcodeHandler : OpcodeToBytecodeHandler {
         opcode: Int,
         source: ByteArray,
         position: Int,
-        destination: BytecodeBuffer
+        destination: BytecodeBuffer,
+        constantPool: AppendableConstantPoolView,
+        macroSrc: IntArray,
+        macroIndices: IntArray,
+        symbolTable: Array<String?>
     ): Int {
         BytecodeEmitter.emitNullValue(destination, IonType.NULL)
         return 0

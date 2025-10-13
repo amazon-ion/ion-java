@@ -6,6 +6,7 @@ import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.BytecodeBuffer
+import com.amazon.ion.bytecode.util.ConstantPool
 import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -38,7 +39,11 @@ class TypedNullOpcodeHandlerTest {
             opcode,
             byteArray,
             position,
-            buffer
+            buffer,
+            ConstantPool(0),
+            intArrayOf(),
+            intArrayOf(),
+            arrayOf()
         )
 
         assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
