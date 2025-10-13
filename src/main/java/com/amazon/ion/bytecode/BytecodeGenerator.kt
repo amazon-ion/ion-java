@@ -5,6 +5,7 @@ package com.amazon.ion.bytecode
 import com.amazon.ion.Decimal
 import com.amazon.ion.Timestamp
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
+import com.amazon.ion.bytecode.util.ByteSlice
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 import java.math.BigInteger
 
@@ -53,8 +54,7 @@ internal interface BytecodeGenerator {
      * no more top-level values may be filled into the destination.
      *
      * If there is incomplete data, and no values can be returned, it should
-     * throw IncompleteDataException (if streaming source) or IonException (if
-     * fully-buffered source).
+     * throw IonException (if fully-buffered source).
      */
     fun refill(
         /** The BytecodeBuffer that is to be filled with the bytecode */
@@ -78,12 +78,48 @@ internal interface BytecodeGenerator {
         symTab: Array<String?>,
     )
 
+    /**
+     * Reads an Ion int value from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should come from an [INT_REF] instruction.
+     */
     fun readBigIntegerReference(position: Int, length: Int): BigInteger
+
+    /**
+     * Reads an Ion decimal value from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should come from a [DECIMAL_REF] instruction.
+     */
     fun readDecimalReference(position: Int, length: Int): Decimal
+
+    /**
+     * Reads an Ion timestamp value from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should come from a [SHORT_TIMESTAMP_REF] instruction.
+     */
     fun readShortTimestampReference(position: Int, opcode: Int): Timestamp
+
+    /**
+     * Reads an Ion timestamp value from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should come from a [TIMESTAMP_REF] instruction.
+     */
     fun readTimestampReference(position: Int, length: Int): Timestamp
+
+    /**
+     * Reads any UTF-8 text from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should usually come from a [STRING_REF], [SYMBOL_REF], [ANNOTATION_REF], or
+     * [FIELD_NAME_REF] instruction.
+     *
+     * In the case of a text reader, this could hypothetically also be used to read text for a [META_COMMENT] instruction.
+     */
     fun readTextReference(position: Int, length: Int): String
-    fun readBytesReference(position: Int, length: Int): ByteArray
+
+    /**
+     * Reads a [ByteSlice] from this [BytecodeGenerator]'s source data.
+     * Arguments to this function should come from a [BLOB_REF] or [CLOB_REF] instruction.
+     *
+     * This function returns a [ByteSlice] rather than a [ByteArray] so that it is relatively cheap to call multiple
+     * times for reading a blob or clob in chunks rather than all at once.
+     * If [BytecodeGenerator] is ever exposed in the public API, we should revisit the return type of this function.
+     */
+    fun readBytesReference(position: Int, length: Int): ByteSlice
 
     /** The Ion Minor Version supported by this [BytecodeGenerator] */
     fun ionMinorVersion(): Int
@@ -93,5 +129,5 @@ internal interface BytecodeGenerator {
      * Implementations must return a BytecodeGenerator that supports the requested version and is positioned
      * to continue compiling bytecode exactly where this BytecodeGenerator left off.
      */
-    fun getGeneratorForMinorVersion(minorVersion: Int): BytecodeGenerator = throw UnsupportedOperationException()
+    fun getGeneratorForMinorVersion(minorVersion: Int): BytecodeGenerator
 }

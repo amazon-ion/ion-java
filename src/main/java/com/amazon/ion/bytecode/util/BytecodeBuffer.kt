@@ -177,7 +177,7 @@ internal class BytecodeBuffer private constructor(
      * @param value the new bytecode instruction value
      * @throws IndexOutOfBoundsException if the index is out of range (index < 0 || index >= size())
      */
-    fun set(index: Int, value: Int) {
+    operator fun set(index: Int, value: Int) {
         if (index < 0 || index >= numberOfValues) {
             throw java.lang.IndexOutOfBoundsException()
         }
