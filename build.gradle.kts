@@ -285,7 +285,7 @@ tasks {
     shadowJar {
         val newLocation = "com.amazon.ion.shaded_.do_not_use"
         archiveClassifier.set("shaded")
-        dependsOn(generateManifest, generateLicenseReport)
+        dependsOn(generateManifest, generateLicenseReport, cyclonedxBom)
         from(generateLicenseReport.get().outputFolder)
         relocate("kotlin", "$newLocation.kotlin")
         relocate("org.jetbrains", "$newLocation.org.jetbrains")
