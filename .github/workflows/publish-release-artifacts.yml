@@ -56,9 +56,7 @@ jobs:
       - name: Build Release Artifacts
         run: ./gradlew cyclonedxBom build
       - name: Publish to Sonatype
-        run: ./gradlew publishToSonatype
-      - name: Close and Release Sonatype Staging Repository
-        run: ./gradlew closeAndReleaseSonatypeStagingRepository
+        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
       - name: Upload Artifacts to GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
