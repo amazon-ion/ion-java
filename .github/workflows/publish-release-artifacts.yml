@@ -54,7 +54,7 @@ jobs:
         with:
           validate-wrappers: true
       - name: Build Release Artifacts
-        run: ./gradlew build cyclonedxBom
+        run: ./gradlew cyclonedxBom build
       - name: Publish to Sonatype
         run: ./gradlew publishToSonatype
       - name: Close and Release Sonatype Staging Repository
