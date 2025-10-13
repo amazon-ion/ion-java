@@ -25,7 +25,7 @@ plugins {
     `maven-publish`
 
     // There are newer versions available, but they are not guaranteed to support Java 8.
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
 
     jacoco
     signing
@@ -604,7 +604,7 @@ publishing {
 }
 
 nexusPublishing {
-    // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v1.3.0/README.md
+    // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v2.0.0/README.md
     // Updated for Central Portal migration
     this.repositories {
         sonatype {
@@ -613,8 +613,8 @@ nexusPublishing {
             // For CI environments, the username and password should be stored in
             // ORG_GRADLE_PROJECT_sonatypeUsername and ORG_GRADLE_PROJECT_sonatypePassword respectively.
             if (!isCI) {
-                username.set(properties["ossrhUsername"].toString())
-                password.set(properties["ossrhPassword"].toString())
+                username.set(properties["ORG_GRADLE_PROJECT_sonatypeUsername"].toString())
+                password.set(properties["ORG_GRADLE_PROJECT_sonatypePassword"].toString())
             }
         }
     }
