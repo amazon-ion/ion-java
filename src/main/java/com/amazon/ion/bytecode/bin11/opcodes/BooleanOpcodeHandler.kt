@@ -14,6 +14,6 @@ internal object BooleanOpcodeHandler : OpcodeToBytecodeHandler {
         destination: BytecodeBuffer
     ): Int {
         BytecodeEmitter.emitBoolValue(destination, opcode == 0x6E)
-        return 1
+        return 0
     }
 }

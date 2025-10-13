@@ -2,45 +2,52 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.opcodes
 
+import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
+import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.util.byteToInt
+import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-
-private const val OPCODE_TRUE: Byte = 0x6e
-private const val OPCODE_FALSE: Byte = 0x6f
 
 class BooleanOpcodeHandlerTest {
 
     @Test
     fun `handler emits true bytecode for true opcode`() {
-        val byteArray: ByteArray = byteArrayOf(OPCODE_TRUE)
+        val byteArray: ByteArray = "6E".hexStringToByteArray()
         val buffer = BytecodeBuffer()
-        val bytesRead = BooleanOpcodeHandler.convertOpcodeToBytecode(
-            byteToInt(OPCODE_TRUE),
+
+        var position = 0
+        val opcode = byteArray[position++].unsignedToInt()
+        position += BooleanOpcodeHandler.convertOpcodeToBytecode(
+            opcode,
             byteArray,
-            0,
+            position,
             buffer
         )
-        val trueInstruction = Instructions.I_BOOL.packInstructionData(1)
-        assertEquals(trueInstruction, buffer.get(0))
-        assertEquals(1, bytesRead)
+
+        val expectedInstruction = Instructions.I_BOOL.packInstructionData(1)
+        assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
+        assertEquals(1, position)
     }
 
     @Test
     fun `handler emits false bytecode for false opcode`() {
-        val byteArray: ByteArray = byteArrayOf(OPCODE_FALSE)
+        val byteArray: ByteArray = "6F".hexStringToByteArray()
         val buffer = BytecodeBuffer()
-        val bytesRead = BooleanOpcodeHandler.convertOpcodeToBytecode(
-            byteToInt(OPCODE_FALSE),
+
+        var position = 0
+        val opcode = byteArray[position++].unsignedToInt()
+        position += BooleanOpcodeHandler.convertOpcodeToBytecode(
+            opcode,
             byteArray,
-            0,
+            position,
             buffer
         )
-        val falseInstruction = Instructions.I_BOOL.packInstructionData(0)
-        assertEquals(falseInstruction, buffer.get(0))
-        assertEquals(1, bytesRead)
+
+        val expectedInstruction = Instructions.I_BOOL.packInstructionData(0)
+        assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
+        assertEquals(1, position)
     }
 }

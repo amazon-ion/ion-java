@@ -15,6 +15,6 @@ internal object NullOpcodeHandler : OpcodeToBytecodeHandler {
         destination: BytecodeBuffer
     ): Int {
         BytecodeEmitter.emitNullValue(destination, IonType.NULL)
-        return 1
+        return 0
     }
 }

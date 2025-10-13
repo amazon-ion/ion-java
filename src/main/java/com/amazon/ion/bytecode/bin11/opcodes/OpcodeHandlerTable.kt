@@ -11,8 +11,8 @@ internal fun interface OpcodeToBytecodeHandler {
      * Given an opcode read off of an input containing binary Ion data and the surrounding context,
      * writes the representative bytecode to a [BytecodeBuffer].
      *
-     * @return The number of bytes that had to be read to handle this opcode, including the opcode itself
-     * and any additional bytes read off of [source]. Should always be at least 1.
+     * @return The number of additional bytes that had to be read off of [source] to handle this opcode. Should be zero
+     * if it was possible to handle the opcode without reading any additional data.
      */
     // TODO: this will also need to accept the constant pool, symbol table, and macro table for certain opcodes
     fun convertOpcodeToBytecode(
@@ -20,7 +20,7 @@ internal fun interface OpcodeToBytecodeHandler {
         opcode: Int,
         /** Byte buffer containing the source binary data, or a part of it */
         source: ByteArray,
-        /** The position in [source] of the current opcode - that is, `source[position] == opcode` */
+        /** The position of the next unread byte in [source] */
         position: Int,
         /** The destination bytecode buffer this handler is expected to write to */
         destination: BytecodeBuffer
@@ -45,6 +45,9 @@ internal object OpcodeHandlerTable {
 
     /**
      * Retrieves the appropriate [OpcodeToBytecodeHandler] for a given opcode.
+     *
+     * TODO: this costs an unnecessary function call for every opcode handled. The performance of this
+     *  vs. exposing the lookup table itself and accessing directly by index should be investigated.
      */
     fun handler(opcode: Int): OpcodeToBytecodeHandler = table[opcode]
 }

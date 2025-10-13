@@ -6,7 +6,7 @@ import com.amazon.ion.IonException
 import com.amazon.ion.IonType
 import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.util.byteToInt
+import com.amazon.ion.bytecode.util.unsignedToInt
 
 /**
  * Writes a typed null bytecode to the bytecode buffer. Handles opcode `0x8F`.
@@ -33,12 +33,12 @@ internal object TypedNullOpcodeHandler : OpcodeToBytecodeHandler {
         position: Int,
         destination: BytecodeBuffer
     ): Int {
-        val typeOperand = byteToInt(source[position + 1]) - 1
+        val typeOperand = source[position].unsignedToInt() - 1
         if (typeOperand < 0 || typeOperand >= typeTable.size) {
             throw IonException("Unsupported typed null")
         }
         val ionType = typeTable[typeOperand]
         BytecodeEmitter.emitNullValue(destination, ionType)
-        return 2
+        return 1
     }
 }
