@@ -613,8 +613,8 @@ nexusPublishing {
             // For CI environments, the username and password should be stored in
             // ORG_GRADLE_PROJECT_sonatypeUsername and ORG_GRADLE_PROJECT_sonatypePassword respectively.
             if (!isCI) {
-                username.set(properties["ORG_GRADLE_PROJECT_sonatypeUsername"].toString())
-                password.set(properties["ORG_GRADLE_PROJECT_sonatypePassword"].toString())
+                username.set(properties["ossrhUsername"].toString())
+                password.set(properties["ossrhPassword"].toString())
             }
         }
     }
