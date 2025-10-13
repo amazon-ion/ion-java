@@ -69,12 +69,21 @@ internal enum class InstructionInfo(
     PLACEHOLDER_TAGLESS(Operation.OP_PLACEHOLDER_TAGLESS, DataInfo.OPCODE),
     ARGUMENT_NONE(Operation.OP_ARGUMENT_NONE, DataInfo.NO_DATA),
     IVM(Operation.OP_IVM, DataInfo.IVM),
+    /** Contents of this directive in bytecode should be strings or symbols. */
     DIRECTIVE_SET_SYMBOLS(Operation.OP_DIRECTIVE_SET_SYMBOLS, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be strings or symbols. */
     DIRECTIVE_ADD_SYMBOLS(Operation.OP_DIRECTIVE_ADD_SYMBOLS, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be s-expressions containing name-template pairs. */
     DIRECTIVE_SET_MACROS(Operation.OP_DIRECTIVE_SET_MACROS, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be s-expressions containing name-template pairs. */
     DIRECTIVE_ADD_MACROS(Operation.OP_DIRECTIVE_ADD_MACROS, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be triples of name (string) version (int), and maxId (null or int). */
     DIRECTIVE_USE(Operation.OP_DIRECTIVE_USE, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should follow the module definition grammar. */
     DIRECTIVE_MODULE(Operation.OP_DIRECTIVE_MODULE, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be triples of bindingName (symbol), catalogName (string), and version (int). */
+    DIRECTIVE_IMPORT(Operation.OP_DIRECTIVE_IMPORT, DataInfo.NO_DATA),
+    /** Contents of this directive in bytecode should be symbols. */
     DIRECTIVE_ENCODING(Operation.OP_DIRECTIVE_ENCODING, DataInfo.NO_DATA),
     INVOKE(Operation.OP_INVOKE, DataInfo.MACRO_ID),
     REFILL(Operation.OP_REFILL, DataInfo.NO_DATA),

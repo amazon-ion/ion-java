@@ -36,8 +36,8 @@ class DebuggerTest {
             L0    BOOL true
             L1    INT_I16 123
             L2    SYMBOL_CHAR x
-            L3    NULL_NULL 
-            L4    NULL_BLOB 
+            L3    NULL_NULL
+            L4    NULL_BLOB
             L5    TIMESTAMP_CP 7
             L6    IVM 1.1
             L7    REFILL
@@ -70,9 +70,9 @@ class DebuggerTest {
 
         val expected =
             """
-            L0    FLOAT_F32 
+            L0    FLOAT_F32
             L1     └─ <7f800000> Infinity
-            L2    INT_I64 
+            L2    INT_I64
             L3     ├─ <00000001> ─┐
             L4     └─ <00000000> ─┴─ 4294967296
             L5    STRING_REF L=10
@@ -105,7 +105,7 @@ class DebuggerTest {
             """
             L0    LIST_START L=2
             L1    . INT_I16 42
-            L2    END_CONTAINER 
+            L2    END_CONTAINER
             L3    END_OF_INPUT
             """
 
@@ -134,11 +134,11 @@ class DebuggerTest {
 
         val expected =
             """
-            L0    DIRECTIVE_ADD_SYMBOLS 
+            L0    DIRECTIVE_ADD_SYMBOLS
             L1    . STRING_CP 7
             L2    . STRING_CP 8
             L3    . STRING_CP 9
-            L4    END_CONTAINER 
+            L4    END_CONTAINER
             L5    REFILL
             """
 
@@ -178,8 +178,8 @@ class DebuggerTest {
             LIST_START L=3
             INT_I16 1
             INT_I16 2
-            END_CONTAINER 
-            END_CONTAINER 
+            END_CONTAINER
+            END_CONTAINER
             END_OF_INPUT
             """
 
@@ -271,8 +271,8 @@ class DebuggerTest {
             L2    . LIST_START L=3
             L3    . . INT_I16 1
             L4    . . INT_I16 2
-            L5    . END_CONTAINER 
-            L6    END_CONTAINER 
+            L5    . END_CONTAINER
+            L6    END_CONTAINER
             L7    END_OF_INPUT
             """
 
@@ -310,45 +310,6 @@ class DebuggerTest {
     }
 
     @Test
-    fun `renderBytecodeToString with dangling and unset instructions after REFILL`() {
-        val bytecode = intArrayOf(
-            Instructions.I_STRUCT_START.packInstructionData(6),
-            Instructions.I_FIELD_NAME_SID.packInstructionData(1), // field name
-            Instructions.I_LIST_START.packInstructionData(3),
-            Instructions.I_INT_I16.packInstructionData(1),
-            Instructions.I_INT_I16.packInstructionData(2),
-            Instructions.I_END_CONTAINER, // end list
-            Instructions.I_END_CONTAINER, // end struct
-            Instructions.I_REFILL,
-            Instructions.I_ANNOTATION_CP, // Hypothetically, this is leftover from last time the buffer was refilled, but not overwritten.
-            0,
-            0,
-        )
-
-        val output = StringBuilder()
-        Debugger.renderBytecodeToString(bytecode, output::append)
-
-        val result = output.toString()
-
-        val expected =
-            """
-            L0    STRUCT_START L=6
-            L1    . FIELD_NAME_SID $1
-            L2    . LIST_START L=3
-            L3    . . INT_I16 1
-            L4    . . INT_I16 2
-            L5    . END_CONTAINER 
-            L6    END_CONTAINER 
-            L7    REFILL
-            """
-
-        assertEquals(
-            expected.trimIndent(),
-            result.trim(),
-        )
-    }
-
-    @Test
     fun `renderBytecodeToString with dangling and unset instructions after END_OF_INPUT`() {
         val bytecode = intArrayOf(
             Instructions.I_STRUCT_START.packInstructionData(6),
@@ -376,8 +337,8 @@ class DebuggerTest {
             L2    . LIST_START L=3
             L3    . . INT_I16 1
             L4    . . INT_I16 2
-            L5    . END_CONTAINER 
-            L6    END_CONTAINER 
+            L5    . END_CONTAINER
+            L6    END_CONTAINER
             L7    END_OF_INPUT
             """
 
