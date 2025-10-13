@@ -34,10 +34,10 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
-            0x8e        -> NullOpcodeHandler
-            0x8f        -> TypedNullOpcodeHandler
-            0x6e, 0x6f  -> BooleanOpcodeHandler
-            else        -> OpcodeToBytecodeHandler { _, _, _, _ ->
+            0x8e -> NullOpcodeHandler
+            0x8f -> TypedNullOpcodeHandler
+            0x6e, 0x6f -> BooleanOpcodeHandler
+            else -> OpcodeToBytecodeHandler { _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
             }
         }

@@ -3,9 +3,9 @@
 package com.amazon.ion.bytecode.bin11.opcodes
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
+import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
 import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
