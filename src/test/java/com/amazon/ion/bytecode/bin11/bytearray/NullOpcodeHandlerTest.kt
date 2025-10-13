@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package com.amazon.ion.bytecode.bin11.opcodes
+package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode

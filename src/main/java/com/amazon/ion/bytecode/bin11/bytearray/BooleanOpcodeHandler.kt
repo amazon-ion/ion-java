@@ -1,20 +1,19 @@
-package com.amazon.ion.bytecode.bin11.opcodes
+package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.IonType
 import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
 /**
- * Writes an untyped null bytecode to the bytecode buffer. Handles opcode `0x8E`.
+ * Writes a boolean bytecode to the bytecode buffer. Handles opcodes `0x6E` and `0x6F`.
  */
-internal object NullOpcodeHandler : OpcodeToBytecodeHandler {
+internal object BooleanOpcodeHandler : OpcodeToBytecodeHandler {
     override fun convertOpcodeToBytecode(
         opcode: Int,
         source: ByteArray,
         position: Int,
         destination: BytecodeBuffer
     ): Int {
-        BytecodeEmitter.emitNullValue(destination, IonType.NULL)
+        BytecodeEmitter.emitBoolValue(destination, opcode == 0x6E)
         return 0
     }
 }

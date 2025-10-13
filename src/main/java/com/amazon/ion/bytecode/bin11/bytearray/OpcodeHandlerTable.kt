@@ -1,4 +1,4 @@
-package com.amazon.ion.bytecode.bin11.opcodes
+package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
