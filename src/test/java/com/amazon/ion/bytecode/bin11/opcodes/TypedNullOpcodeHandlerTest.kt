@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.opcodes
 
 import com.amazon.ion.bytecode.ir.Instructions
@@ -70,7 +72,6 @@ class TypedNullOpcodeHandlerTest {
         typedNullTest(0x0c, Instructions.I_NULL_STRUCT)
     }
 
-
     fun typedNullTest(nextByte: Byte, expectedInstruction: Int) {
         val byteArray: ByteArray = byteArrayOf(OPCODE_TYPED_NULL, nextByte)
         val buffer = BytecodeBuffer()
@@ -83,5 +84,4 @@ class TypedNullOpcodeHandlerTest {
         assertEquals(expectedInstruction, buffer.get(0))
         assertEquals(2, bytesRead)
     }
-
 }

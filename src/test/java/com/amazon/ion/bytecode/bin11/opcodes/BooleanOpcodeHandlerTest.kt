@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.opcodes
 
 import com.amazon.ion.bytecode.ir.Instructions
@@ -41,5 +43,4 @@ class BooleanOpcodeHandlerTest {
         assertEquals(falseInstruction, buffer.get(0))
         assertEquals(1, bytesRead)
     }
-
 }

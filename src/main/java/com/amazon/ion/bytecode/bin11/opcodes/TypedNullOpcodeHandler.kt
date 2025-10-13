@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.opcodes
 
 import com.amazon.ion.IonException
@@ -32,7 +34,7 @@ internal object TypedNullOpcodeHandler : OpcodeToBytecodeHandler {
         destination: BytecodeBuffer
     ): Int {
         val typeOperand = byteToInt(source[position + 1]) - 1
-        if(typeOperand < 0 || typeOperand >= typeTable.size) {
+        if (typeOperand < 0 || typeOperand >= typeTable.size) {
             throw IonException("Unsupported typed null")
         }
         val ionType = typeTable[typeOperand]
