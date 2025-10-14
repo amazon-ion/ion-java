@@ -58,7 +58,9 @@ object BinaryPrimitiveReader {
     private fun ByteArray.getInt24(position: Int): Int {
         return (this[position].toInt() and 0xFF) or
             ((this[position + 1].toInt() and 0xFF) shl 8) or
-            ((this[position + 2].toInt() and 0xFF) shl 16)
+            // Shift left into 4th byte and then back down a byte here spreads the sign
+            // across high byte, which is needed for negatives
+            ((this[position + 2].toInt() and 0xFF) shl 24 shr 8)
     }
     @JvmStatic
     private fun ByteArray.getInt(position: Int): Int {
