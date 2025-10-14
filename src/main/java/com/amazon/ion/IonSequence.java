@@ -426,15 +426,15 @@ public interface IonSequence
      * </p>
      *
      * The implementation of {@link List<IonValue>} returned by this method
-     * implements {@link List#equals(Object)} and
-     * {@link List#equals(Object)} ()} per the specification of these methods.
+     * implements {@link List#equals} and {@link List#hashCode()}
+     * per the specification of these methods.
      * However, the existing implementation of {@link IonSequence} does not
      * provide a specification compliant {@link List#equals} and
-     * {@link List#hashCode()}} which results to the following caveats:
+     * {@link List#hashCode()} which results to the following caveats:
      *
      * Given:
      *
-     * <code>
+     * <pre> {@code
      * int[] ints = new int[] {1, 2, 3, 4};
      * IonList list = SYSTEM.newList(ints);
      * IonSexp sexp = SYSTEM.newSexp(ints)
@@ -444,7 +444,7 @@ public interface IonSequence
      * List<IonValue> dgrmSubList = sexp.subList(0, ints.size())
      * List<IonValue> arrayList = new ArrayList<IonValue>();
      * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
-     * </code>
+     * } </pre>
      *
      * {@link IonSequence#equals(Object)} always returns false when presented
      * with a non {@link IonSequence} instance of {@link List<IonValue>}.
@@ -457,7 +457,7 @@ public interface IonSequence
      * library we maintain backwards compatibility and support this behaviour
      * as-is.
      *
-     * <code>
+     * <pre> {@code
      * list.equals(listSubList)     // false
      * list.equals(sexpSubList)     // false
      * list.equals(dgrm)            // false
@@ -472,7 +472,7 @@ public interface IonSequence
      * dgrm.equals(sexpSubList)     // false
      * dgrm.equals(dgrmSubList)     // false
      * dgrm.equals(arrayList)       // false
-     *</code>
+     * } </pre>
      *
      * However, {@link IonSequence#subList(int, int)} was implemented much
      * later and faithfully implements {@link List#equals(Object)} meaning
@@ -483,7 +483,7 @@ public interface IonSequence
      * no notion of an {@link IonType}, annotations or nullability which
      * allows for compliance with the {@link List} specification.
      *
-     * <code>
+     * <pre> {@code
      * listSubList.equals(listSubList); // true
      * listSubList.equals(sexpSubList); // true
      * listSubList.equals(dgrmSubList); // true
@@ -504,7 +504,7 @@ public interface IonSequence
      * dgrmSubList.equals(list);        // true
      * dgrmSubList.equals(sexp);        // true
      * dgrmSubList.equals(arrayList);   // true
-     * </code>
+     * } </pre>
      *
      * @see List#subList(int, int)
      */
@@ -566,4 +566,60 @@ public interface IonSequence
 
     public IonSequence clone()
         throws UnknownSymbolException;
+
+    /**
+     * The existing implementation of {@link IonSequence} does not
+     * provide a specification-compliant {@link List#equals} and
+     * {@link List#hashCode()}. If you want a symmetric {@code equals} then
+     * use a {@link IonSequence#subList(int, int)} view of the sequence.
+     * <p>
+     * The non-compliant {@code equals} implementation of {@link IonSequence}
+     * results to the following caveats:
+     * <p>
+     * Given:
+     *
+     * <pre> {@code
+     * int[] ints = new int[] {1, 2, 3, 4};
+     * IonList list = SYSTEM.newList(ints);
+     * IonSexp sexp = SYSTEM.newSexp(ints)
+     * IonSexp dgrm = SYSTEM.newDatagram(ints)
+     * List<IonValue> listSubList = list.subList(0, ints.size())
+     * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
+     * List<IonValue> dgrmSubList = sexp.subList(0, ints.size())
+     * List<IonValue> arrayList = new ArrayList<IonValue>();
+     * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
+     * } </pre>
+     *
+     * {@link IonSequence#equals(Object)} always returns false when presented
+     * with a non {@link IonSequence} instance of {@link List<IonValue>}.
+     * Hence, the following invocations of {@link Object#equals(Object)}
+     * return false even if the contained elements are equivalent.  This
+     * means that {@link Object#equals(Object)} is not symmetric in these
+     * cases.  The reason for the asymmetry is historical:
+     * {@link IonSequence} has long violated the contract outlined by the
+     * {@link List} documentation.  For the current major version of this
+     * library we maintain backwards compatibility and support this behaviour
+     * as-is.
+     *
+     * <pre> {@code
+     * list.equals(listSubList)     // false
+     * list.equals(sexpSubList)     // false
+     * list.equals(dgrm)            // false
+     * list.equals(arrayList)       // false
+     *
+     * sexp.equals(listSubList)     // false
+     * sexp.equals(sexpSubList)     // false
+     * sexp.equals(dgrm)            // false
+     * sexp.equals(arrayList)       // false
+     *
+     * dgrm.equals(listSubList)     // false
+     * dgrm.equals(sexpSubList)     // false
+     * dgrm.equals(dgrmSubList)     // false
+     * dgrm.equals(arrayList)       // false
+     * } </pre>
+     *
+     * @param other the object to be compared for equality with this list
+     * @return {@code true} if the specified object is equal to this list
+     */
+    boolean equals(Object other);
 }
