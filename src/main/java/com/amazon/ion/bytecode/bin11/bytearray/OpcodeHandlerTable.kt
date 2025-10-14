@@ -17,7 +17,6 @@ internal fun interface OpcodeToBytecodeHandler {
      * @return The number of additional bytes that had to be read off of [source] to handle this opcode. Should be zero
      * if it was possible to handle the opcode without reading any additional data.
      */
-    // TODO: this will also need to accept the constant pool, symbol table, and macro table for certain opcodes
     fun convertOpcodeToBytecode(
         /** The opcode to handle */
         opcode: Int,
