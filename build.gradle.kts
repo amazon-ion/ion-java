@@ -553,7 +553,7 @@ tasks {
     publish { dependsOn(minifyTest) }
 
     withType<Sign> {
-        setOnlyIf { isReleaseVersion && gradle.taskGraph.hasTask(":publish") }
+        setOnlyIf { isReleaseVersion && (gradle.taskGraph.hasTask(":publish") || gradle.taskGraph.hasTask(":publishToSonatype")) }
     }
 
     cyclonedxBom {
