@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt16AsShort
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt24AsInt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt32AsInt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt8AsShort
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsLong
 import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -23,18 +27,29 @@ internal object FixedIntOpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         val fixedIntLength = opcode and 0xF
         when (fixedIntLength) {
+            // We are already doing the branching here to figure out which kind of instruction to write, we might
+            // as well have some helper functions to read the exact length of the FixedInt. Note that for short,
+            // `1 -> ..., 2 -> ...` is the same amount of conditionals as `in 1..2 -> ...` and similar for int.
             0 -> BytecodeEmitter.emitInt16Value(destination, 0)
-            in 1..2 -> BytecodeEmitter.emitInt16Value(
+            1 -> BytecodeEmitter.emitInt16Value(
                 destination,
-                readFixedIntAt(source, position, fixedIntLength).toShort()
+                readFixedInt8AsShort(source, position)
             )
-            in 3..4 -> BytecodeEmitter.emitInt32Value(
+            2 -> BytecodeEmitter.emitInt16Value(
                 destination,
-                readFixedIntAt(source, position, fixedIntLength).toInt()
+                readFixedInt16AsShort(source, position)
             )
-            in 5..8 -> BytecodeEmitter.emitInt64Value(
+            3 -> BytecodeEmitter.emitInt32Value(
                 destination,
-                readFixedIntAt(source, position, fixedIntLength)
+                readFixedInt24AsInt(source, position)
+            )
+            4 -> BytecodeEmitter.emitInt32Value(
+                destination,
+                readFixedInt32AsInt(source, position)
+            )
+            else -> BytecodeEmitter.emitInt64Value(
+                destination,
+                readFixedIntAsLong(source, position, fixedIntLength)
             )
         }
         return fixedIntLength

@@ -53,6 +53,13 @@ import java.nio.ByteBuffer
 object BinaryPrimitiveReader {
 
     @JvmStatic
+    private fun ByteArray.getShort(position: Int): Short {
+        return (
+            (this[position].toInt() and 0xFF) or
+                ((this[position + 1].toInt() and 0xFF) shl 8)
+            ).toShort()
+    }
+    @JvmStatic
     private fun ByteArray.getInt(position: Int): Int {
         return (this[position].toInt() and 0xFF) or
             ((this[position + 1].toInt() and 0xFF) shl 8) or
@@ -72,7 +79,37 @@ object BinaryPrimitiveReader {
     }
 
     @JvmStatic
-    fun readFixedIntAt(source: ByteArray, start: Int, length: Int): Long {
+    fun readFixedInt8AsShort(source: ByteArray, start: Int): Short {
+        if (source.size < start + 1) throw IonException("Incomplete data: start=$start, length=${1}, limit=${source.size}")
+        return source[start].toShort()
+    }
+
+    @JvmStatic
+    fun readFixedInt16AsShort(source: ByteArray, start: Int): Short {
+        if (source.size < start + 2) throw IonException("Incomplete data: start=$start, length=${2}, limit=${source.size}")
+        return source.getShort(start)
+    }
+
+    @JvmStatic
+    fun readFixedInt24AsInt(source: ByteArray, start: Int): Int {
+        if (source.size < start + 3) throw IonException("Incomplete data: start=$start, length=${3}, limit=${source.size}")
+        return source.getInt(start - 1) shr 8
+    }
+
+    @JvmStatic
+    fun readFixedInt32AsInt(source: ByteArray, start: Int): Int {
+        if (source.size < start + 4) throw IonException("Incomplete data: start=$start, length=${4}, limit=${source.size}")
+        return source.getInt(start)
+    }
+
+    @JvmStatic
+    fun readFixedIntAsInt(source: ByteArray, start: Int, length: Int): Int {
+        if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
+        return (source.getInt(start - 4 + length) shr ((4 - length) * 8))
+    }
+
+    @JvmStatic
+    fun readFixedIntAsLong(source: ByteArray, start: Int, length: Int): Long {
         if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
         if (length > 4) {
             // TODO: See if we can simplify some of the calculations
@@ -371,7 +408,7 @@ object BinaryPrimitiveReader {
                 val numBytes = source[position + 1].countTrailingZeroBits() + 9
                 when (numBytes) {
                     9 -> {
-                        val value = readFixedIntAt(source, position + 1, 8)
+                        val value = readFixedIntAsLong(source, position + 1, 8)
                         value shr 1
                     }
                     10 -> {
