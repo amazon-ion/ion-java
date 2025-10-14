@@ -56,7 +56,16 @@ jobs:
       - name: Build Release Artifacts
         run: ./gradlew cyclonedxBom build
       - name: Publish to Sonatype
-        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+        run: |
+          SIGN_CREDS=$(aws secretsmanager get-secret-value --secret-id signing-credentials --query SecretString --output text)
+          SIGNING_KEY_ID=$(echo "$SIGN_CREDS" | jq -r '.id')
+          SIGNING_PASSWORD=$(echo "$SIGN_CREDS" | jq -r '.passphrase')
+          SIGNING_KEY_JSON=$(aws secretsmanager get-secret-value --secret-id signing-key --query SecretString --output text)
+          SIGNING_KEY=$(echo "$SIGNING_KEY_JSON" | jq -r '.secret')
+          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository \
+            -PsigningKeyId="$SIGNING_KEY_ID" \
+            -PsigningKey="$SIGNING_KEY" \
+            -PsigningPassword="$SIGNING_PASSWORD"
       - name: Upload Artifacts to GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
