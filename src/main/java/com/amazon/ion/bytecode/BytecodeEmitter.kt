@@ -42,4 +42,28 @@ internal object BytecodeEmitter {
     fun emitBoolValue(destination: BytecodeBuffer, bool: Boolean) {
         destination.add(Instructions.I_BOOL.packInstructionData(if (bool) 1 else 0))
     }
+
+    @JvmStatic
+    fun emitInt16Value(destination: BytecodeBuffer, int16: Short) {
+        // The unused portion of the data region of the instruction will be filled with the sign
+        // of this int16.
+        // For positive int16, the high 6 bits of the data region of the instruction will be 0.
+        // For negative int16, the high 6 bits of the data region of the instruction will be 1.
+        // This does not matter, since a call to .toShort() on the int value of the instruction data
+        // will truncate the high 16 bits and return the correct value either way. Therefore, we don't
+        // have to do `int16.toInt() and 0xFFFF` or similar here, or when we read the short back out of the
+        // instruction with Instructions.getData(...).toShort().
+        destination.add(Instructions.I_INT_I16.packInstructionData(int16.toInt()))
+    }
+
+    @JvmStatic
+    fun emitInt32Value(destination: BytecodeBuffer, int32: Int) {
+        destination.add2(Instructions.I_INT_I32, int32)
+    }
+
+    @JvmStatic
+    fun emitInt64Value(destination: BytecodeBuffer, int64: Long) {
+        // Stores high 4 bytes in first operand, low 4 bytes in the second operand
+        destination.add3(Instructions.I_INT_I64, (int64 ushr 32).toInt(), int64.toInt())
+    }
 }
