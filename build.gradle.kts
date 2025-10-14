@@ -631,12 +631,12 @@ signing {
         val signingKeyId: String? by project
         val signingKey: String? by project
         val signingPassword: String? by project
-        
+
         logger.lifecycle("DEBUG: isCI = $isCI")
         logger.lifecycle("DEBUG: signingKeyId = ${if (signingKeyId.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
         logger.lifecycle("DEBUG: signingKey = ${if (signingKey.isNullOrEmpty()) "NULL/EMPTY" else "SET (${signingKey?.length} chars)"}")
         logger.lifecycle("DEBUG: signingPassword = ${if (signingPassword.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
-        
+
         useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     }
 
