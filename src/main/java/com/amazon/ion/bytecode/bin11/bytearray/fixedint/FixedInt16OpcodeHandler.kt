@@ -24,7 +24,7 @@ internal object FixedInt16OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitInt16Value(
             destination,
-            readFixedInt16AsShort(source, position)
+            source.readFixedInt16AsShort(position)
         )
         return 2
     }

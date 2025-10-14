@@ -82,43 +82,43 @@ object BinaryPrimitiveReader {
     }
 
     @JvmStatic
-    fun readFixedInt8AsShort(source: ByteArray, start: Int): Short {
-        if (source.size < start + 1) throw IonException("Incomplete data: start=$start, length=${1}, limit=${source.size}")
-        return source[start].toShort()
+    fun ByteArray.readFixedInt8AsShort(start: Int): Short {
+        if (this.size < start + 1) throw IonException("Incomplete data: start=$start, length=${1}, limit=${this.size}")
+        return this[start].toShort()
     }
 
     @JvmStatic
-    fun readFixedInt16AsShort(source: ByteArray, start: Int): Short {
-        if (source.size < start + 2) throw IonException("Incomplete data: start=$start, length=${2}, limit=${source.size}")
-        return source.getShort(start)
+    fun ByteArray.readFixedInt16AsShort(start: Int): Short {
+        if (this.size < start + 2) throw IonException("Incomplete data: start=$start, length=${2}, limit=${this.size}")
+        return this.getShort(start)
     }
 
     @JvmStatic
-    fun readFixedInt24AsInt(source: ByteArray, start: Int): Int {
-        if (source.size < start + 3) throw IonException("Incomplete data: start=$start, length=${3}, limit=${source.size}")
-        return source.getInt24(start)
+    fun ByteArray.readFixedInt24AsInt(start: Int): Int {
+        if (this.size < start + 3) throw IonException("Incomplete data: start=$start, length=${3}, limit=${this.size}")
+        return this.getInt24(start)
     }
 
     @JvmStatic
-    fun readFixedInt32AsInt(source: ByteArray, start: Int): Int {
-        if (source.size < start + 4) throw IonException("Incomplete data: start=$start, length=${4}, limit=${source.size}")
-        return source.getInt(start)
+    fun ByteArray.readFixedInt32AsInt(start: Int): Int {
+        if (this.size < start + 4) throw IonException("Incomplete data: start=$start, length=${4}, limit=${this.size}")
+        return this.getInt(start)
     }
 
     @JvmStatic
-    fun readFixedIntAsInt(source: ByteArray, start: Int, length: Int): Int {
-        if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
-        return (source.getInt(start - 4 + length) shr ((4 - length) * 8))
+    fun ByteArray.readFixedIntAsInt(start: Int, length: Int): Int {
+        if (this.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${this.size}")
+        return (this.getInt(start - 4 + length) shr ((4 - length) * 8))
     }
 
     @JvmStatic
-    fun readFixedIntAsLong(source: ByteArray, start: Int, length: Int): Long {
-        if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
+    fun ByteArray.readFixedIntAsLong(start: Int, length: Int): Long {
+        if (this.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${this.size}")
         if (length > 4) {
             // TODO: See if we can simplify some of the calculations
-            return source.getLong(start - 8 + length) shr ((8 - length) * 8)
+            return this.getLong(start - 8 + length) shr ((8 - length) * 8)
         } else {
-            return (source.getInt(start - 4 + length) shr ((4 - length) * 8)).toLong()
+            return (this.getInt(start - 4 + length) shr ((4 - length) * 8)).toLong()
         }
     }
 

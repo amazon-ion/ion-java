@@ -3,6 +3,12 @@
 package com.amazon.ion.bytecode
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt16AsShort
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt24AsInt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt32AsInt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt8AsShort
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsInt
+import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsLong
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -30,7 +36,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedInt8AsShort(expectedValue: Short, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedInt8AsShort(data, 4)
+        val value = data.readFixedInt8AsShort(4)
 
         assertEquals(expectedValue, value)
     }
@@ -50,7 +56,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedInt16AsShort(expectedValue: Short, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedInt16AsShort(data, 4)
+        val value = data.readFixedInt16AsShort(4)
 
         assertEquals(expectedValue, value)
     }
@@ -67,7 +73,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedInt24AsInt(expectedValue: Int, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedInt24AsInt(data, 4)
+        val value = data.readFixedInt24AsInt(4)
 
         assertEquals(expectedValue, value)
     }
@@ -84,7 +90,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedInt32AsInt(expectedValue: Int, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedInt32AsInt(data, 4)
+        val value = data.readFixedInt32AsInt(4)
 
         assertEquals(expectedValue, value)
     }
@@ -128,7 +134,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedIntAsInt(expectedValue: Int, length: Int, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedIntAsInt(data, 4, length)
+        val value = data.readFixedIntAsInt(4, length)
 
         assertEquals(expectedValue, value)
     }
@@ -188,7 +194,7 @@ class BinaryPrimitiveReaderTest {
     fun testReadFixedIntAsLong(expectedValue: Long, length: Int, input: String) {
         val data = "00 00 00 00 $input".hexStringToByteArray()
 
-        val value = BinaryPrimitiveReader.readFixedIntAsLong(data, 4, length)
+        val value = data.readFixedIntAsLong(4, length)
 
         assertEquals(expectedValue, value)
     }

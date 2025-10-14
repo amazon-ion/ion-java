@@ -25,7 +25,7 @@ internal object FixedLongIntOpcodeHandler : OpcodeToBytecodeHandler {
         val fixedIntLength = opcode and 0xF
         BytecodeEmitter.emitInt64Value(
             destination,
-            readFixedIntAsLong(source, position, fixedIntLength)
+            source.readFixedIntAsLong(position, fixedIntLength)
         )
         return fixedIntLength
     }
