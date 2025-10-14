@@ -4,6 +4,12 @@ package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt0OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt16OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt24OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt32OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt8OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedLongIntOpcodeHandler
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -36,17 +42,19 @@ class FixedIntOpcodeHandlerTest {
         "62 7F FF, 2,   -129", // length boundary
         "62 00 80, 2, -32768", // min value
     )
-    fun testI16EmittingFixedInt(
+    fun testI16EmittingFixedIntHandlers(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt16: Short
     ) {
+        val handlersByBytesRead = arrayOf(FixedInt0OpcodeHandler, FixedInt8OpcodeHandler, FixedInt16OpcodeHandler)
+
         val inputByteArray: ByteArray = "E0 01 01 EA $inputString".hexStringToByteArray()
         val buffer = BytecodeBuffer()
 
         var position = 4 // skip the IVM
         val opcode = inputByteArray[position++].unsignedToInt()
-        position += FixedIntOpcodeHandler.convertOpcodeToBytecode(
+        position += handlersByBytesRead[expectedBytesRead].convertOpcodeToBytecode(
             opcode,
             inputByteArray,
             position,
@@ -84,17 +92,19 @@ class FixedIntOpcodeHandlerTest {
         "64 FF FF 7F FF, 4,         -8388609", // length boundary
         "64 00 00 00 80, 4, ${Int.MIN_VALUE}", // min value
     )
-    fun testI32EmittingFixedInt(
+    fun testI32EmittingFixedIntHandlers(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt32: Int
     ) {
+        val handlersByBytesRead = arrayOf(FixedInt24OpcodeHandler, FixedInt32OpcodeHandler)
+
         val inputByteArray: ByteArray = "E0 01 01 EA $inputString".hexStringToByteArray()
         val buffer = BytecodeBuffer()
 
         var position = 4 // skip the IVM
         val opcode = inputByteArray[position++].unsignedToInt()
-        position += FixedIntOpcodeHandler.convertOpcodeToBytecode(
+        position += handlersByBytesRead[expectedBytesRead - 3].convertOpcodeToBytecode(
             opcode,
             inputByteArray,
             position,
@@ -141,7 +151,7 @@ class FixedIntOpcodeHandlerTest {
         "68 FF FF FF FF FF FF 7F FF, 8, -36028797018963969", // length boundary
         "68 00 00 00 00 00 00 00 80, 8,  ${Long.MIN_VALUE}", // min value
     )
-    fun testI64EmittingFixedInt(
+    fun testI64EmittingFixedIntHandler(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt64: Long
@@ -151,7 +161,7 @@ class FixedIntOpcodeHandlerTest {
 
         var position = 4 // skip the IVM
         val opcode = inputByteArray[position++].unsignedToInt()
-        position += FixedIntOpcodeHandler.convertOpcodeToBytecode(
+        position += FixedLongIntOpcodeHandler.convertOpcodeToBytecode(
             opcode,
             inputByteArray,
             position,

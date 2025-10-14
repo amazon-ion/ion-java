@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt0OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt16OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt24OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt32OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt8OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedLongIntOpcodeHandler
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
@@ -54,6 +60,12 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
+            0x60 -> FixedInt0OpcodeHandler
+            0x61 -> FixedInt8OpcodeHandler
+            0x62 -> FixedInt16OpcodeHandler
+            0x63 -> FixedInt24OpcodeHandler
+            0x64 -> FixedInt32OpcodeHandler
+            in 0x65..0x68 -> FixedLongIntOpcodeHandler
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
