@@ -5,6 +5,7 @@ package com.amazon.ion.bytecode.bin11.bytearray
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
 import com.amazon.ion.bytecode.bin11.bytearray.float.DoubleOpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.float.Float0OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.float.Float16OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.float.Float32OpcodeHandler
 import com.amazon.ion.bytecode.ir.Instructions
@@ -12,6 +13,7 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.ConstantPool
 import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import kotlin.String
@@ -19,6 +21,29 @@ import kotlin.String
 class FloatOpcodeHandlerTest {
     // In these tests, we check the float values themselves written to the bytecode buffer as well as the raw bits
     // on the floats to ensure that NaN semantics are preserved.
+
+    @Test
+    fun `float0 opcode handler emits correct bytecode`() {
+        val inputByteArray: ByteArray = "6A".hexStringToByteArray()
+        val buffer = BytecodeBuffer()
+
+        var position = 0
+        val opcode = inputByteArray[position++].unsignedToInt()
+        position += Float0OpcodeHandler.convertOpcodeToBytecode(
+            opcode,
+            inputByteArray,
+            position,
+            buffer,
+            ConstantPool(0),
+            intArrayOf(),
+            intArrayOf(),
+            arrayOf()
+        )
+
+        val expectedBytecode = intArrayOf(Instructions.I_FLOAT_F32, 0)
+        assertEqualBytecode(expectedBytecode, buffer.toArray())
+        assertEquals(1, position)
+    }
 
     @ParameterizedTest
     @CsvSource(
