@@ -627,22 +627,16 @@ signing {
     // not present in gradle.properties.
     isRequired = isReleaseVersion
     sign(publishing.publications["IonJava"])
-    
-    gradle.taskGraph.whenReady {
-        if (isCI && hasTask(":signIonJavaPublication")) {
-            val signingKeyId: String? by project
-            val signingKey: String? by project
-            val signingPassword: String? by project
-            
-            logger.info("Configuring signing keys for task execution")
-            logger.lifecycle("DEBUG: signingKeyId = ${if (signingKeyId.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
-            logger.lifecycle("DEBUG: signingKey = ${if (signingKey.isNullOrEmpty()) "NULL/EMPTY" else "SET (${signingKey?.length} chars)"}")
-            logger.lifecycle("DEBUG: signingPassword = ${if (signingPassword.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
-            
-            if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
-                useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-                logger.info("Configured in-memory PGP keys for signing")
-            }
+}
+
+afterEvaluate {
+    if (isCI) {
+        val signingKeyId: String? by project
+        val signingKey: String? by project
+        val signingPassword: String? by project
+        
+        if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
+            signing.useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
         }
     }
 }
