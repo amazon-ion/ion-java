@@ -97,8 +97,7 @@ internal fun readTimestampReference(valueBytes: ByteArray, position: Int, length
             offset
         )
     } catch (e: IllegalArgumentException) {
-        println("Timestamp starting at $position")
-        throw IonException("Illegal timestamp encoding. ", e)
+        throw IonException("Illegal timestamp encoding at $position.", e)
     }
 }
 

@@ -22,10 +22,10 @@ class TypeIdHelperTest {
         "0x31, INT",
         "0x3F, INT",
         "0x40, FLOAT",
-        "0x4F, FLOAT",
+        "0x48, FLOAT",
         "0x50, DECIMAL",
         "0x5F, DECIMAL",
-        "0x60, TIMESTAMP",
+        "0x63, TIMESTAMP",
         "0x6F, TIMESTAMP",
         "0x70, SYMBOL",
         "0x7F, SYMBOL",
@@ -72,12 +72,12 @@ class TypeIdHelperTest {
         "0x3E, INT",
         "0x3F, INT",
         "0x40, FLOAT",
-        "0x4E, FLOAT",
+        "0x48, FLOAT",
         "0x4F, FLOAT",
         "0x50, DECIMAL",
         "0x5E, DECIMAL",
         "0x5F, DECIMAL",
-        "0x60, TIMESTAMP",
+        "0x63, TIMESTAMP",
         "0x6E, TIMESTAMP",
         "0x6F, TIMESTAMP",
         "0x70, SYMBOL",
@@ -103,7 +103,7 @@ class TypeIdHelperTest {
         "0xDE, STRUCT",
         "0xDF, STRUCT",
         "0xE0, IVM",
-        "0xE1, ANNOTATIONS",
+        "0xE3, ANNOTATIONS",
         "0xEE, ANNOTATIONS"
     )
     fun testOperationKindForTypeId(typeId: Int, expectedOperationKind: String) {
@@ -129,7 +129,8 @@ class TypeIdHelperTest {
         "0x2E, -1", // VarUInt follows
         "0x2F, 0", // NULL (length 0)
         "0xE0, 3", // IVM (3 bytes after typeId)
-        "0xE1, 1", // Annotations (length 1)
+        "0xE1, -2", // Reserved (invalid)
+        "0xE3, 3", // Annotations (length 3)
         "0xEE, -1", // Annotations (VarUInt follows)
         "0xEF, -2", // Reserved (invalid)
         "0xF0, -2", // Reserved (invalid)
