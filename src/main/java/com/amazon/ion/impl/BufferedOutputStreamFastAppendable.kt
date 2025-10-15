@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl
 
-import com.amazon.ion.impl.bin.*
-import com.amazon.ion.util.*
+import com.amazon.ion.impl.bin.Block
+import com.amazon.ion.impl.bin.BlockAllocator
+import com.amazon.ion.util._Private_FastAppendable
 import java.io.OutputStream
 
 /**
