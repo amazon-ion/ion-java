@@ -4,6 +4,7 @@ package com.amazon.ion.bytecode.bin10
 
 import com.amazon.ion.IonType
 import com.amazon.ion.bytecode.ir.OperationKind
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 internal object TypeIdHelper {
 
@@ -68,11 +69,15 @@ internal object TypeIdHelper {
      * A lookup table containing the value length for Ion 1.0 type IDs.
      * A value of -1 indicates that the length follows as a `VarUInt`.
      * A value of -2 indicates that the typeId is not a valid Ion 1.0 typeId.
+     *
+     * TODO(perf): If there's not a noticeable amount of overhead, we should hide this behind a method instead of
+     *     exposing it directly and suppressing the spotbugs error.
      */
-//    @JvmStatic
-    val TYPE_LENGTHS by lazy { IntArray(256) { initTypeLength(it) } }
+    @JvmStatic
+    @get:SuppressFBWarnings("MS_EXPOSE_REP", justification = "it is exposed for internal use only as a performance optimization")
+    val TYPE_LENGTHS = IntArray(256) { initTypeLength(it) }
 
-//    @JvmStatic
+    @JvmStatic
     @OptIn(ExperimentalStdlibApi::class)
     private fun initTypeLength(typeId: Int): Int {
         return when (typeId) {

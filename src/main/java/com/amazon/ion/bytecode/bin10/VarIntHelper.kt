@@ -42,6 +42,7 @@ object VarIntHelper {
         var length = 2
         do {
             length++
+            if (length > 7) throw IonException("VarUInt value is too large")
             currentByte = source.get(p++).toInt()
             result = (result shl 7) or (currentByte and MASK_7_BITS).toLong()
         } while (currentByte and TERMINATION_BIT_MASK == 0)
@@ -63,6 +64,7 @@ object VarIntHelper {
             val sign = getSignumValueFromVarIntSignBit(currentByte)
             while (currentByte and TERMINATION_BIT_MASK == 0) {
                 length++
+                if (length > 7) throw IonException("VarInt value is too large")
                 currentByte = source[p++].toInt()
                 result = (result shl 7) or (currentByte and MASK_7_BITS).toLong()
             }

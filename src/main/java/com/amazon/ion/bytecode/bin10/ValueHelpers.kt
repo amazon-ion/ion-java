@@ -14,6 +14,8 @@ import kotlin.experimental.and
  * This uses some clever bit twiddling to avoid any branching.
  *
  * (Yes, it's obtuse looking, but it works.)
+ *
+ * TODO(perf): Once reader is implemented enough for benchmarks, benchmark this vs using if/else.
  */
 internal fun signForIntTypeId(typeId: Int): Int = (((typeId shr 4) shl 31) shr 31) or 1
 
