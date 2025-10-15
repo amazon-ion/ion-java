@@ -637,19 +637,14 @@ signing {
         logger.lifecycle("DEBUG: signingKey = ${if (signingKey.isNullOrEmpty()) "NULL/EMPTY" else "SET (${signingKey?.length} chars)"}")
         logger.lifecycle("DEBUG: signingPassword = ${if (signingPassword.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
 
-        try {
+        if (signingKeyId.isNullOrEmpty() || signingKey.isNullOrEmpty() || signingPassword.isNullOrEmpty()) {
+            logger.info("Skipping useInMemoryPgpKeys() due to missing credentials")
+        } else {
             useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-            logger.lifecycle("DEBUG: useInMemoryPgpKeys() succeeded")
-        } catch (e: Exception) {
-            logger.lifecycle("DEBUG: useInMemoryPgpKeys() failed: ${e.message}")
+            logger.info("useInMemoryPgpKeys() called successfully")
         }
     }
 
-    try {
-        logger.lifecycle("DEBUG: Attempting to sign publication 'IonJava'")
-        sign(publishing.publications["IonJava"])
-        logger.lifecycle("DEBUG: sign() call succeeded")
-    } catch (e: Exception) {
-        logger.lifecycle("DEBUG: sign() call failed: ${e.message}")
-    }
+    sign(publishing.publications["IonJava"])
+    logger.lifecycle("DEBUG: sign() called")
 }
