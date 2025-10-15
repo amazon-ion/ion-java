@@ -637,11 +637,11 @@ signing {
         logger.lifecycle("DEBUG: signingKey = ${if (signingKey.isNullOrEmpty()) "NULL/EMPTY" else "SET (${signingKey?.length} chars)"}")
         logger.lifecycle("DEBUG: signingPassword = ${if (signingPassword.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
 
-        if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
-            useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-            logger.lifecycle("DEBUG: useInMemoryPgpKeys() called successfully")
+        if (signingKeyId.isNullOrEmpty() || signingKey.isNullOrEmpty() || signingPassword.isNullOrEmpty()) {
+            logger.info("Skipping useInMemoryPgpKeys() due to missing credentials")
         } else {
-            logger.lifecycle("DEBUG: Skipping useInMemoryPgpKeys() due to missing credentials")
+            useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+            logger.info("useInMemoryPgpKeys() called successfully")
         }
     }
 
