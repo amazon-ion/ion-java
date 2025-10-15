@@ -635,7 +635,9 @@ afterEvaluate {
         val signingKey: String? by project
         val signingPassword: String? by project
 
-        if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
+        if (signingKeyId.isNullOrEmpty() || signingKey.isNullOrEmpty() || signingPassword.isNullOrEmpty()) {
+            logger.lifecycle("signing credentials unavailable; build artifacts will not be signed")
+        } else {
             signing.useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
         }
     }
