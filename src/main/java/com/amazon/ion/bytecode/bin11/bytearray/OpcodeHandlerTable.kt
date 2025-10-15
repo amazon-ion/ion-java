@@ -8,6 +8,10 @@ import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt24OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt32OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt8OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedLongIntOpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.float.DoubleOpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.float.Float0OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.float.Float16OpcodeHandler
+import com.amazon.ion.bytecode.bin11.bytearray.float.Float32OpcodeHandler
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
@@ -66,6 +70,10 @@ internal object OpcodeHandlerTable {
             0x63 -> FixedInt24OpcodeHandler
             0x64 -> FixedInt32OpcodeHandler
             in 0x65..0x68 -> FixedLongIntOpcodeHandler
+            0x6a -> Float0OpcodeHandler
+            0x6b -> Float16OpcodeHandler
+            0x6c -> Float32OpcodeHandler
+            0x6d -> DoubleOpcodeHandler
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
