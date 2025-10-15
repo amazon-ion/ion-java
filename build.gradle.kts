@@ -634,7 +634,7 @@ afterEvaluate {
         val signingKeyId: String? by project
         val signingKey: String? by project
         val signingPassword: String? by project
-        
+
         if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
             signing.useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
         }
