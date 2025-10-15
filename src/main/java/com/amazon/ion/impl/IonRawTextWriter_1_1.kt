@@ -17,6 +17,7 @@ import com.amazon.ion.ion_1_1.TaglessScalarType
 import com.amazon.ion.printTimestamp
 import com.amazon.ion.system.IonTextWriterBuilder
 import com.amazon.ion.util.IonTextUtils
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.io.OutputStream
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -32,9 +33,12 @@ import java.util.function.Consumer
  *  - To make it easier to concatenate streams, this eagerly emits a top-level separator after each top-level syntax item.
  */
 class IonRawTextWriter_1_1 internal constructor(
-    private val options: _Private_IonTextWriterBuilder,
+    options: _Private_IonTextWriterBuilder,
+    @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "We're intentionally storing a reference to a mutable object because we need to write to it.")
     private val output: _Private_IonTextAppender,
 ) : IonRawWriter_1_1 {
+
+    private val options = options.immutable()
 
     private inline fun confirm(condition: Boolean, lazyMessage: () -> String) {
         if (!condition) {

@@ -5,6 +5,7 @@ package com.amazon.ion.impl
 import com.amazon.ion.impl.bin.Block
 import com.amazon.ion.impl.bin.BlockAllocator
 import com.amazon.ion.util._Private_FastAppendable
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.io.OutputStream
 
 /**
@@ -27,6 +28,7 @@ import java.io.OutputStream
  * @see OutputStreamFastAppendable
  */
 internal class BufferedOutputStreamFastAppendable(
+    @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "We're intentionally storing a reference to a mutable object because we need to write to it.")
     private val out: OutputStream,
     private val allocator: BlockAllocator,
     /**
