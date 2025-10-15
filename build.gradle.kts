@@ -626,25 +626,19 @@ signing {
     // if signing.keyId, signing.password, signing.secretKeyRingFile, etc are
     // not present in gradle.properties.
     isRequired = isReleaseVersion
+    sign(publishing.publications["IonJava"])
+}
 
+afterEvaluate {
     if (isCI) {
         val signingKeyId: String? by project
         val signingKey: String? by project
         val signingPassword: String? by project
 
-        logger.lifecycle("DEBUG: isCI = $isCI")
-        logger.lifecycle("DEBUG: signingKeyId = ${if (signingKeyId.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
-        logger.lifecycle("DEBUG: signingKey = ${if (signingKey.isNullOrEmpty()) "NULL/EMPTY" else "SET (${signingKey?.length} chars)"}")
-        logger.lifecycle("DEBUG: signingPassword = ${if (signingPassword.isNullOrEmpty()) "NULL/EMPTY" else "SET"}")
-
         if (signingKeyId.isNullOrEmpty() || signingKey.isNullOrEmpty() || signingPassword.isNullOrEmpty()) {
-            logger.info("Skipping useInMemoryPgpKeys() due to missing credentials")
+            logger.lifecycle("signing credentials unavailable; build artifacts will not be signed")
         } else {
-            useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-            logger.info("useInMemoryPgpKeys() called successfully")
+            signing.useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
         }
     }
-
-    sign(publishing.publications["IonJava"])
-    logger.lifecycle("DEBUG: sign() called")
 }
