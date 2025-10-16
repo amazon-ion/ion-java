@@ -7,7 +7,7 @@ import com.amazon.ion.IonException
 /**
  * Helper class containing methods for reading FixedInts, and (TODO) FlexInts, FixedUInts, and FlexUInts.
  */
-object BinaryPrimitiveReader {
+internal object BinaryPrimitiveReader {
 
     @JvmStatic
     private fun ByteArray.getShort(position: Int): Short {
