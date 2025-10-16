@@ -37,13 +37,8 @@ object FlexInt {
     /** Determine the length of FlexInt for the provided value.  */
     @JvmStatic
     fun flexIntLength(value: Long): Int {
-        val numMagnitudeBitsRequired: Int = if (value < 0) {
-            val numLeadingOnes = java.lang.Long.numberOfLeadingZeros(value.inv())
-            64 - numLeadingOnes
-        } else {
-            val numLeadingZeros = java.lang.Long.numberOfLeadingZeros(value)
-            64 - numLeadingZeros
-        }
+        val numLeadingSignBits = java.lang.Long.numberOfLeadingZeros(value.shr(63).xor(value))
+        val numMagnitudeBitsRequired: Int = 64 - numLeadingSignBits
         return numMagnitudeBitsRequired / 7 + 1
     }
 
