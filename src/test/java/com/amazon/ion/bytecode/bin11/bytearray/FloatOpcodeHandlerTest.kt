@@ -4,10 +4,6 @@ package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
-import com.amazon.ion.bytecode.bin11.bytearray.DoubleOpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.Float0OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.Float16OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.Float32OpcodeHandler
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.ConstantPool
