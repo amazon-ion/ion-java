@@ -581,11 +581,12 @@ public interface IonSequence
      * <pre> {@code
      * int[] ints = new int[] {1, 2, 3, 4};
      * IonList list = SYSTEM.newList(ints);
-     * IonSexp sexp = SYSTEM.newSexp(ints)
-     * IonDatagram dgrm = SYSTEM.newDatagram(ints)
-     * List<IonValue> listSubList = list.subList(0, ints.size())
-     * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
-     * List<IonValue> dgrmSubList = dgrm.subList(0, ints.size())
+     * IonSexp sexp = SYSTEM.newSexp(ints);
+     * IonDatagram dgrm = SYSTEM.newDatagram();
+     * for(int i : ints) { dgrm.add(SYSTEM.newInt(i)); };
+     * List<IonValue> listSubList = list.subList(0, ints.length);
+     * List<IonValue> sexpSubList = sexp.subList(0, ints.length);
+     * List<IonValue> dgrmSubList = dgrm.subList(0, ints.length);
      * List<IonValue> arrayList = new ArrayList<IonValue>();
      * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
      * } </pre>
@@ -602,20 +603,20 @@ public interface IonSequence
      * as-is.
      *
      * <pre> {@code
-     * list.equals(listSubList)     // false
-     * list.equals(sexpSubList)     // false
-     * list.equals(dgrmSubList)     // false
-     * list.equals(arrayList)       // false
+     * list.equals(listSubList);     // false
+     * list.equals(sexpSubList);     // false
+     * list.equals(dgrmSubList);     // false
+     * list.equals(arrayList);       // false
      *
-     * sexp.equals(listSubList)     // false
-     * sexp.equals(sexpSubList)     // false
-     * sexp.equals(dgrmSubList)     // false
-     * sexp.equals(arrayList)       // false
+     * sexp.equals(listSubList);     // false
+     * sexp.equals(sexpSubList);     // false
+     * sexp.equals(dgrmSubList);     // false
+     * sexp.equals(arrayList);       // false
      *
-     * dgrm.equals(listSubList)     // false
-     * dgrm.equals(sexpSubList)     // false
-     * dgrm.equals(dgrmSubList)     // false
-     * dgrm.equals(arrayList)       // false
+     * dgrm.equals(listSubList);     // false
+     * dgrm.equals(sexpSubList);     // false
+     * dgrm.equals(dgrmSubList);     // false
+     * dgrm.equals(arrayList);       // false
      * } </pre>
      *
      * @param other the object to be compared for equality with this list
