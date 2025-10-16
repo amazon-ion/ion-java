@@ -116,13 +116,11 @@ class IonRawTextWriter_1_1 internal constructor(
             if (fieldNameText != null) {
                 output.printSymbol(fieldNameText)
                 output.appendAscii(':')
-                if (options.isPrettyPrintOn) output.appendAscii(" ")
                 fieldNameText = null
             } else {
                 output.appendAscii("$")
                 output.printInt(fieldNameId.toLong())
                 output.appendAscii(":")
-                if (options.isPrettyPrintOn) output.appendAscii(" ")
                 fieldNameId = -1
             }
         }
@@ -453,63 +451,35 @@ class IonRawTextWriter_1_1 internal constructor(
     }
 
     override fun stepInTaglessElementList(taglessEncodingOpcode: Int) {
-        openValue {
-            output.appendAscii("[")
-            val tag = TaglessScalarType.getTaglessScalarTypeForOpcode(taglessEncodingOpcode)!!
-            writePrimitiveEncodingTag(tag)
-            output.appendAscii(" ")
-        }
-        ancestorContainersStack.add(currentContainer)
-        currentContainer = List
-        currentContainerHasValues = false // So that it does what?
-        isPendingLeadingWhitespace = false
+        stepInList(usingLengthPrefix = false) // Arg here doesn't actually matter.
+        val tag = TaglessScalarType.getTaglessScalarTypeForOpcode(taglessEncodingOpcode)!!
+        writePrimitiveEncodingTag(tag)
+        output.appendAscii(" ")
     }
 
     override fun stepInTaglessElementList(macroId: Int, macroName: String?) {
-        openValue {
-            output.appendAscii("[")
-            writeMacroEncodingTag(macroName ?: macroId.toString())
-            output.appendAscii(" ")
-        }
-        ancestorContainersStack.add(currentContainer)
-        currentContainer = List
-        currentContainerHasValues = false
-        isPendingLeadingWhitespace = false
+        stepInList(usingLengthPrefix = false) // Arg here doesn't actually matter.
+        writeMacroEncodingTag(macroName ?: macroId.toString())
+        output.appendAscii(" ")
     }
 
     override fun stepInTaglessElementSExp(taglessEncodingOpcode: Int) {
-        openValue {
-            output.appendAscii("(")
-            val tag = TaglessScalarType.getTaglessScalarTypeForOpcode(taglessEncodingOpcode)!!
-            writePrimitiveEncodingTag(tag)
-        }
-        ancestorContainersStack.add(currentContainer)
-        currentContainer = SExp
-        currentContainerHasValues = false
-        isPendingSeparator = true
-        isPendingLeadingWhitespace = true
+        stepInSExp(usingLengthPrefix = false) // Arg here doesn't actually matter.
+        val tag = TaglessScalarType.getTaglessScalarTypeForOpcode(taglessEncodingOpcode)!!
+        writePrimitiveEncodingTag(tag)
+        output.appendAscii(" ")
     }
 
     override fun stepInTaglessElementSExp(macroId: Int, macroName: String?) {
-        openValue {
-            output.appendAscii("(")
-            writeMacroEncodingTag(macroName ?: macroId.toString())
-        }
-        ancestorContainersStack.add(currentContainer)
-        currentContainer = SExp
-        currentContainerHasValues = false
-        isPendingSeparator = true
-        isPendingLeadingWhitespace = true
+        stepInSExp(usingLengthPrefix = false) // Arg here doesn't actually matter.
+        writeMacroEncodingTag(macroName ?: macroId.toString())
+        output.appendAscii(" ")
     }
 
     override fun stepInTaglessEExp() {
-        openValue {
-            output.appendAscii('(')
-        }
-        ancestorContainersStack.add(currentContainer)
+        // Looks like a SExp, so we'll start this way and switch it to EExp.
+        stepInSExp(usingLengthPrefix = false) // Arg here doesn't actually matter.
         currentContainer = EExpression
-        currentContainerHasValues = false
-        isPendingLeadingWhitespace = false
     }
 
     override fun writeTaglessInt(implicitOpcode: Int, value: Int) {

@@ -78,7 +78,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `calling finish while in a container should throw IonException`() {
+    fun `calling flush while in a container should throw IonException`() {
         ionWriter {
             stepInList(true)
             assertThrows<IonException> { flush() }
@@ -86,7 +86,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `calling finish with a dangling annotation should throw IonException`() {
+    fun `calling flush with a dangling annotation should throw IonException`() {
         ionWriter {
             writeAnnotations(10)
             assertThrows<IonException> { flush() }
@@ -126,7 +126,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `calling finish should cause the buffered data to be written to the output stream`() {
+    fun `calling flush should cause the buffered data to be written to the output stream`() {
         val actual = writeAsString(autoClose = false) {
             writeIVM()
             flush()
@@ -136,7 +136,7 @@ class IonRawTextWriterTest_1_1 {
     }
 
     @Test
-    fun `after calling finish, it should still be possible to write more data`() {
+    fun `after calling flush, it should still be possible to write more data`() {
         val actual = writeAsString {
             flush()
             writeIVM()
@@ -780,6 +780,26 @@ class IonRawTextWriterTest_1_1 {
         }
     }
 
+    @Test
+    fun `write an empty tagless list`() {
+        assertWriterOutputEquals("[{#int} ]") {
+            stepInTaglessElementList(TaglessScalarType.INT.getOpcode())
+            stepOut()
+        }
+        assertWriterOutputEquals("[{#int} ]", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementList(TaglessScalarType.INT.getOpcode())
+            stepOut()
+        }
+        assertWriterOutputEquals("[{:foo} ]") {
+            stepInTaglessElementList(1, "foo")
+            stepOut()
+        }
+        assertWriterOutputEquals("[{:foo} ]", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementList(1, "foo")
+            stepOut()
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(TaglessScalarType::class, mode = EnumSource.Mode.MATCH_ALL, names = ["U?INT.*"])
     fun `write a tagless element list with integers`(elementType: TaglessScalarType) {
@@ -788,6 +808,17 @@ class IonRawTextWriterTest_1_1 {
             writeTaglessInt(elementType.getOpcode(), 1)
             writeTaglessInt(elementType.getOpcode(), 2L)
             writeTaglessInt(elementType.getOpcode(), 3.toBigInteger())
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a pretty-printed tagless element list`() {
+        assertWriterOutputEquals("[{#int8} \n  1,\n  2,\n  3\n]", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementList(TaglessScalarType.INT_8.getOpcode())
+            writeTaglessInt(TaglessScalarType.INT_8.getOpcode(), 1)
+            writeTaglessInt(TaglessScalarType.INT_8.getOpcode(), 2L)
+            writeTaglessInt(TaglessScalarType.INT_8.getOpcode(), 3.toBigInteger())
             stepOut()
         }
     }
@@ -808,6 +839,26 @@ class IonRawTextWriterTest_1_1 {
         }
     }
 
+    @Test
+    fun `write an empty tagless sexp`() {
+        assertWriterOutputEquals("({#int} )") {
+            stepInTaglessElementSExp(TaglessScalarType.INT.getOpcode())
+            stepOut()
+        }
+        assertWriterOutputEquals("({#int} )", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementSExp(TaglessScalarType.INT.getOpcode())
+            stepOut()
+        }
+        assertWriterOutputEquals("({:foo} )") {
+            stepInTaglessElementSExp(1, "foo")
+            stepOut()
+        }
+        assertWriterOutputEquals("({:foo} )", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementSExp(1, "foo")
+            stepOut()
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(TaglessScalarType::class, mode = EnumSource.Mode.MATCH_ALL, names = ["FLOAT.*"])
     fun `write a tagless element sexp with floats`(elementType: TaglessScalarType) {
@@ -815,6 +866,16 @@ class IonRawTextWriterTest_1_1 {
             stepInTaglessElementSExp(elementType.getOpcode())
             writeTaglessFloat(elementType.getOpcode(), 1.0f)
             writeTaglessFloat(elementType.getOpcode(), 2.0)
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write a pretty-printed tagless element sexp`() {
+        assertWriterOutputEquals("({#float32} \n  1e0\n  2e0\n)", builderConfigurator = { withPrettyPrinting() }) {
+            stepInTaglessElementSExp(TaglessScalarType.FLOAT_32.getOpcode())
+            writeTaglessFloat(TaglessScalarType.FLOAT_32.getOpcode(), 1.0f)
+            writeTaglessFloat(TaglessScalarType.FLOAT_32.getOpcode(), 2.0)
             stepOut()
         }
     }
@@ -886,15 +947,15 @@ class IonRawTextWriterTest_1_1 {
         val expected = """
             ${'$'}ion_1_1
             {
-              name: "Fido",
-              age: years::4,
-              birthday: 2012-03-01,
-              toys: [
+              name:"Fido",
+              age:years::4,
+              birthday:2012-03-01,
+              toys:[
                 ball,
                 rope
               ],
-              weight: pounds::41.2,
-              buzz: {{ VG8gaW5maW5pdHkuLi4gYW5kIGJleW9uZCE= }}
+              weight:pounds::41.2,
+              buzz:{{ VG8gaW5maW5pdHkuLi4gYW5kIGJleW9uZCE= }}
             }
         """.trimIndent()
         assertWriterOutputEquals(
@@ -991,7 +1052,7 @@ class IonRawTextWriterTest_1_1 {
         val expected = """
             ${'$'}ion_1_1
             {
-              name: (:foo
+              name:(:foo
                 "F"
                 "ido"
               )
@@ -1017,7 +1078,7 @@ class IonRawTextWriterTest_1_1 {
         val expected = """
             ${'$'}ion_1_1
             {
-              a: {}
+              a:{}
             }
             [
               []

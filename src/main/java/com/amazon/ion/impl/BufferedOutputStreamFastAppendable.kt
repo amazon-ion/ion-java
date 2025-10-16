@@ -136,8 +136,6 @@ internal class BufferedOutputStreamFastAppendable(
 
     override fun appendAscii(csq: CharSequence, start: Int, end: Int) {
         if (csq is String) {
-            // Using deprecated String.getBytes intentionally, since it is
-            // correct behavior in this case, and much faster.
             var pos = start
             val len = end - start
             if (len > current.remaining() && current.remaining() < maxBlockWaste && len < allocator.blockSize) {
@@ -186,6 +184,8 @@ internal class BufferedOutputStreamFastAppendable(
 
     /** Helper function to wrap [java.lang.String.getBytes]. */
     private fun String.copyAsciiBytes(srcBegin: Int, srcEnd: Int, dst: ByteArray, dstBegin: Int) {
+        // Using deprecated String.getBytes intentionally, since it is
+        // correct behavior in this case, and much faster.
         (this as java.lang.String).getBytes(srcBegin, srcEnd, dst, dstBegin)
     }
 }
