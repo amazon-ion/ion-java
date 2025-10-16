@@ -55,4 +55,24 @@ object TextToBinaryUtils {
             .uppercase(Locale.getDefault())
             .trim()
     }
+
+    /**
+     * Converts a byte array to a string of bits, such as "00110110 10001001".
+     * The purpose of this method is to make it easier to read and write test assertions.
+     */
+    @JvmStatic
+    fun ByteArray.byteArrayToBitString(): String {
+        val s = java.lang.StringBuilder()
+        for (aByte in this) {
+            for (bit in 7 downTo 0) {
+                if (((0x01 shl bit) and aByte.toInt()) != 0) {
+                    s.append("1")
+                } else {
+                    s.append("0")
+                }
+            }
+            s.append(" ")
+        }
+        return s.toString().trim { it <= ' ' }
+    }
 }
