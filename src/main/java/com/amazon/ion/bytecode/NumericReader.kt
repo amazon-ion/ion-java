@@ -74,6 +74,7 @@ internal object NumericReader {
      */
     @JvmStatic
     fun ByteArray.readFloat16(start: Int): Float {
+        // TODO: ion-java#1114
         if (this.size < start + 2) throw IonException("Incomplete data: start=$start, length=${2}, limit=${this.size}")
 
         val bits16 = this.getShort(start).toInt()
@@ -142,6 +143,7 @@ internal object NumericReader {
      */
     @JvmStatic
     fun ByteArray.readFloat(start: Int): Float {
+        // TODO: ion-java#1114
         if (this.size < start + 4) throw IonException("Incomplete data: start=$start, length=${4}, limit=${this.size}")
         return Float.fromBits(this.getInt(start))
     }
@@ -153,6 +155,7 @@ internal object NumericReader {
      */
     @JvmStatic
     fun ByteArray.readDouble(start: Int): Double {
+        // TODO: ion-java#1114
         if (this.size < start + 8) throw IonException("Incomplete data: start=$start, length=${8}, limit=${this.size}")
         return Double.fromBits(this.getLong(start))
     }

@@ -64,6 +64,7 @@ internal fun readTimestampReference(valueBytes: ByteArray, position: Int, length
                 p += hourValueAndLength.toInt() and 0xFF
                 hour = (hourValueAndLength shr 8).toInt()
                 if (p >= end) {
+                    // TODO: ion-java#1114
                     throw IonException("Timestamps may not specify hour without specifying minute.")
                 }
 
