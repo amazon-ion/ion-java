@@ -3,9 +3,6 @@
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.BytecodeEmitter
-import com.amazon.ion.bytecode.NumericReader.readDouble
-import com.amazon.ion.bytecode.NumericReader.readFloat
-import com.amazon.ion.bytecode.NumericReader.readShort
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.asHalfToFloat
@@ -24,10 +21,7 @@ internal object Float0OpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        BytecodeEmitter.emitFloatValue(
-            destination,
-            0f
-        )
+        BytecodeEmitter.emitFloatValue(destination, 0f)
         return 0
     }
 }
@@ -46,10 +40,8 @@ internal object Float16OpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        BytecodeEmitter.emitFloatValue(
-            destination,
-            source.readShort(position).asHalfToFloat()
-        )
+        val floatValue = PrimitiveDecoder.readFixedInt16(source, position).asHalfToFloat()
+        BytecodeEmitter.emitFloatValue(destination, floatValue)
         return 2
     }
 }
@@ -68,10 +60,8 @@ internal object Float32OpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        BytecodeEmitter.emitFloatValue(
-            destination,
-            source.readFloat(position)
-        )
+        val floatValue = Float.fromBits(PrimitiveDecoder.readFixedInt32(source, position))
+        BytecodeEmitter.emitFloatValue(destination, floatValue)
         return 4
     }
 }
@@ -90,10 +80,8 @@ internal object DoubleOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        BytecodeEmitter.emitDoubleValue(
-            destination,
-            source.readDouble(position)
-        )
+        val doubleValue = Double.fromBits(PrimitiveDecoder.readFixedInt64(source, position))
+        BytecodeEmitter.emitDoubleValue(destination, doubleValue)
         return 8
     }
 }

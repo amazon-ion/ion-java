@@ -3,9 +3,9 @@
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.BytecodeEmitter
-import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt24AsInt
-import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32AsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
@@ -49,7 +49,7 @@ internal object Int8OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitInt16Value(
             destination,
-            source.readFixedInt8AsShort(position)
+            readFixedInt8AsShort(source, position)
         )
         return 1
     }
@@ -71,7 +71,7 @@ internal object Int16OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitInt16Value(
             destination,
-            source.readFixedInt16AsShort(position)
+            readFixedInt16(source, position)
         )
         return 2
     }
@@ -93,7 +93,7 @@ internal object Int24OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitInt32Value(
             destination,
-            source.readFixedInt24AsInt(position)
+            readFixedInt24AsInt(source, position)
         )
         return 3
     }
@@ -115,7 +115,7 @@ internal object Int32OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitInt32Value(
             destination,
-            source.readFixedInt32AsInt(position)
+            readFixedInt32(source, position)
         )
         return 4
     }
@@ -138,7 +138,7 @@ internal object LongIntOpcodeHandler : OpcodeToBytecodeHandler {
         val fixedIntLength = opcode and 0xF
         BytecodeEmitter.emitInt64Value(
             destination,
-            source.readFixedIntAsLong(position, fixedIntLength)
+            readFixedIntAsLong(source, position, fixedIntLength)
         )
         return fixedIntLength
     }

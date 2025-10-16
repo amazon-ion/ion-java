@@ -18,9 +18,11 @@ internal class ConstantPool private constructor(
 ) : AppendableConstantPoolView {
     companion object {
         const val GROWTH_MULTIPLIER: Int = 2
+        private const val DEFAULT_INITIAL_CAPACITY: Int = 32
     }
 
     constructor(initialCapacity: Int) : this(data = arrayOfNulls(initialCapacity), numberOfValues = 0)
+    constructor() : this(data = arrayOfNulls(DEFAULT_INITIAL_CAPACITY), numberOfValues = 0)
 
     override val size: Int
         get() = numberOfValues
