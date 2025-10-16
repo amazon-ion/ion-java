@@ -40,6 +40,7 @@ internal object TypedNullOpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         val typeOperand = source[position].unsignedToInt() - 1
         if (typeOperand < 0 || typeOperand >= typeTable.size) {
+            // TODO: ion-java#1114
             throw IonException("Unsupported typed null")
         }
         val ionType = typeTable[typeOperand]

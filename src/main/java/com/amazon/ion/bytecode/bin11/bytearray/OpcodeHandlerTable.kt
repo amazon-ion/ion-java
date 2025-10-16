@@ -64,12 +64,12 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
-            0x60 -> FixedInt0OpcodeHandler
-            0x61 -> FixedInt8OpcodeHandler
-            0x62 -> FixedInt16OpcodeHandler
-            0x63 -> FixedInt24OpcodeHandler
-            0x64 -> FixedInt32OpcodeHandler
-            in 0x65..0x68 -> FixedLongIntOpcodeHandler
+            0x60 -> Int0OpcodeHandler
+            0x61 -> Int8OpcodeHandler
+            0x62 -> Int16OpcodeHandler
+            0x63 -> Int24OpcodeHandler
+            0x64 -> Int32OpcodeHandler
+            in 0x65..0x68 -> LongIntOpcodeHandler
             0x6a -> Float0OpcodeHandler
             0x6b -> Float16OpcodeHandler
             0x6c -> Float32OpcodeHandler
