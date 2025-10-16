@@ -32,4 +32,34 @@ enum class TaglessScalarType(val textEncodingName: String, private val binaryEnc
     ;
 
     fun getOpcode(): Int = binaryEncodingOpcode
+
+    companion object {
+        @JvmStatic
+        fun getTaglessScalarTypeForOpcode(opcode: Int): TaglessScalarType? {
+            return when (opcode) {
+                OpCode.TE_FLEX_INT -> INT
+                OpCode.INT_8 -> INT_8
+                OpCode.INT_16 -> INT_16
+                OpCode.INT_32 -> INT_32
+                OpCode.INT_64 -> INT_64
+                OpCode.TE_FLEX_UINT -> UINT
+                OpCode.TE_UINT_8 -> UINT_8
+                OpCode.TE_UINT_16 -> UINT_16
+                OpCode.TE_UINT_32 -> UINT_32
+                OpCode.TE_UINT_64 -> UINT_64
+                OpCode.TE_SMALL_DECIMAL -> SMALL_DECIMAL
+                OpCode.FLOAT_16 -> FLOAT_16
+                OpCode.FLOAT_32 -> FLOAT_32
+                OpCode.FLOAT_64 -> FLOAT_64
+                OpCode.TIMESTAMP_DAY_PRECISION -> TIMESTAMP_DAY
+                OpCode.TIMESTAMP_MINUTE_PRECISION -> TIMESTAMP_MIN
+                OpCode.TIMESTAMP_SECOND_PRECISION -> TIMESTAMP_S
+                OpCode.TIMESTAMP_MILLIS_PRECISION -> TIMESTAMP_MS
+                OpCode.TIMESTAMP_MICROS_PRECISION -> TIMESTAMP_US
+                OpCode.TIMESTAMP_NANOS_PRECISION -> TIMESTAMP_NS
+                OpCode.TE_SYMBOL_FS -> SYMBOL
+                else -> null
+            }
+        }
+    }
 }

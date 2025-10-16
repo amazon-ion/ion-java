@@ -95,18 +95,21 @@ internal object OpCode {
     const val STRUCT_LENGTH_15 = 0xDF
 
     const val IVM = 0xE0
+    const val NO_ARGUMENT = 0xE0
+
     const val DIRECTIVE_SET_SYMBOLS = 0xE1
     const val DIRECTIVE_ADD_SYMBOLS = 0xE2
     const val DIRECTIVE_SET_MACROS = 0xE3
     const val DIRECTIVE_ADD_MACROS = 0xE4
     const val DIRECTIVE_USE = 0xE5
     const val DIRECTIVE_MODULE = 0xE6
-    const val DIRECTIVE_ENCODING = 0xE7
-    const val TAGGED_PLACEHOLDER = 0xE8
-    const val TAGGED_PLACEHOLDER_WITH_DEFAULT = 0xE9
-    const val TAGLESS_PLACEHOLDER = 0xEA
+    const val DIRECTIVE_IMPORT = 0xE7
+    const val DIRECTIVE_ENCODING = 0xE8
 
-    const val NO_ARGUMENT = 0xEB
+    const val TAGGED_PLACEHOLDER = 0xE9
+    const val TAGGED_PLACEHOLDER_WITH_DEFAULT = 0xEA
+    const val TAGLESS_PLACEHOLDER = 0xEB
+
     const val NOP = 0xEC
     const val NOP_L = 0xED
 
