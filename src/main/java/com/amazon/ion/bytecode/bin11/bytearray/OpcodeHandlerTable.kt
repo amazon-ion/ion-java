@@ -2,12 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt0OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt16OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt24OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt32OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt8OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedLongIntOpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.float.DoubleOpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.float.Float0OpcodeHandler
 import com.amazon.ion.bytecode.bin11.bytearray.float.Float16OpcodeHandler

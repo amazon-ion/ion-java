@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode
 
+import com.amazon.ion.IonException
 import com.amazon.ion.bytecode.NumericReader.getInt
 import com.amazon.ion.bytecode.NumericReader.getInt24
 import com.amazon.ion.bytecode.NumericReader.getLong
 import com.amazon.ion.bytecode.NumericReader.getShort
-import com.amazon.ion.IonException
 
 /**
  * Helper class containing methods for reading FixedInts, and (TODO) FlexInts, FixedUInts, and FlexUInts.
