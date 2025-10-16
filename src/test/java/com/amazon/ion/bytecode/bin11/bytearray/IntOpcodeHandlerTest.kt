@@ -4,12 +4,6 @@ package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt0OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt16OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt24OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt32OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedInt8OpcodeHandler
-import com.amazon.ion.bytecode.bin11.bytearray.fixedint.FixedLongIntOpcodeHandler
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -20,7 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import kotlin.String
 
-class FixedIntOpcodeHandlerTest {
+class IntOpcodeHandlerTest {
     // These tests need to include the IVM in the test bytecode (or any 4 bytes before the FixedInt)
     // because the BinaryPrimitiveReader has logic that expects this to always be the case.
 
@@ -42,12 +36,12 @@ class FixedIntOpcodeHandlerTest {
         "62 7F FF, 2,   -129", // length boundary
         "62 00 80, 2, -32768", // min value
     )
-    fun testI16EmittingFixedIntHandlers(
+    fun testI16EmittingIntHandlers(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt16: Short
     ) {
-        val handlersByBytesRead = arrayOf(FixedInt0OpcodeHandler, FixedInt8OpcodeHandler, FixedInt16OpcodeHandler)
+        val handlersByBytesRead = arrayOf(Int0OpcodeHandler, Int8OpcodeHandler, Int16OpcodeHandler)
 
         val inputByteArray: ByteArray = "E0 01 01 EA $inputString".hexStringToByteArray()
         val buffer = BytecodeBuffer()
@@ -92,12 +86,12 @@ class FixedIntOpcodeHandlerTest {
         "64 FF FF 7F FF, 4,         -8388609", // length boundary
         "64 00 00 00 80, 4, ${Int.MIN_VALUE}", // min value
     )
-    fun testI32EmittingFixedIntHandlers(
+    fun testI32EmittingIntHandlers(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt32: Int
     ) {
-        val handlersByBytesRead = arrayOf(FixedInt24OpcodeHandler, FixedInt32OpcodeHandler)
+        val handlersByBytesRead = arrayOf(Int24OpcodeHandler, Int32OpcodeHandler)
 
         val inputByteArray: ByteArray = "E0 01 01 EA $inputString".hexStringToByteArray()
         val buffer = BytecodeBuffer()
@@ -151,7 +145,7 @@ class FixedIntOpcodeHandlerTest {
         "68 FF FF FF FF FF FF 7F FF, 8, -36028797018963969", // length boundary
         "68 00 00 00 00 00 00 00 80, 8,  ${Long.MIN_VALUE}", // min value
     )
-    fun testI64EmittingFixedIntHandler(
+    fun testI64EmittingIntHandler(
         inputString: String,
         expectedBytesRead: Int,
         expectedInt64: Long
@@ -161,7 +155,7 @@ class FixedIntOpcodeHandlerTest {
 
         var position = 4 // skip the IVM
         val opcode = inputByteArray[position++].unsignedToInt()
-        position += FixedLongIntOpcodeHandler.convertOpcodeToBytecode(
+        position += LongIntOpcodeHandler.convertOpcodeToBytecode(
             opcode,
             inputByteArray,
             position,

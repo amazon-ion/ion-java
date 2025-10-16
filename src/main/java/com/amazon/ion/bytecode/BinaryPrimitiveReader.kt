@@ -3,7 +3,6 @@
 package com.amazon.ion.bytecode
 
 import com.amazon.ion.IonException
-import java.nio.ByteBuffer
 
 /**
  * Helper class containing methods for reading FixedInts, and (TODO) FlexInts, FixedUInts, and FlexUInts.
