@@ -585,7 +585,7 @@ public interface IonSequence
      * IonSexp dgrm = SYSTEM.newDatagram(ints)
      * List<IonValue> listSubList = list.subList(0, ints.size())
      * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
-     * List<IonValue> dgrmSubList = sexp.subList(0, ints.size())
+     * List<IonValue> dgrmSubList = dgrm.subList(0, ints.size())
      * List<IonValue> arrayList = new ArrayList<IonValue>();
      * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
      * } </pre>
