@@ -438,10 +438,10 @@ public interface IonSequence
      * int[] ints = new int[] {1, 2, 3, 4};
      * IonList list = SYSTEM.newList(ints);
      * IonSexp sexp = SYSTEM.newSexp(ints)
-     * IonSexp dgrm = SYSTEM.newDatagram(ints)
+     * IonDatagram dgrm = SYSTEM.newDatagram(ints)
      * List<IonValue> listSubList = list.subList(0, ints.size())
      * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
-     * List<IonValue> dgrmSubList = sexp.subList(0, ints.size())
+     * List<IonValue> dgrmSubList = dgrm.subList(0, ints.size())
      * List<IonValue> arrayList = new ArrayList<IonValue>();
      * for(int i : ints) { arrayList.add(SYSTEM.newInt(i)); }
      * } </pre>
@@ -582,7 +582,7 @@ public interface IonSequence
      * int[] ints = new int[] {1, 2, 3, 4};
      * IonList list = SYSTEM.newList(ints);
      * IonSexp sexp = SYSTEM.newSexp(ints)
-     * IonSexp dgrm = SYSTEM.newDatagram(ints)
+     * IonDatagram dgrm = SYSTEM.newDatagram(ints)
      * List<IonValue> listSubList = list.subList(0, ints.size())
      * List<IonValue> sexpSubList = sexp.subList(0, ints.size())
      * List<IonValue> dgrmSubList = dgrm.subList(0, ints.size())
@@ -604,12 +604,12 @@ public interface IonSequence
      * <pre> {@code
      * list.equals(listSubList)     // false
      * list.equals(sexpSubList)     // false
-     * list.equals(dgrm)            // false
+     * list.equals(dgrmSubList)     // false
      * list.equals(arrayList)       // false
      *
      * sexp.equals(listSubList)     // false
      * sexp.equals(sexpSubList)     // false
-     * sexp.equals(dgrm)            // false
+     * sexp.equals(dgrmSubList)     // false
      * sexp.equals(arrayList)       // false
      *
      * dgrm.equals(listSubList)     // false
