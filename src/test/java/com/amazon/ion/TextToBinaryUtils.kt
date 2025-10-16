@@ -25,6 +25,14 @@ object TextToBinaryUtils {
     }
 
     /**
+     * Converts a string of binary octets, such as "10010111 00010011", to a byte array.
+     */
+    @JvmStatic
+    fun String.binaryStringToByteArray(): ByteArray {
+        return octetStringToByteArray(this, 2)
+    }
+
+    /**
      * Converts a string of hex octets, such as "BE EF", to a byte array.
      */
     @JvmStatic
