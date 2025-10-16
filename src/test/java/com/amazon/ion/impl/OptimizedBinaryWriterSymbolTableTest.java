@@ -22,6 +22,7 @@ import static com.amazon.ion.junit.IonAssert.assertIonEquals;
 import static com.amazon.ion.junit.IonAssert.assertIonIteratorEquals;
 
 import com.amazon.ion.IonDatagram;
+import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.SymbolTable;
 import org.junit.Test;
@@ -314,6 +315,97 @@ public class OptimizedBinaryWriterSymbolTableTest
         iw.close();
 
         IonDatagram expected = loader().load("a aa b bb");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
+    }
+
+    @Test
+    public void testWriteValuesInStructWithSetFieldName()
+        throws Exception
+    {
+        // Multiple top-level values
+        byte[] multiValueDataBinary = encode("1 2 3 \"hello\" true");
+        IonReader reader = system().newReader(multiValueDataBinary);
+
+        iw = makeWriter();
+
+        // Start writing a struct
+        iw.stepIn(IonType.STRUCT);
+
+        // Set field name for the struct's first child value
+        iw.setFieldName("values");
+
+        // The following fails on the second nested call to writeValue because no field name is set.
+        // The same field name is not applied to all values provided by the reader.
+        assertThrows(IllegalStateException.class, () -> iw.writeValues(reader));
+    }
+
+    @Test
+    public void testWriteValuesInStructWithoutSetFieldName()
+        throws Exception
+    {
+        // Struct with multiple values
+        byte[] multiValueDataBinary = encode("{foo: 1, bar: 2}");
+        IonReader reader = system().newReader(multiValueDataBinary);
+        reader.next(); // Position the reader on the struct
+
+        iw = makeWriter();
+
+        // Start writing a struct
+        iw.stepIn(IonType.STRUCT);
+        reader.stepIn(); // Enter the reader's struct
+
+        // The field names from the reader's struct should be applied.
+        iw.writeValues(reader);
+
+        // End the struct.
+        iw.stepOut();
+
+        IonDatagram expected = loader().load("{foo: 1, bar: 2}");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
+    }
+
+    @Test
+    public void testWriteValuesToTopLevelFromStruct()
+        throws Exception
+    {
+        // Struct with multiple values
+        byte[] multiValueDataBinary = encode("{foo: 1, bar: 2}");
+        IonReader reader = system().newReader(multiValueDataBinary);
+        reader.next(); // Position the reader on the struct
+
+        iw = makeWriter();
+
+        reader.stepIn(); // Enter the reader's struct
+
+        // The field names from the reader's struct should be dropped.
+        iw.writeValues(reader);
+
+        IonDatagram expected = loader().load("1 2");
+        IonDatagram actual   = loader().load(outputByteArray());
+        assertIonEquals(expected, actual);
+    }
+
+
+    @Test
+    public void testWriteValuesWithAnnotationSet()
+        throws Exception
+    {
+        // Multiple top-level annotated values
+        byte[] multiValueDataBinary = encode("b::1 c::2");
+        IonReader reader = system().newReader(multiValueDataBinary);
+        reader.next(); // Position the reader on the struct
+
+        iw = makeWriter();
+
+        // Set an annotation on the writer. This is expected to be clobbered.
+        iw.setTypeAnnotations("a");
+
+        // The annotations from the reader's struct should overwrite any set on the writer.
+        iw.writeValues(reader);
+
+        IonDatagram expected = loader().load("b::1 c::2");
         IonDatagram actual   = loader().load(outputByteArray());
         assertIonEquals(expected, actual);
     }

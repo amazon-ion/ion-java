@@ -17,6 +17,7 @@ import com.amazon.ion.SpanProvider;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.system.IonReaderBuilder;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -44,7 +45,7 @@ import java.io.InputStream;
  * stream's values risk exceeding the available memory, then continuable reading must not be used.
  * </p>
  */
-final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableApplicationBinary implements IonReader, _Private_ReaderWriter {
+final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableApplicationBinary implements IonReader, _Private_ReaderWriter, _Private_ByteTransferReader {
 
     // True if continuable reading is disabled.
     private final boolean isNonContinuable;
@@ -313,6 +314,20 @@ final class IonReaderContinuableTopLevelBinary extends IonReaderContinuableAppli
             slice(binarySpan.bufferOffset, binarySpan.bufferLimit, binarySpan.symbolTable.getIonVersionId());
             type = null;
         }
+    }
+
+    @Override
+    public boolean transferCurrentValue(_Private_ByteTransferSink writer) throws IOException {
+        if (hasAnnotations || !isByteBacked() || isInStruct()) {
+            return false;
+        }
+        writer.writeBytes(buffer, (int) valuePreHeaderIndex, (int) (valueMarker.endIndex - valuePreHeaderIndex));
+        return true;
+    }
+
+    @Override
+    public boolean isSymbolTableCompatible(SymbolTable symbolTable) {
+        return isSymbolTableSubsetOf(symbolTable);
     }
 
     @Override

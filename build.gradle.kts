@@ -25,7 +25,7 @@ plugins {
     `maven-publish`
 
     // There are newer versions available, but they are not guaranteed to support Java 8.
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
 
     jacoco
     signing
@@ -285,7 +285,7 @@ tasks {
     shadowJar {
         val newLocation = "com.amazon.ion.shaded_.do_not_use"
         archiveClassifier.set("shaded")
-        dependsOn(generateManifest, generateLicenseReport)
+        dependsOn(generateManifest, generateLicenseReport, cyclonedxBom)
         from(generateLicenseReport.get().outputFolder)
         relocate("kotlin", "$newLocation.kotlin")
         relocate("org.jetbrains", "$newLocation.org.jetbrains")
@@ -553,7 +553,7 @@ tasks {
     publish { dependsOn(minifyTest) }
 
     withType<Sign> {
-        setOnlyIf { isReleaseVersion && gradle.taskGraph.hasTask(":publish") }
+        setOnlyIf { isReleaseVersion && (gradle.taskGraph.hasTask(":publish") || gradle.taskGraph.hasTask(":publishToSonatype")) }
     }
 
     cyclonedxBom {
@@ -604,7 +604,7 @@ publishing {
 }
 
 nexusPublishing {
-    // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v1.3.0/README.md
+    // Documentation for this plugin, see https://github.com/gradle-nexus/publish-plugin/blob/v2.0.0/README.md
     // Updated for Central Portal migration
     this.repositories {
         sonatype {
@@ -626,13 +626,19 @@ signing {
     // if signing.keyId, signing.password, signing.secretKeyRingFile, etc are
     // not present in gradle.properties.
     isRequired = isReleaseVersion
+    sign(publishing.publications["IonJava"])
+}
 
+afterEvaluate {
     if (isCI) {
         val signingKeyId: String? by project
         val signingKey: String? by project
         val signingPassword: String? by project
-        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-    }
 
-    sign(publishing.publications["IonJava"])
+        if (signingKeyId.isNullOrEmpty() || signingKey.isNullOrEmpty() || signingPassword.isNullOrEmpty()) {
+            logger.lifecycle("signing credentials unavailable; build artifacts will not be signed")
+        } else {
+            signing.useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+        }
+    }
 }

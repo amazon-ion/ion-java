@@ -31,6 +31,57 @@ import java.util.ServiceLoader;
  * {@link IonReader}s parse incrementally, so syntax errors in the input data
  * will not be detected as side effects of any of the {@code build} methods
  * in this class.
+ * 
+ * <h2>Obtaining and Usage</h2>
+ * An {@code IonReaderBuilder} with the default configuration may be constructed
+ * as follows. This builder will construct {@code IonReader} instances which
+ * can read both text and binary Ion data and is appropriate for simple use
+ * cases or when no IonCatalog is in use.
+ * {@snippet :
+ * IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+ * }
+ * {@code IonReaderBuilder}s can be configured by chaining calls to {@code with*()}
+ * configuration methods. Below is an example of a builder configured to
+ * incrementally read Ion binary data, use a custom initial buffer size, throw
+ * on inputs that would require a buffer over a specified size, and use a
+ * user-provided IonCatalog.
+ * {@snippet :
+ * // Create an IonCatalog and IonBufferConfiguration to use with IonReaderBuilder
+ * final IonCatalog catalog = new SimpleCatalog();
+ * final IonBufferConfiguration bufferConfiguration = IonBufferConfiguration.Builder.standard()
+ *       .onOversizedSymbolTable(() -> { throw new IllegalStateException("Oversized system table encountered"); })
+ *       .onOversizedValue(() -> { throw new IllegalStateException("Oversized value encountered"); })
+ *       .withInitialBufferSize(1024)
+ *       .withMaximumBufferSize(1024 * 1024)
+ *       .build();
+ *
+ * IonReaderBuilder readerBuilder = IonReaderBuilder.standard()
+ *     .withIncrementalReadingEnabled(true)
+ *     .withBufferConfiguration(bufferConfiguration)
+ *     .withCatalog(catalog);
+ * }
+ * 
+ * <h3>Building a Reader over a Data Source</h3>
+ * An {@code IonReader} may be obtained from a builder by calling {@code build}
+ * over the appropriate data source. Below is an example of a reader being constructed
+ * over a string containing Ion text from a builder with the default configuration.
+ * {@snippet :
+ * IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+ * final String helloWorld = "{hello: \"world\"}";
+ * try (final IonReader reader = readerBuilder.build(helloWorld)) {
+ *     reader.next();
+ *     reader.stepIn();
+ *     reader.next();
+ *     System.out.println(reader.getFieldName() + " " + reader.stringValue());  // prints "hello world"
+ * }
+ * }
+ * Builders can build an IonReader over a string, {@code byte[]} array,
+ * {@link java.io.InputStream}, {@link java.io.Reader}, or existing {@link com.amazon.ion.IonValue}
+ * data model. Building a reader over a byte array allows specifying the start
+ * index and length of the data to be read. Readers built over {@code byte[]}
+ * arrays or {@code InputStream}s are capable of reading both binary and text
+ * Ion; readers built over strings and {@code Reader} instances are only capable of
+ * reading text Ion.
  */
 @SuppressWarnings("deprecation")
 public abstract class IonReaderBuilder

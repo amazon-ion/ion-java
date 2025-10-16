@@ -3,6 +3,8 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_IonConstants;
+
 /**
  * Configures buffers that hold Ion data.
  */
@@ -182,6 +184,17 @@ public final class IonBufferConfiguration extends BufferConfiguration<IonBufferC
             oversizedSymbolTableHandler = builder.getThrowingOversizedSymbolTableHandler();
         } else {
             oversizedSymbolTableHandler = builder.getOversizedSymbolTableHandler();
+        }
+    }
+
+    /**
+     * Requires that the maximum buffer size not be limited.
+     */
+    private void requireMaximumBufferSize() {
+        if (getMaximumBufferSize() < _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+            throw new IllegalArgumentException(
+                "Must specify both an OversizedValueHandler and OversizedSymbolTableHandler when a custom maximum buffer size is specified."
+            );
         }
     }
 

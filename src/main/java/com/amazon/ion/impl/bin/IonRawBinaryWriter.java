@@ -33,8 +33,6 @@ import com.amazon.ion.IonWriter;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
-import com.amazon.ion.impl._Private_RecyclingQueue;
-import com.amazon.ion.impl._Private_RecyclingStack;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoder;
 import com.amazon.ion.impl.bin.utf8.Utf8StringEncoderPool;
 
@@ -42,8 +40,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Iterator;
-import java.util.ListIterator;
+import java.util.ArrayList;
 
 /**
  * Low-level binary {@link IonWriter} that understands encoding concerns but doesn't operate with any sense of symbol table management.
@@ -251,15 +248,45 @@ import java.util.ListIterator;
             patchIndex = -1;
         }
 
+        /**
+         * Set the data in the patch point assigned to this container.
+         * 
+         * PatchPoint instances in {@link #patchPoints} are reused across the lifecycle of the writer, so
+         * there is a chance that a patch point already exists at {@link #patchIndex} with stale data
+         * that needs to be replaced. However, PatchPoints are not constructed until their first use,
+         * meaning the slot pointed to by {@link #patchIndex} may be null, in which case we have to
+         * create our own. This can occur if a child container ends up needing a patch point and some
+         * of its ancestors are missing patch points; the parents are assigned indices into {@link #patchPoints}
+         * but the patch point object itself was not constructed until now.
+         */
+        private void setPatchPointData(final long oldPosition, final int oldLength, final long length)
+        {
+            final PatchPoint existingPatchPoint = patchPoints.get(patchIndex);
+            if (existingPatchPoint != null) {
+                existingPatchPoint.initialize(oldPosition, oldLength, length);
+            } else {
+                patchPoints.set(patchIndex, new PatchPoint().initialize(oldPosition, oldLength, length));
+            }
+        }
+
         public void appendPatch(final long oldPosition, final int oldLength, final long length)
         {
             if (patchIndex == -1) {
                 // We have no assigned patch point, we need to make our own
-                patchIndex = patchPoints.push(p -> p.initialize(oldPosition, oldLength, length));
-            } else {
-                // We have an assigned patch point already, but we need to overwrite it with the correct data
-                patchPoints.get(patchIndex).initialize(oldPosition, oldLength, length);
+                patchIndex = patchPointsLength++;
+                if (patchIndex >= patchPoints.size()) {
+                    // The patch point ArrayList is not large enough.
+                    // It needs to grow to accomodate this patch point.
+                    patchPoints.ensureCapacity(patchPointsLength);
+                    for (int i = patchPoints.size(); i < patchPointsLength; i++) {
+                        patchPoints.add(null);
+                    }
+                }
             }
+
+            // A stale reusable patch point instance may be waiting for us here that we need to overwrite with 
+            // the correct data, or this may be a null slot. If we just extended the ArrayList, then it is definitely null.
+            setPatchPointData(oldPosition, oldLength, length);
         }
 
         public ContainerInfo initialize(final ContainerType type, final long offset) {
@@ -305,10 +332,6 @@ import java.util.ListIterator;
             this.length = length;
             return this;
         }
-
-        public PatchPoint clear() {
-            return initialize(-1, -1, -1);
-        }
     }
 
     /*package*/ enum StreamCloseMode
@@ -332,8 +355,16 @@ import java.util.ListIterator;
     private final PreallocationMode             preallocationMode;
     private final boolean                       isFloatBinary32Enabled;
     private final WriteBuffer                   buffer;
-    private final _Private_RecyclingQueue<PatchPoint> patchPoints;
-    private final _Private_RecyclingStack<ContainerInfo> containers;
+    private final ArrayList<PatchPoint>         patchPoints;
+    /** The length of the patch point queue. Some elements in the queue may be null or not yet have the correct data. */
+    private int                                 patchPointsLength;
+    private final ArrayList<ContainerInfo>      containers;
+    /**
+     * The index in {@link #containers} of the element at the top of the stack, or -1 if the stack is empty.
+     * Always one less than the length of the stack itself. */
+    private int                                 containerIndex;
+    /** The container at the top of the container stack, or null if the container stack is empty */
+    private ContainerInfo                       topContainer;
     private int                                 depth;
     private boolean                             hasWrittenValuesSinceFinished;
     private boolean                             hasWrittenValuesSinceConstructed;
@@ -380,15 +411,17 @@ import java.util.ListIterator;
         this.preallocationMode = preallocationMode;
         this.isFloatBinary32Enabled = isFloatBinary32Enabled;
         this.buffer            = new WriteBuffer(allocator, this::endOfBlockSizeReached);
-        this.patchPoints       = new _Private_RecyclingQueue<>(512, PatchPoint::new);
-        this.containers        = new _Private_RecyclingStack<ContainerInfo>(
-            10,
-            new _Private_RecyclingStack.ElementFactory<ContainerInfo>() {
-                public ContainerInfo newElement() {
-                    return new ContainerInfo();
-                }
-            }
-        );
+        // Patch point list initial capacity of 512 is fairly arbitrary and subject to tuning.
+        // When patch points are required, they are often required in bulk, since all ancestors of
+        // containers with large content require one.
+        // Some tuning has shown performance impacts - see https://github.com/amazon-ion/ion-java/issues/1095
+        this.patchPoints       = new ArrayList<>(512);
+        this.patchPointsLength = 0;
+        // Container stack initial capacity of 10 is fairly arbitrary. A max depth of
+        // 10 containers seems reasonable for common data. Subject to tuning.
+        this.containers        = new ArrayList<>(10);
+        this.containerIndex    = -1;
+        this.topContainer      = null;
         this.depth                            = 0;
         this.hasWrittenValuesSinceFinished    = false;
         this.hasWrittenValuesSinceConstructed = false;
@@ -545,35 +578,49 @@ import java.util.ListIterator;
 
     private void updateLength(long length)
     {
-        if (containers.isEmpty())
+        if (containerIndex < 0)
         {
             return;
         }
 
-        containers.peek().length += length;
+        topContainer.length += length;
     }
 
     private void pushContainer(final ContainerType type)
     {
         // XXX we push before writing the type of container
-        containers.push(c -> c.initialize(type, buffer.position() + 1));
+        containerIndex++;
+        if (containerIndex < containers.size()) {
+            // The container stack array is large enough, the index of this container is in bounds.
+            // A stale reusable container instance is waiting for us here to recycle.
+            // Note: the element at this container cannot be null. The only way for the container stack
+            // to grow is to push a container, and this always happens in order. Unlike patch points, we
+            // will never push a container at an index without its ancestors already being in the stack.
+            final ContainerInfo existingElement = containers.get(containerIndex);
+            existingElement.initialize(type, buffer.position() + 1);
+            topContainer = existingElement;
+        } else {
+            // The container stack is not large enough. It needs to grow to accomodate this container.
+            topContainer = new ContainerInfo().initialize(type, buffer.position() + 1);
+            containers.add(topContainer);
+        }
     }
 
     private void addPatchPoint(final ContainerInfo container, final long position, final int oldLength, final long value)
     {
         // If we're adding a patch point we first need to ensure that all of our ancestors (containing values) already
         // have a patch point. No container can be smaller than the contents, so all outer layers also require patches.
-        // Instead of allocating iterator, we share one iterator instance within the scope of the container stack and reset the cursor every time we track back to the ancestors.
-        ListIterator<ContainerInfo> stackIterator = containers.iterator();
-        // Walk down the stack until we find an ancestor which already has a patch point
-        while (stackIterator.hasNext() && stackIterator.next().patchIndex == -1);
-
-        // The iterator cursor is now positioned on an ancestor container that has a patch point
-        // Ascend back up the stack, fixing the ancestors which need a patch point assigned before us
-        while (stackIterator.hasPrevious()) {
-            ContainerInfo ancestor = stackIterator.previous();
-            if (ancestor.patchIndex == -1) {
-                ancestor.patchIndex = patchPoints.push(PatchPoint::clear);
+        if (containerIndex >= 0) {
+            int index;
+            // Walk down the stack until we find an ancestor which already has a patch point
+            for (index = containerIndex; index >= 0; index--) {
+                if (containers.get(index).patchIndex != -1) {
+                    break;
+                }
+            }
+            // index is now positioned on an ancestor container that has a patch point
+            for (int i = index + 1; i <= containerIndex; i++) {
+                containers.get(i).patchIndex = patchPointsLength++;
             }
         }
 
@@ -585,7 +632,9 @@ import java.util.ListIterator;
 
     private ContainerInfo popContainer()
     {
-        final ContainerInfo currentContainer = containers.pop();
+        final ContainerInfo currentContainer = topContainer;
+        containerIndex--;
+        topContainer = containerIndex > -1 ? containers.get(containerIndex) : null;
         if (currentContainer == null)
         {
             throw new IllegalStateException("Tried to pop container state without said container");
@@ -718,7 +767,7 @@ import java.util.ListIterator;
     /** Closes out annotations. */
     private void finishValue() throws IOException
     {
-        if (!containers.isEmpty() && containers.peek().type == ContainerType.ANNOTATION)
+        if (containerIndex > -1 && topContainer.type == ContainerType.ANNOTATION)
         {
             // close out and patch the length
             popContainer();
@@ -756,7 +805,7 @@ import java.util.ListIterator;
         {
             throw new IonException("Cannot step out with field name set");
         }
-        if (containers.isEmpty() || !containers.peek().type.allowedInStepOut)
+        if (containerIndex < 0 || !topContainer.type.allowedInStepOut)
         {
             throw new IonException("Cannot step out when not in container");
         }
@@ -769,7 +818,7 @@ import java.util.ListIterator;
 
     public boolean isInStruct()
     {
-        return !containers.isEmpty() && containers.peek().type == ContainerType.STRUCT;
+        return containerIndex > -1 && topContainer.type == ContainerType.STRUCT;
     }
 
     // Write Value Methods
@@ -946,7 +995,7 @@ import java.util.ListIterator;
         prepareValue();
 
         int type = POS_INT_TYPE;
-        if(value.signum() < 0)
+        if (value.signum() < 0)
         {
             type = NEG_INT_TYPE;
             value = value.negate();
@@ -1337,17 +1386,14 @@ import java.util.ListIterator;
     {
         buffer.truncate(position);
         // TODO decide if it is worth making this faster than O(N)
-        Iterator<PatchPoint> patchIterator = patchPoints.iterate();
-        int i = 0;
-        while (patchIterator.hasNext()) {
-            PatchPoint patchPoint = patchIterator.next();
-            if (patchPoint.length > -1) {
+        for (int i = 0; i < patchPointsLength; i++) {
+            final PatchPoint patchPoint = patchPoints.get(i);
+            if (patchPoint != null && patchPoint.length > -1) {
                 if (patchPoint.oldPosition >= position) {
-                    patchPoints.truncate(i - 1);
+                    patchPointsLength = i;
                     break;
                 }
             }
-            i++;
         }
     }
 
@@ -1359,11 +1405,11 @@ import java.util.ListIterator;
         {
             return;
         }
-        if (!containers.isEmpty() || depth > 0)
+        if (containerIndex > -1 || depth > 0)
         {
             throw new IllegalStateException("Cannot finish within container: " + containers);
         }
-        if (patchPoints.isEmpty())
+        if (patchPointsLength == 0)
         {
             // nothing to patch--write 'em out!
             buffer.writeTo(out);
@@ -1371,11 +1417,10 @@ import java.util.ListIterator;
         else
         {
             long bufferPosition = 0;
-            Iterator<PatchPoint> iterator = patchPoints.iterate();
-            while (iterator.hasNext())
+            for (int i = 0; i < patchPointsLength; i++)
             {
-                PatchPoint patch = iterator.next();
-                if (patch.length < 0) {
+                final PatchPoint patch = patchPoints.get(i);
+                if (patch == null || patch.length < 0) {
                     continue;
                 }
                 // write up to the thing to be patched
@@ -1391,7 +1436,7 @@ import java.util.ListIterator;
             }
             buffer.writeTo(out, bufferPosition, buffer.position() - bufferPosition);
         }
-        patchPoints.clear();
+        patchPointsLength = 0;
         buffer.reset();
 
         if (streamFlushMode == StreamFlushMode.FLUSH)

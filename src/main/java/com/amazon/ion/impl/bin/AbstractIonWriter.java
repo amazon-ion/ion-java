@@ -29,12 +29,11 @@ import java.util.Date;
     }
 
     /** The cache for copy optimization checks--null if not copy optimized. */
-    private final _Private_SymtabExtendsCache symtabExtendsCache;
+    private final boolean isStreamCopyOptimized;
 
     /*package*/ AbstractIonWriter(final WriteValueOptimization optimization)
     {
-        this.symtabExtendsCache = optimization == WriteValueOptimization.COPY_OPTIMIZED
-            ? new _Private_SymtabExtendsCache() : null;
+        this.isStreamCopyOptimized = optimization == WriteValueOptimization.COPY_OPTIMIZED;
     }
 
     public final void writeValue(final IonValue value) throws IOException
@@ -54,18 +53,14 @@ import java.util.Date;
     {
         final IonType type = reader.getType();
 
-        if (isStreamCopyOptimized())
+        if (isStreamCopyOptimized() && reader instanceof _Private_ByteTransferReader)
         {
-            final _Private_ByteTransferReader transferReader =
-                reader.asFacet(_Private_ByteTransferReader.class);
-
-            if (transferReader != null
-                && (_Private_Utils.isNonSymbolScalar(type)
-                 || symtabExtendsCache.symtabsCompat(getSymbolTable(), reader.getSymbolTable())))
+            _Private_ByteTransferReader byteTransferReader = (_Private_ByteTransferReader) reader;
+            if (_Private_Utils.isNonSymbolScalar(type) || byteTransferReader.isSymbolTableCompatible(getSymbolTable()))
             {
-                // we have something we can pipe over
-                transferReader.transferCurrentValue(this);
-                return;
+                if (byteTransferReader.transferCurrentValue(this)) {
+                    return;
+                }
             }
         }
 
@@ -127,80 +122,86 @@ import java.util.Date;
                 stepOut();
                 continue;
             }
-
-            final SymbolToken fieldName = reader.getFieldNameSymbol();
-            if (fieldName != null && !isFieldNameSet() && isInStruct()) {
-                setFieldNameSymbol(fieldName);
-            }
-            final SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
-            if (annotations.length > 0) {
-                setTypeAnnotationSymbols(annotations);
-            }
+            transferFieldNameAndAnnotations(reader);
             if (reader.isNullValue()) {
                 writeNull(type);
                 continue;
             }
+            writeCurrentValue(type, reader);
+        }
+    }
 
-            switch (type) {
-                case BOOL:
-                    final boolean booleanValue = reader.booleanValue();
-                    writeBool(booleanValue);
-                    break;
-                case INT:
-                    switch (reader.getIntegerSize()) {
-                        case INT:
-                            final int intValue = reader.intValue();
-                            writeInt(intValue);
-                            break;
-                        case LONG:
-                            final long longValue = reader.longValue();
-                            writeInt(longValue);
-                            break;
-                        case BIG_INTEGER:
-                            final BigInteger bigIntegerValue = reader.bigIntegerValue();
-                            writeInt(bigIntegerValue);
-                            break;
-                        default:
-                            throw new IllegalStateException();
-                    }
-                    break;
-                case FLOAT:
-                    final double doubleValue = reader.doubleValue();
-                    writeFloat(doubleValue);
-                    break;
-                case DECIMAL:
-                    final Decimal decimalValue = reader.decimalValue();
-                    writeDecimal(decimalValue);
-                    break;
-                case TIMESTAMP:
-                    final Timestamp timestampValue = reader.timestampValue();
-                    writeTimestamp(timestampValue);
-                    break;
-                case SYMBOL:
-                    final SymbolToken symbolToken = reader.symbolValue();
-                    writeSymbolToken(symbolToken);
-                    break;
-                case STRING:
-                    final String stringValue = reader.stringValue();
-                    writeString(stringValue);
-                    break;
-                case CLOB:
-                    final byte[] clobValue = reader.newBytes();
-                    writeClob(clobValue);
-                    break;
-                case BLOB:
-                    final byte[] blobValue = reader.newBytes();
-                    writeBlob(blobValue);
-                    break;
-                case LIST:
-                case SEXP:
-                case STRUCT:
-                    reader.stepIn();
-                    stepIn(type);
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected type: " + type);
-            }
+    private void transferFieldNameAndAnnotations(IonReader reader) {
+        final SymbolToken fieldName = reader.getFieldNameSymbol();
+        if (fieldName != null && !isFieldNameSet() && isInStruct()) {
+            setFieldNameSymbol(fieldName);
+        }
+        final SymbolToken[] annotations = reader.getTypeAnnotationSymbols();
+        if (annotations.length > 0) {
+            setTypeAnnotationSymbols(annotations);
+        }
+    }
+
+    private void writeCurrentValue(IonType type, IonReader reader) throws IOException {
+        switch (type) {
+            case BOOL:
+                final boolean booleanValue = reader.booleanValue();
+                writeBool(booleanValue);
+                break;
+            case INT:
+                switch (reader.getIntegerSize()) {
+                    case INT:
+                        final int intValue = reader.intValue();
+                        writeInt(intValue);
+                        break;
+                    case LONG:
+                        final long longValue = reader.longValue();
+                        writeInt(longValue);
+                        break;
+                    case BIG_INTEGER:
+                        final BigInteger bigIntegerValue = reader.bigIntegerValue();
+                        writeInt(bigIntegerValue);
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                }
+                break;
+            case FLOAT:
+                final double doubleValue = reader.doubleValue();
+                writeFloat(doubleValue);
+                break;
+            case DECIMAL:
+                final Decimal decimalValue = reader.decimalValue();
+                writeDecimal(decimalValue);
+                break;
+            case TIMESTAMP:
+                final Timestamp timestampValue = reader.timestampValue();
+                writeTimestamp(timestampValue);
+                break;
+            case SYMBOL:
+                final SymbolToken symbolToken = reader.symbolValue();
+                writeSymbolToken(symbolToken);
+                break;
+            case STRING:
+                final String stringValue = reader.stringValue();
+                writeString(stringValue);
+                break;
+            case CLOB:
+                final byte[] clobValue = reader.newBytes();
+                writeClob(clobValue);
+                break;
+            case BLOB:
+                final byte[] blobValue = reader.newBytes();
+                writeBlob(blobValue);
+                break;
+            case LIST:
+            case SEXP:
+            case STRUCT:
+                reader.stepIn();
+                stepIn(type);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected type: " + type);
         }
     }
 
@@ -223,7 +224,7 @@ import java.util.Date;
 
     public final boolean isStreamCopyOptimized()
     {
-        return symtabExtendsCache != null;
+        return isStreamCopyOptimized;
     }
 
     @SuppressWarnings("deprecation")
