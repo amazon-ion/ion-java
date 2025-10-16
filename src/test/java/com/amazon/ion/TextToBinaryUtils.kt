@@ -62,17 +62,6 @@ object TextToBinaryUtils {
      */
     @JvmStatic
     fun ByteArray.byteArrayToBitString(): String {
-        val s = java.lang.StringBuilder()
-        for (aByte in this) {
-            for (bit in 7 downTo 0) {
-                if (((0x01 shl bit) and aByte.toInt()) != 0) {
-                    s.append("1")
-                } else {
-                    s.append("0")
-                }
-            }
-            s.append(" ")
-        }
-        return s.toString().trim { it <= ' ' }
+        return this.joinToString(" ") { it.toUByte().toString(2).padStart(8, '0') }
     }
 }
