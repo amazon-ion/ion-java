@@ -30,7 +30,7 @@ internal object Float0OpcodeHandler : OpcodeToBytecodeHandler {
 }
 
 /**
- * Writes bytecode for a half-precision float to the bytecode buffer. Handles opcode `0x6A`.
+ * Writes bytecode for a half-precision float to the bytecode buffer. Handles opcode `0x6B`.
  */
 internal object Float16OpcodeHandler : OpcodeToBytecodeHandler {
     override fun convertOpcodeToBytecode(
@@ -52,7 +52,7 @@ internal object Float16OpcodeHandler : OpcodeToBytecodeHandler {
 }
 
 /**
- * Writes bytecode for a single-precision float to the bytecode buffer. Handles opcode `0x6A`.
+ * Writes bytecode for a single-precision float to the bytecode buffer. Handles opcode `0x6C`.
  */
 internal object Float32OpcodeHandler : OpcodeToBytecodeHandler {
     override fun convertOpcodeToBytecode(
@@ -74,7 +74,7 @@ internal object Float32OpcodeHandler : OpcodeToBytecodeHandler {
 }
 
 /**
- * Writes bytecode for a double-precision float to the bytecode buffer. Handles opcode `0x6A`.
+ * Writes bytecode for a double-precision float to the bytecode buffer. Handles opcode `0x6D`.
  */
 internal object DoubleOpcodeHandler : OpcodeToBytecodeHandler {
     override fun convertOpcodeToBytecode(
