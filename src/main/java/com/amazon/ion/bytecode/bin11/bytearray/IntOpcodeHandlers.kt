@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt16AsShort
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt24AsInt
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt32AsInt
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt8AsShort
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsLong
 import com.amazon.ion.bytecode.BytecodeEmitter
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt24AsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32AsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
