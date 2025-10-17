@@ -1,11 +1,14 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.NumericReader.readDouble
 import com.amazon.ion.bytecode.NumericReader.readFloat
-import com.amazon.ion.bytecode.NumericReader.readFloat16
+import com.amazon.ion.bytecode.NumericReader.readShort
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
+import com.amazon.ion.bytecode.util.asHalfToFloat
 
 /**
  * Writes bytecode representing float 0e0 to the bytecode buffer. Handles opcode `0x6A`.
@@ -45,7 +48,7 @@ internal object Float16OpcodeHandler : OpcodeToBytecodeHandler {
     ): Int {
         BytecodeEmitter.emitFloatValue(
             destination,
-            source.readFloat16(position)
+            source.readShort(position).asHalfToFloat()
         )
         return 2
     }

@@ -5,7 +5,7 @@ package com.amazon.ion.bytecode
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.bytecode.NumericReader.readDouble
 import com.amazon.ion.bytecode.NumericReader.readFloat
-import com.amazon.ion.bytecode.NumericReader.readFloat16
+import com.amazon.ion.bytecode.NumericReader.readShort
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -14,46 +14,34 @@ class NumericReaderTest {
 
     @ParameterizedTest
     @CsvSource(
-        "01 00, 0 01100111 00000000000000000000000, 0.000000059604645", // smallest positive subnormal number
-        "FF 03, 0 01110000 11111111100000000000000, 0.000060975552", // largest subnormal number
-        "00 04, 0 01110001 00000000000000000000000, 0.00006103515625", // smallest positive normal number
-        "FF 7B, 0 10001110 11111111110000000000000, 65504", // largest normal number
-        "FF 3B, 0 01111110 11111111110000000000000, 0.99951172", // largest number less than one
-        "00 3C, 0 01111111 00000000000000000000000, 1",
-        "01 3C, 0 01111111 00000000010000000000000, 1.00097656", // smallest number larger than one
-
-        // Same as above, but negative
-        "01 80, 1 01100111 00000000000000000000000, -0.000000059604645",
-        "FF 83, 1 01110000 11111111100000000000000, -0.000060975552",
-        "00 84, 1 01110001 00000000000000000000000, -0.00006103515625",
-        "FF FB, 1 10001110 11111111110000000000000, -65504",
-        "FF BB, 1 01111110 11111111110000000000000, -0.99951172",
-        "00 BC, 1 01111111 00000000000000000000000, -1",
-        "01 BC, 1 01111111 00000000010000000000000, -1.00097656",
-
-        "00 00, 0 00000000 00000000000000000000000, 0",
-        "00 80, 1 00000000 00000000000000000000000, -0",
-        "00 7C, 0 11111111 00000000000000000000000, Infinity",
-        "00 FC, 1 11111111 00000000000000000000000, -Infinity",
-        "01 7E, 0 11111111 10000000010000000000000, NaN", // quiet NaN
-        "01 7C, 0 11111111 00000000010000000000000, NaN", // signaling NaN
-        "01 FE, 1 11111111 10000000010000000000000, NaN", // negative quiet NaN
-        "01 FC, 1 11111111 00000000010000000000000, NaN", // negative signaling NaN
-        "53 7F, 0 11111111 11010100110000000000000, NaN", // another quiet NaN
-        "53 FF, 1 11111111 11010100110000000000000, NaN", // another negative quiet NaN
-
-        "00 C0, 1 10000000 00000000000000000000000, -2",
-        "55 35, 0 01111101 01010101010000000000000, 0.33325195",
-        "48 42, 0 10000000 10010010000000000000000, 3.140625"
+        "FE FF, -2",
+        "FF FF, -1",
+        "00 00, 0",
+        "01 00, 1",
+        "02 00, 2",
+        "03 00, 3",
+        "04 00, 4",
+        "05 00, 5",
+        "FF 03, 1023",
+        "00 04, 1024",
+        "FF 7B, 31743",
+        "FF 3B, 15359",
+        "00 3C, 15360",
+        "01 3C, 15361",
+        "01 80, -32767",
+        "FF 83, -31745",
+        "00 84, -31744",
+        "FF FB, -1025",
+        "FF BB, -17409",
+        "00 BC, -17408",
+        "01 BC, -17407",
+        "00 80, ${Short.MIN_VALUE}",
+        "FF 7F, ${Short.MAX_VALUE}"
     )
-    fun testReadFloat16(input: String, expectedBytes: String, expectedValue: Float) {
+    fun testReadShort(input: String, expectedValue: Short) {
         val data = input.hexStringToByteArray()
 
-        val value = data.readFloat16(0)
-
-        val expectedRawBits = expectedBytes.replace(" ", "").toUInt(2).toInt()
-
-        assertEquals(expectedRawBits, value.toRawBits())
+        val value = data.readShort(0)
         assertEquals(expectedValue, value)
     }
 
@@ -89,7 +77,7 @@ class NumericReaderTest {
         "AB AA AA 3E, 0 01111101 01010101010101010101011, 0.333333343267440796",
         "DB 0F 49 40, 0 10000000 10010010000111111011011, 3.14159274101257324"
     )
-    fun testReadFloat32(input: String, expectedBytes: String, expectedValue: Float) {
+    fun testReadFloat(input: String, expectedBytes: String, expectedValue: Float) {
         val data = input.hexStringToByteArray()
 
         val value = data.readFloat(0)
