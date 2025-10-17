@@ -1,19 +1,28 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package com.amazon.ion.bytecode
+package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.IonException
+import com.amazon.ion.PrimitiveTestCases_1_1
+import com.amazon.ion.TextToBinaryUtils.binaryStringToByteArray
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt16AsShort
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt24AsInt
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt32AsInt
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedInt8AsShort
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsInt
-import com.amazon.ion.bytecode.BinaryPrimitiveReader.readFixedIntAsLong
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.lengthOfFlexIntOrUIntAt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt24AsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32AsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsInt
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
+import java.math.BigInteger
 
-class BinaryPrimitiveReaderTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class PrimitiveDecoderTest {
 
     @ParameterizedTest
     @CsvSource(
@@ -199,5 +208,91 @@ class BinaryPrimitiveReaderTest {
         assertEquals(expectedValue, value)
     }
 
-    // TODO: add tests for reading the rest of the binary encoding primitives once implemented
+    // ==== FLEX INT AND UINT TESTS ==== //
+
+    @ParameterizedTest
+    @MethodSource(
+        PrimitiveTestCases_1_1.FLEX_INT_READ_WRITE_CASES,
+        PrimitiveTestCases_1_1.FLEX_INT_READ_ONLY_CASES,
+        PrimitiveTestCases_1_1.FLEX_UINT_READ_WRITE_CASES,
+        PrimitiveTestCases_1_1.FLEX_UINT_READ_ONLY_CASES,
+    )
+    fun testLengthOfFlexIntOrUIntAt(unused: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        val expectedLength = bytes.size
+        val actualLength = lengthOfFlexIntOrUIntAt(bytes, 0)
+        assertEquals(expectedLength, actualLength)
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_INT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_INT_READ_ONLY_CASES)
+    fun testReadFlexIntValueAndLength(expectedBigInteger: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        if (expectedBigInteger.isIntValue()) {
+            val expectedValue = expectedBigInteger.toInt()
+            val expectedLength = bytes.size
+            val actual = PrimitiveDecoder.readFlexIntValueAndLength(bytes, 0)
+            val actualValue = actual.toInt()
+            val actualLength = actual.shr(Int.SIZE_BITS).toInt()
+            assertEquals(expectedValue, actualValue)
+            assertEquals(expectedLength, actualLength)
+        } else {
+            assertThrows<IonException> {
+                PrimitiveDecoder.readFlexIntValueAndLength(bytes, 0)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_INT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_INT_READ_ONLY_CASES,)
+    fun testReadFlexIntAsLong(expectedBigInteger: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        if (expectedBigInteger.isLongValue()) {
+            val expected = expectedBigInteger.toLong()
+            val actual = PrimitiveDecoder.readFlexIntAsLong(bytes, 0)
+            assertEquals(expected, actual, "Unexpected result reading a FlexInt that is ${bytes.size} bytes")
+        } else {
+            assertThrows<IonException> {
+                PrimitiveDecoder.readFlexIntAsLong(bytes, 0)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_INT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_INT_READ_ONLY_CASES,)
+    fun testReadFlexIntAsBigInteger(expected: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        val actual = PrimitiveDecoder.readFlexIntAsBigInteger(bytes, 0)
+        assertEquals(expected, actual, "Unexpected result reading a FlexInt that is ${bytes.size} bytes")
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_UINT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_UINT_READ_ONLY_CASES,)
+    fun testReadFlexUIntValueAndLength(expectedBigInteger: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        if (expectedBigInteger.isIntValue()) {
+            val expectedValue = expectedBigInteger.toInt()
+            val expectedLength = bytes.size
+            val actual = PrimitiveDecoder.readFlexUIntValueAndLength(bytes, 0)
+            val actualValue = actual.toInt()
+            val actualLength = actual.shr(Int.SIZE_BITS).toInt()
+            assertEquals(expectedValue, actualValue)
+            assertEquals(expectedLength, actualLength)
+        } else {
+            assertThrows<IonException> {
+                PrimitiveDecoder.readFlexUIntValueAndLength(bytes, 0)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_UINT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_UINT_READ_ONLY_CASES,)
+    fun testReadFlexUIntAsBigInteger(expected: BigInteger, bits: String) {
+        val bytes = bits.binaryStringToByteArray()
+        val actual = PrimitiveDecoder.readFlexUIntAsBigInteger(bytes, 0)
+        assertEquals(expected, actual, "Unexpected result reading a FlexUInt that is ${bytes.size} bytes")
+    }
+
+    private fun BigInteger.isLongValue(): Boolean = this == this.toLong().toBigInteger()
+    private fun BigInteger.isIntValue(): Boolean = this == this.toInt().toBigInteger()
 }
