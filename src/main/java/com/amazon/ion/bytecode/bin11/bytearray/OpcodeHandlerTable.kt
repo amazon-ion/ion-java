@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
@@ -60,9 +61,17 @@ internal object OpcodeHandlerTable {
             0x63 -> Int24OpcodeHandler
             0x64 -> Int32OpcodeHandler
             in 0x65..0x68 -> LongIntOpcodeHandler
+            in 0x80..0x8c -> ShortTimestampOpcodeHandler
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
+            0xf5 -> GenericReferenceOpcodeHandler(Instructions.I_INT_REF)
+            0xf6 -> GenericReferenceOpcodeHandler(Instructions.I_DECIMAL_REF)
+            0xf7 -> GenericReferenceOpcodeHandler(Instructions.I_TIMESTAMP_REF)
+            0xf8 -> GenericReferenceOpcodeHandler(Instructions.I_STRING_REF)
+            0xf9 -> GenericReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
+            0xfe -> GenericReferenceOpcodeHandler(Instructions.I_BLOB_REF)
+            0xff -> GenericReferenceOpcodeHandler(Instructions.I_CLOB_REF)
             else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
             }

@@ -66,4 +66,14 @@ internal object BytecodeEmitter {
         // Stores high 4 bytes in first operand, low 4 bytes in the second operand
         destination.add3(Instructions.I_INT_I64, (int64 ushr 32).toInt(), int64.toInt())
     }
+
+    @JvmStatic
+    fun emitReference(destination: BytecodeBuffer, instruction: Int, dataLength: Int, dataPosition: Int) {
+        destination.add2(instruction.packInstructionData(dataLength), dataPosition)
+    }
+
+    @JvmStatic
+    fun emitShortTimestampReference(destination: BytecodeBuffer, precisionAndOffsetMode: Int, dataPosition: Int) {
+        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(precisionAndOffsetMode), dataPosition)
+    }
 }

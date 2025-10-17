@@ -40,8 +40,28 @@ object GeneratorTestUtil {
     internal fun assertEqualBytecode(expectedBytecode: IntArray, actualBytecode: IntArray) {
         if (!expectedBytecode.contentEquals(actualBytecode)) {
             // If they're not equal, we'll use a string-based equality assertion to try to get a friendlier test failure message.
-            val expectedBytecodeText = StringBuilder().apply { Debugger.renderBytecodeToString(expectedBytecode, ::append, useNumbers = false) }.toString()
-            val actualBytecodeText = StringBuilder().apply { Debugger.renderBytecodeToString(actualBytecode, ::append, useNumbers = false) }.toString()
+            /*
+            Prepend the strings to compare with a newline below. Without the newline, unequal bytecode will report an
+            assertion error that looks like the following:
+
+            org.opentest4j.AssertionFailedError: expected: <INT_REF L=4194303
+             └─ <00000005> offset=5
+            > but was: <INT_REF L=2097152
+             └─ <00000005> offset=5
+            >
+
+            The leading newline puts the first instruction header with the rest of the printed bytecode:
+
+            org.opentest4j.AssertionFailedError: expected: <
+            INT_REF L=4194303
+             └─ <00000005> offset=5
+            > but was: <
+            INT_REF L=2097152
+             └─ <00000005> offset=5
+            >
+             */
+            val expectedBytecodeText = StringBuilder("\n").apply { Debugger.renderBytecodeToString(expectedBytecode, ::append, useNumbers = false) }.toString()
+            val actualBytecodeText = StringBuilder("\n").apply { Debugger.renderBytecodeToString(actualBytecode, ::append, useNumbers = false) }.toString()
             assertEquals(expectedBytecodeText, actualBytecodeText)
             // But, in case there's a difference that doesn't show up in the debug rendering, we'll follow it with the original check.
             assertArrayEquals(expectedBytecode, actualBytecode)
