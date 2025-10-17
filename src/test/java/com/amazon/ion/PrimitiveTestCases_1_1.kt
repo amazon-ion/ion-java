@@ -1,23 +1,19 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-package com.amazon.ion.impl.bin
+package com.amazon.ion
 
-import com.amazon.ion.IonException
-import com.amazon.ion.TextToBinaryUtils.binaryStringToByteArray
-import com.amazon.ion.TextToBinaryUtils.byteArrayToBitString
-import com.amazon.ion.impl.bin.FlexInt.lengthOfFlexIntOrUIntAt
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import java.math.BigInteger
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class FlexIntTest {
+/**
+ * Test cases for FlexInts, FlexUInts, etc.
+ */
+object PrimitiveTestCases_1_1 {
 
+    private const val THIS_NAME = "com.amazon.ion.PrimitiveTestCases_1_1"
+
+    const val FLEX_INT_READ_WRITE_CASES = "$THIS_NAME#flexIntReadWriteCases"
+
+    @JvmStatic
     fun flexIntReadWriteCases() = listOf(
         "                   0, 00000001",
         "                   1, 00000011",
@@ -78,6 +74,9 @@ class FlexIntTest {
         Arguments.of(bigInt.trim(), bits.trim())
     }
 
+    const val FLEX_INT_READ_ONLY_CASES = "$THIS_NAME#flexIntReadOnlyCases"
+
+    @JvmStatic
     fun flexIntReadOnlyCases() = listOf(
         // Mostly just over-padded numbers that we should be able to read, but we'll never write them this way.
         "  1, 00000000 00000011 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
@@ -93,6 +92,9 @@ class FlexIntTest {
         Arguments.of(bigInt.trim(), bits.trim())
     }
 
+    const val FLEX_UINT_READ_WRITE_CASES = "$THIS_NAME#flexUIntReadWriteCases"
+
+    @JvmStatic
     fun flexUIntReadWriteCases() = listOf(
         "                   0, 00000001",
         "                   1, 00000011",
@@ -127,6 +129,9 @@ class FlexIntTest {
         Arguments.of(bigInt.trim(), bits.trim())
     }
 
+    const val FLEX_UINT_READ_ONLY_CASES = "$THIS_NAME#flexUIntReadOnlyCases"
+
+    @JvmStatic
     fun flexUIntReadOnlyCases() = listOf(
         // Mostly just over-padded numbers that we should be able to read, but we'll never write them this way.
         "  1, 00000000 00000011 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
@@ -137,129 +142,4 @@ class FlexIntTest {
         val (bigInt, bits) = it.split(',')
         Arguments.of(bigInt.trim(), bits.trim())
     }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases", "flexIntReadOnlyCases", "flexUIntReadWriteCases", "flexUIntReadOnlyCases")
-    fun testLengthOfFlexIntOrUIntAt(unused: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        val expectedLength = bytes.size
-        val actualLength = lengthOfFlexIntOrUIntAt(bytes, 0)
-        assertEquals(expectedLength, actualLength)
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases")
-    fun testWriteFlexInt(bigIntegerValue: BigInteger, expectedBits: String) {
-        assumeTrue(bigIntegerValue.isLongValue())
-        val value = bigIntegerValue.longValueExact()
-        val numBytes: Int = FlexInt.flexIntLength(value)
-        val bytes = ByteArray(numBytes)
-        FlexInt.writeFlexIntOrUIntInto(bytes, 0, value, numBytes)
-        assertEquals(expectedBits, bytes.byteArrayToBitString())
-        assertEquals((expectedBits.length + 1) / 9, numBytes)
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexUIntReadWriteCases")
-    fun testWriteFlexUInt(bigIntegerValue: BigInteger, expectedBits: String) {
-        assumeTrue(bigIntegerValue.isLongValue())
-        val value = bigIntegerValue.longValueExact()
-        val numBytes: Int = FlexInt.flexUIntLength(value)
-        val bytes = ByteArray(numBytes)
-        FlexInt.writeFlexIntOrUIntInto(bytes, 0, value, numBytes)
-        assertEquals(expectedBits, bytes.byteArrayToBitString())
-        assertEquals((expectedBits.length + 1) / 9, numBytes)
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases")
-    fun testWriteFlexIntForBigInteger(value: BigInteger, expectedBits: String) {
-        val numBytes: Int = FlexInt.flexIntLength(value)
-        val bytes = ByteArray(numBytes)
-        FlexInt.writeFlexIntOrUIntInto(bytes, 0, value, numBytes)
-        assertEquals(expectedBits, bytes.byteArrayToBitString())
-        assertEquals((expectedBits.length + 1) / 9, numBytes)
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexUIntReadWriteCases")
-    fun testWriteFlexUIntForBigInteger(value: BigInteger, expectedBits: String) {
-        val numBytes: Int = FlexInt.flexUIntLength(value)
-        val bytes = ByteArray(numBytes)
-        FlexInt.writeFlexIntOrUIntInto(bytes, 0, value, numBytes)
-        assertEquals(expectedBits, bytes.byteArrayToBitString())
-        assertEquals((expectedBits.length + 1) / 9, numBytes)
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases", "flexIntReadOnlyCases")
-    fun testReadFlexIntValueAndLength(expectedBigInteger: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        if (expectedBigInteger.isIntValue()) {
-            val expectedValue = expectedBigInteger.toInt()
-            val expectedLength = bytes.size
-            val actual = FlexInt.readFlexIntValueAndLength(bytes, 0)
-            val actualValue = actual.toInt()
-            val actualLength = actual.shr(Int.SIZE_BITS).toInt()
-            assertEquals(expectedValue, actualValue)
-            assertEquals(expectedLength, actualLength)
-        } else {
-            assertThrows<IonException> {
-                FlexInt.readFlexIntValueAndLength(bytes, 0)
-            }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases", "flexIntReadOnlyCases")
-    fun testReadFlexIntAsLong(expectedBigInteger: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        if (expectedBigInteger.isLongValue()) {
-            val expected = expectedBigInteger.toLong()
-            val actual = FlexInt.readFlexIntAsLong(bytes, 0)
-            assertEquals(expected, actual, "Unexpected result reading a FlexInt that is ${bytes.size} bytes")
-        } else {
-            assertThrows<IonException> {
-                FlexInt.readFlexIntAsLong(bytes, 0)
-            }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexIntReadWriteCases", "flexIntReadOnlyCases")
-    fun testReadFlexIntAsBigInteger(expected: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        val actual = FlexInt.readFlexIntAsBigInteger(bytes, 0)
-        assertEquals(expected, actual, "Unexpected result reading a FlexInt that is ${bytes.size} bytes")
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexUIntReadWriteCases", "flexUIntReadOnlyCases")
-    fun testReadFlexUIntValueAndLength(expectedBigInteger: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        if (expectedBigInteger.isIntValue()) {
-            val expectedValue = expectedBigInteger.toInt()
-            val expectedLength = bytes.size
-            val actual = FlexInt.readFlexUIntValueAndLength(bytes, 0)
-            val actualValue = actual.toInt()
-            val actualLength = actual.shr(Int.SIZE_BITS).toInt()
-            assertEquals(expectedValue, actualValue)
-            assertEquals(expectedLength, actualLength)
-        } else {
-            assertThrows<IonException> {
-                FlexInt.readFlexUIntValueAndLength(bytes, 0)
-            }
-        }
-    }
-
-    @ParameterizedTest
-    @MethodSource("flexUIntReadWriteCases", "flexUIntReadOnlyCases")
-    fun testReadFlexUIntAsBigInteger(expected: BigInteger, bits: String) {
-        val bytes = bits.binaryStringToByteArray()
-        val actual = FlexInt.readFlexUIntAsBigInteger(bytes, 0)
-        assertEquals(expected, actual, "Unexpected result reading a FlexUInt that is ${bytes.size} bytes")
-    }
-
-    private fun BigInteger.isLongValue(): Boolean = this == this.toLong().toBigInteger()
-    private fun BigInteger.isIntValue(): Boolean = this == this.toInt().toBigInteger()
 }
