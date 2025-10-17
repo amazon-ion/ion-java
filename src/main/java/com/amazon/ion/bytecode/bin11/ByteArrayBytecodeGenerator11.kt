@@ -8,6 +8,7 @@ import com.amazon.ion.Timestamp
 import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.BytecodeGenerator
 import com.amazon.ion.bytecode.bin11.bytearray.OpcodeHandlerTable
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsBigInteger
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.ByteSlice
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -57,7 +58,7 @@ internal class ByteArrayBytecodeGenerator11(
     }
 
     override fun readBigIntegerReference(position: Int, length: Int): BigInteger {
-        TODO("Not yet implemented")
+        return readFixedIntAsBigInteger(source, position, length)
     }
 
     override fun readDecimalReference(position: Int, length: Int): Decimal {

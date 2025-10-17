@@ -74,6 +74,17 @@ internal object PrimitiveDecoder {
     }
 
     @JvmStatic
+    fun readFixedIntAsBigInteger(source: ByteArray, start: Int, length: Int): BigInteger {
+        // TODO: ion-java#1114
+        if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
+        val bytes = ByteArray(length)
+        for (i in 0 until length) {
+            bytes[i] = source[start + length - i - 1]
+        }
+        return BigInteger(bytes)
+    }
+
+    @JvmStatic
     fun readFixedUInt16(source: ByteArray, position: Int): UShort {
         // TODO: ion-java#1114
         if (source.size < position + 2) throw IonException("Incomplete data: start=$position, length=2, limit=${source.size}")
