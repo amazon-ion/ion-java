@@ -42,29 +42,33 @@ internal class GenericReferenceOpcodeHandlerTest {
         )
 
         val testTemplates = listOf(
-            // FlexUInt representation of payload length, decimal payload length, payload start position, expected end position
-            "03,   1, 2,   3",
-            "05,   2, 2,   4",
-            "07,   3, 2,   5",
-            "09,   4, 2,   6",
-            "0B,   5, 2,   7",
-            "1D,  14, 2,  16",
-            "7F,  63, 2,  65",
-            "81,  64, 2,  66",
-            "FF, 127, 2, 129",
-            "02 02,   128, 3,   131",
-            "FE FF, 16383, 3, 16386",
-            "04 00 02,      16384, 4,   16388",
-            "FC FF FF,    2097151, 4, 2097155",
-            "08 00 00 02, 2097152, 5, 2097157",
-            "F8 FF FF 03, 4194303, 5, 4194308", // maximum length of a payload
-            "00 18 00 00 00 00 00 00 00 00 00 00, 1, 13, 14", // overlong encoding on the FlexUInt
-            "01, 0, 2, 2", // zero-length payload  TODO: is this legal?
+            //     Decimal payload length
+            //     |   Expected payload start position
+            //     |   |        Expected end position after handling
+            //     |   |        |   FlexUInt representation of payload length
+            //     |   |        |   |
+            "      1,  2,       3, 03",
+            "      2,  2,       4, 05",
+            "      3,  2,       5, 07",
+            "      4,  2,       6, 09",
+            "      5,  2,       7, 0B",
+            "     14,  2,      16, 1D",
+            "     63,  2,      65, 7F",
+            "     64,  2,      66, 81",
+            "    127,  2,     129, FF",
+            "    128,  3,     131, 02 02",
+            "  16383,  3,   16386, FE FF",
+            "  16384,  4,   16388, 04 00 02",
+            "2097151,  4, 2097155, FC FF FF",
+            "2097152,  5, 2097157, 08 00 00 02",
+            "4194303,  5, 4194308, F8 FF FF 03", // maximum length of a payload
+            "      1, 13,      14, 00 18 00 00 00 00 00 00 00 00 00 00", // overlong encoding on the FlexUInt
+            "      0,  2,       2, 01", // zero-length payload  TODO: is this legal?
         )
 
-        // This loop maps the above templates into a tests for each opcode. The templates above consist of some bytecode
-        // representing the FlexUInt length of the payload, the decimal value of that FlexUInt, the expected start
-        // position of the payload, and the expected end position of the generator after executing the handler.
+        // This loop maps the above templates into a tests for each opcode. The templates above consist of the decimal
+        // value of the FlexUInt length prefix, the expected start position of the payload, the expected end position of
+        // the generator after executing the handler, and some bytecode representing the FlexUInt length of the payload.
         //
         // The opcode will be prepended to the bytecode string, and random bytes will be generated to fill the payload.
         //
@@ -80,7 +84,7 @@ internal class GenericReferenceOpcodeHandlerTest {
         val random = Random(100) // Seed so we get the same values every time
         instructions.forEach { (instruction, opcode) ->
             testTemplates.forEach {
-                val (flexUIntStr, payloadLengthStr, expectedPayloadStartPosStr, expectedEndPositionStr) = it.split(',')
+                val (payloadLengthStr, expectedPayloadStartPosStr, expectedEndPositionStr, flexUIntStr) = it.split(',')
                 val payloadLength = payloadLengthStr.trim().toInt()
                 val expectedPayloadStartPosition = expectedPayloadStartPosStr.trim().toInt()
                 val expectedEndPosition = expectedEndPositionStr.trim().toInt()
@@ -91,7 +95,7 @@ internal class GenericReferenceOpcodeHandlerTest {
                         GenericReferenceOpcodeHandler(instruction),
                         byteArrayOf(
                             opcode.toByte(), // write the opcode
-                            *flexUIntStr.hexStringToByteArray(), // then the FlexUInt
+                            *flexUIntStr.trim().hexStringToByteArray(), // then the FlexUInt
                             *payload // then the payload bytes
                         ),
                         intArrayOf(
