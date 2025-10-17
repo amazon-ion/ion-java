@@ -3,11 +3,8 @@
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.BytecodeEmitter
-import com.amazon.ion.bytecode.ir.Instructions
-import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.impl.bin.FlexInt.readFlexUIntValueAndLength
 
 /**
  * Writes a bytecode representing a reference to a short-form timestamp. Handles opcodes `0x80`-`0x8C`.
