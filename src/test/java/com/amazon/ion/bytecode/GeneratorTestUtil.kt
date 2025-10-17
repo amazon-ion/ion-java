@@ -40,8 +40,8 @@ object GeneratorTestUtil {
     internal fun assertEqualBytecode(expectedBytecode: IntArray, actualBytecode: IntArray) {
         if (!expectedBytecode.contentEquals(actualBytecode)) {
             // If they're not equal, we'll use a string-based equality assertion to try to get a friendlier test failure message.
-            val expectedBytecodeText = StringBuilder("").apply { Debugger.renderBytecodeToString(expectedBytecode, ::append, useNumbers = false) }.toString()
-            val actualBytecodeText = StringBuilder("").apply { Debugger.renderBytecodeToString(actualBytecode, ::append, useNumbers = false) }.toString()
+            val expectedBytecodeText = StringBuilder().apply { Debugger.renderBytecodeToString(expectedBytecode, ::append, useNumbers = false) }.toString()
+            val actualBytecodeText = StringBuilder().apply { Debugger.renderBytecodeToString(actualBytecode, ::append, useNumbers = false) }.toString()
             assertEquals(expectedBytecodeText, actualBytecodeText)
             // But, in case there's a difference that doesn't show up in the debug rendering, we'll follow it with the original check.
             assertArrayEquals(expectedBytecode, actualBytecode)

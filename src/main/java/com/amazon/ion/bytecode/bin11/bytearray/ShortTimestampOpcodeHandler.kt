@@ -9,6 +9,8 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 /**
  * Writes a bytecode representing a reference to a short-form timestamp. Handles opcodes `0x80`-`0x8C`.
  */
+// TODO: this handler might be worth moving into the same file as either the GenericReferenceOpcodeHandler or
+//  the (eventual) long timestamp handler
 internal object ShortTimestampOpcodeHandler : OpcodeToBytecodeHandler {
     override fun convertOpcodeToBytecode(
         opcode: Int,
