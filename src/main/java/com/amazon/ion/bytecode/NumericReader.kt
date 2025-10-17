@@ -9,11 +9,12 @@ import com.amazon.ion.IonException
  * doubles, etc.
  */
 internal object NumericReader {
+    // TODO: these 3 functions are now duplicated here and in PrimitiveDecoder.
     /**
      * Returns the 2-byte int at the given position in the array. Does NOT validate array bounds.
      */
     @JvmStatic
-    fun ByteArray.getShort(position: Int): Short {
+    private fun ByteArray.getShort(position: Int): Short {
         return (
             (this[position].toInt() and 0xFF) or
                 ((this[position + 1].toInt() and 0xFF) shl 8)
@@ -21,22 +22,10 @@ internal object NumericReader {
     }
 
     /**
-     * Returns the 3-byte int at the given position in the array. Does NOT validate array bounds.
-     */
-    @JvmStatic
-    fun ByteArray.getInt24(position: Int): Int {
-        return (this[position].toInt() and 0xFF) or
-            ((this[position + 1].toInt() and 0xFF) shl 8) or
-            // Shift left into 4th byte and then back down a byte here spreads the sign
-            // across high byte, which is needed for negatives
-            ((this[position + 2].toInt() and 0xFF) shl 24 shr 8)
-    }
-
-    /**
      * Returns the 4-byte int at the given position in the array. Does NOT validate array bounds.
      */
     @JvmStatic
-    fun ByteArray.getInt(position: Int): Int {
+    private fun ByteArray.getInt(position: Int): Int {
         return (this[position].toInt() and 0xFF) or
             ((this[position + 1].toInt() and 0xFF) shl 8) or
             ((this[position + 2].toInt() and 0xFF) shl 16) or
@@ -47,7 +36,7 @@ internal object NumericReader {
      * Returns the 8-byte int at the given position in the array. Does NOT validate array bounds.
      */
     @JvmStatic
-    fun ByteArray.getLong(position: Int): Long {
+    private fun ByteArray.getLong(position: Int): Long {
         return (this[position].toLong() and 0xFF) or
             ((this[position + 1].toLong() and 0xFF) shl 8) or
             ((this[position + 2].toLong() and 0xFF) shl 16) or
