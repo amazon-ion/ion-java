@@ -9,7 +9,7 @@ import com.amazon.ion.impl.bin.FlexInt.readFlexUIntValueAndLength
 
 /**
  * Writes a bytecode representing a generic reference to a variable-length payload of a particular data type.
- * Handles opcodes followed by a FlexUInt length prefix (`0xF5`-`0xF9`, `0xFE`, `0xFF`).
+ * Handles opcodes followed by a FlexUInt length prefix (`0x59`, `0xF5`-`0xF9`, `0xFE`, `0xFF`).
  */
 // TODO(perf): Could it be more efficient to not use a class here and copy-paste separate objects for each
 //  instruction type? Does accessing the class field add overhead?

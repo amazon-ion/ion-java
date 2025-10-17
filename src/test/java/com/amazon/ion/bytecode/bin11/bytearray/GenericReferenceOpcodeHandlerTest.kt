@@ -31,6 +31,7 @@ internal class GenericReferenceOpcodeHandlerTest {
         val arguments = mutableListOf<Arguments>()
 
         val instructions = arrayOf(
+            Pair(Instructions.I_ANNOTATION_REF, 0x59),
             Pair(Instructions.I_INT_REF, 0xF5),
             Pair(Instructions.I_DECIMAL_REF, 0xF6),
             Pair(Instructions.I_TIMESTAMP_REF, 0xF7),

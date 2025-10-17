@@ -57,6 +57,7 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
+            0x59 -> GenericReferenceOpcodeHandler(Instructions.I_ANNOTATION_REF)
             0x60 -> Int0OpcodeHandler
             0x61 -> Int8OpcodeHandler
             0x62 -> Int16OpcodeHandler
