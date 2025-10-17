@@ -3,9 +3,9 @@
 package com.amazon.ion.bytecode.bin11.bytearray
 
 import com.amazon.ion.bytecode.BytecodeEmitter
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFlexUIntValueAndLength
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.impl.bin.FlexInt.readFlexUIntValueAndLength
 
 /**
  * Writes a bytecode representing a generic reference to a variable-length payload of a particular data type.
