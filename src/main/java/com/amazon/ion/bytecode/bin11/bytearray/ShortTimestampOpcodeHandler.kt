@@ -12,6 +12,25 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 // TODO: this handler might be worth moving into the same file as either the GenericReferenceOpcodeHandler or
 //  the (eventual) long timestamp handler
 internal object ShortTimestampOpcodeHandler : OpcodeToBytecodeHandler {
+    /**
+     * Maps the precision and offset mode (low nibble of the opcode) to the length of the timestamp's payload
+     * in bytes.
+     *
+     * Note that this mapping also be expressed with a pretty tight conditional:
+     *
+     * ```kotlin
+     * when (precisionAndOffsetMode) {
+     *      0x2 -> 2
+     *      0x9 -> 5
+     *      in 0x0..0x7 -> precisionAndOffsetMode + 1
+     *      else -> precisionAndOffsetMode - 3
+     * }
+     * ```
+     */
+    private val serializedSizeByOpcodeTable = intArrayOf(
+        1, 2, 2, 4, 5, 6, 7, 8, 5, 5, 7, 8, 9
+    )
+
     override fun convertOpcodeToBytecode(
         opcode: Int,
         source: ByteArray,
@@ -28,6 +47,6 @@ internal object ShortTimestampOpcodeHandler : OpcodeToBytecodeHandler {
             precisionAndOffsetMode,
             position
         )
-        return 0
+        return serializedSizeByOpcodeTable[precisionAndOffsetMode]
     }
 }

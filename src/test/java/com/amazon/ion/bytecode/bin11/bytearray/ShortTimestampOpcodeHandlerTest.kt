@@ -16,23 +16,24 @@ import kotlin.String
 
 class ShortTimestampOpcodeHandlerTest {
 
-    // TODO: not all opcodes are checked here
+    // TODO: not all opcodes are checked here yet
     @ParameterizedTest
     @CsvSource(
-        "80 35, 0", // 2023T
-        "81 35 05, 1", // 2023-10T
-        "82 35 7D, 2", // 2023-10-15T
-        "83 35 7D CB 0A, 3", // 2023-10-15T11:22Z
-        "84 35 7D CB 1A 02, 4", // 2023-10-15T11:22:33Z
-        "84 35 7D CB 12 02, 4", // 2023-10-15T11:22:33-00:00
-        "85 35 7D CB 12 F2 06, 5", // 2023-10-15T11:22:33.444-00:00
-        "88 35 7D CB 2A 00, 8", // 2023-10-15T11:22+01:15
-        "89 35 7D CB 2A 84, 9", // 2023-10-15T11:22:33+01:15
-        "8C 35 7D CB 2A 84 92 61 7F 1A, 12", // 2023-10-15T11:22:33.444555666+01:15
+        "80 35, 0, 2", // 2023T
+        "81 35 05, 1, 3", // 2023-10T
+        "82 35 7D, 2, 3", // 2023-10-15T
+        "83 35 7D CB 0A, 3, 5", // 2023-10-15T11:22Z
+        "84 35 7D CB 1A 02, 4, 6", // 2023-10-15T11:22:33Z
+        "84 35 7D CB 12 02, 4, 6", // 2023-10-15T11:22:33-00:00
+        "85 35 7D CB 12 F2 06, 5, 7", // 2023-10-15T11:22:33.444-00:00
+        "88 35 7D CB 2A 00, 8, 6", // 2023-10-15T11:22+01:15
+        "89 35 7D CB 2A 84, 9, 6", // 2023-10-15T11:22:33+01:15
+        "8C 35 7D CB 2A 84 92 61 7F 1A, 12, 10", // 2023-10-15T11:22:33.444555666+01:15
     )
     fun `short timestamp opcode handler emits correct bytecode`(
         inputString: String,
-        expectedPrecisionAndOffsetMode: Int
+        expectedPrecisionAndOffsetMode: Int,
+        expectedEndPosition: Int
     ) {
         val inputByteArray = inputString.hexStringToByteArray()
         val buffer = BytecodeBuffer()
@@ -50,12 +51,12 @@ class ShortTimestampOpcodeHandlerTest {
             arrayOf()
         )
 
-        val expectedPosition = 1
+        val expectedPayloadStartPosition = 1
         val expectedBytecode = intArrayOf(
             Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(expectedPrecisionAndOffsetMode),
-            expectedPosition
+            expectedPayloadStartPosition
         )
         assertEqualBytecode(expectedBytecode, buffer.toArray())
-        assertEquals(expectedPosition, position)
+        assertEquals(expectedEndPosition, position)
     }
 }

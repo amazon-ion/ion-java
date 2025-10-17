@@ -35,6 +35,6 @@ internal class GenericReferenceOpcodeHandler(
             payloadSize,
             position + payloadSizeFlexUIntLength
         )
-        return payloadSizeFlexUIntLength
+        return payloadSizeFlexUIntLength + payloadSize
     }
 }

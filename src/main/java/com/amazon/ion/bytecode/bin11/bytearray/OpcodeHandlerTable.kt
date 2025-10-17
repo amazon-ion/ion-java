@@ -16,7 +16,9 @@ internal fun interface OpcodeToBytecodeHandler {
      * writes the representative bytecode to a [BytecodeBuffer].
      *
      * @return The number of additional bytes that had to be read off of [source] to handle this opcode. Should be zero
-     * if it was possible to handle the opcode without reading any additional data.
+     * if it was possible to handle the opcode without reading any additional data. Skipping this many bytes in the
+     * input plus one will position the caller at the start of the next expression (the opcode for an opcode-prefixed
+     * value, or the first byte of a tagless value payload, etc.).
      */
     fun convertOpcodeToBytecode(
         /** The opcode to handle */

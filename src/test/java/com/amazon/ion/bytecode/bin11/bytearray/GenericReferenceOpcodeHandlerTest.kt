@@ -40,31 +40,32 @@ internal class GenericReferenceOpcodeHandlerTest {
         )
 
         val z = listOf(
-            // FlexUInt representation of payload length, decimal payload length, payload start position
-            "03, 1, 2",
-            "05, 2, 2",
-            "07, 3, 2",
-            "09, 4, 2",
-            "0B, 5, 2",
-            "1D, 14, 2",
-            "7F, 63, 2",
-            "81, 64, 2",
-            "FF, 127, 2",
-            "02 02, 128, 3",
-            "FE FF, 16383, 3",
-            "04 00 02, 16384, 4",
-            "FC FF FF, 2097151, 4",
-            "08 00 00 02, 2097152, 5",
-            "F8 FF FF 03, 4194303, 5", // maximum length of a payload
-            "00 18 00 00 00 00 00 00 00 00 00 00, 1, 13", // overlong encoding on the FlexUInt
-            "01, 0, 2", // zero-length payload  TODO: is this legal?
+            // FlexUInt representation of payload length, decimal payload length, payload start position, expected end position
+            "03,   1, 2,   3",
+            "05,   2, 2,   4",
+            "07,   3, 2,   5",
+            "09,   4, 2,   6",
+            "0B,   5, 2,   7",
+            "1D,  14, 2,  16",
+            "7F,  63, 2,  65",
+            "81,  64, 2,  66",
+            "FF, 127, 2, 129",
+            "02 02,   128, 3,   131",
+            "FE FF, 16383, 3, 16386",
+            "04 00 02,      16384, 4,   16388",
+            "FC FF FF,    2097151, 4, 2097155",
+            "08 00 00 02, 2097152, 5, 2097157",
+            "F8 FF FF 03, 4194303, 5, 4194308", // maximum length of a payload
+            "00 18 00 00 00 00 00 00 00 00 00 00, 1, 13, 14", // overlong encoding on the FlexUInt
+            "01, 0, 2, 2", // zero-length payload  TODO: is this legal?
         )
 
         val random = Random(100) // Seed so we get the same values every time
         instructions.forEach { (instruction, opcode) ->
             z.forEach {
-                val (flexUIntStr, payloadLengthStr, expectedEndPositionStr) = it.split(',')
+                val (flexUIntStr, payloadLengthStr, expectedPayloadStartPosStr, expectedEndPositionStr) = it.split(',')
                 val payloadLength = payloadLengthStr.trim().toInt()
+                val expectedPayloadStartPosition = expectedPayloadStartPosStr.trim().toInt()
                 val expectedEndPosition = expectedEndPositionStr.trim().toInt()
 
                 val payload = Array(payloadLength) { random.nextBits(8).toByte() }.toByteArray()
@@ -78,7 +79,7 @@ internal class GenericReferenceOpcodeHandlerTest {
                         ),
                         intArrayOf(
                             instruction.packInstructionData(payloadLength),
-                            expectedEndPosition
+                            expectedPayloadStartPosition
                         ),
                         expectedEndPosition
                     )
