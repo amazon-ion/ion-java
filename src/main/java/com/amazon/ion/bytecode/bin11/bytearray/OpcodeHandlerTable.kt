@@ -60,6 +60,10 @@ internal object OpcodeHandlerTable {
             0x63 -> Int24OpcodeHandler
             0x64 -> Int32OpcodeHandler
             in 0x65..0x68 -> LongIntOpcodeHandler
+            0x6a -> Float0OpcodeHandler
+            0x6b -> Float16OpcodeHandler
+            0x6c -> Float32OpcodeHandler
+            0x6d -> DoubleOpcodeHandler
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
