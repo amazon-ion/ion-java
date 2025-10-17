@@ -11,6 +11,9 @@ class NumericConversionsTest {
     /**
      * Tests that half-precision floats packed into a [Short] are converted to [Float] correctly;
      * that is, the resulting float has identical value and NaN semantics (but different bit layout).
+     *
+     * In these tests, we check the float values themselves as well as the raw bits on the floats to ensure that NaN
+     * semantics are preserved.
      */
     @ParameterizedTest
     @CsvSource(
