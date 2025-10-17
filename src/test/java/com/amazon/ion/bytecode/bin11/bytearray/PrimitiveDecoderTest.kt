@@ -13,7 +13,6 @@ import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32As
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsInt
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
@@ -48,7 +47,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedInt8AsShort(4)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
@@ -68,7 +67,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedInt16AsShort(4)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
@@ -85,7 +84,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedInt24AsInt(4)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
@@ -102,7 +101,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedInt32AsInt(4)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
@@ -146,7 +145,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedIntAsInt(4, length)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
@@ -206,7 +205,7 @@ class PrimitiveDecoderTest {
 
         val value = data.readFixedIntAsLong(4, length)
 
-        Assertions.assertEquals(expectedValue, value)
+        assertEquals(expectedValue, value)
     }
 
     // ==== FLEX INT AND UINT TESTS ==== //
