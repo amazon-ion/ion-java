@@ -50,7 +50,7 @@ internal object PrimitiveDecoder {
     @JvmStatic
     fun readFixedInt64(source: ByteArray, start: Int): Long {
         // TODO: ion-java#1114
-        if (source.size < start + 4) throw IonException("Incomplete data: start=$start, length=4, limit=${source.size}")
+        if (source.size < start + 8) throw IonException("Incomplete data: start=$start, length=8, limit=${source.size}")
         return read8IntBytes(source[start], source, start)
     }
 
@@ -75,16 +75,22 @@ internal object PrimitiveDecoder {
 
     @JvmStatic
     fun readFixedUInt16(source: ByteArray, position: Int): UShort {
+        // TODO: ion-java#1114
+        if (source.size < position + 2) throw IonException("Incomplete data: start=$position, length=2, limit=${source.size}")
         return read2IntBytes(source[position], source, position).shr(16).toUShort()
     }
 
     @JvmStatic
     fun readFixedUInt32(source: ByteArray, position: Int): UInt {
+        // TODO: ion-java#1114
+        if (source.size < position + 4) throw IonException("Incomplete data: start=$position, length=4, limit=${source.size}")
         return read4IntBytes(source[position], source, position).toUInt()
     }
 
     @JvmStatic
     fun readFixedUInt64(source: ByteArray, position: Int): ULong {
+        // TODO: ion-java#1114
+        if (source.size < position + 8) throw IonException("Incomplete data: start=$position, length=8, limit=${source.size}")
         return read8IntBytes(source[position], source, position).toULong()
     }
 
