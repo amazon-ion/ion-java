@@ -57,7 +57,7 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
-            0x59 -> GenericReferenceOpcodeHandler(Instructions.I_ANNOTATION_REF)
+            0x59 -> ReferenceOpcodeHandler(Instructions.I_ANNOTATION_REF)
             0x60 -> Int0OpcodeHandler
             0x61 -> Int8OpcodeHandler
             0x62 -> Int16OpcodeHandler
@@ -72,13 +72,13 @@ internal object OpcodeHandlerTable {
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
-            0xf5 -> GenericReferenceOpcodeHandler(Instructions.I_INT_REF)
-            0xf6 -> GenericReferenceOpcodeHandler(Instructions.I_DECIMAL_REF)
-            0xf7 -> GenericReferenceOpcodeHandler(Instructions.I_TIMESTAMP_REF)
-            0xf8 -> GenericReferenceOpcodeHandler(Instructions.I_STRING_REF)
-            0xf9 -> GenericReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
-            0xfe -> GenericReferenceOpcodeHandler(Instructions.I_BLOB_REF)
-            0xff -> GenericReferenceOpcodeHandler(Instructions.I_CLOB_REF)
+            0xf5 -> ReferenceOpcodeHandler(Instructions.I_INT_REF)
+            0xf6 -> ReferenceOpcodeHandler(Instructions.I_DECIMAL_REF)
+            0xf7 -> ReferenceOpcodeHandler(Instructions.I_TIMESTAMP_REF)
+            0xf8 -> ReferenceOpcodeHandler(Instructions.I_STRING_REF)
+            0xf9 -> ReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
+            0xfe -> ReferenceOpcodeHandler(Instructions.I_BLOB_REF)
+            0xff -> ReferenceOpcodeHandler(Instructions.I_CLOB_REF)
             else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
             }

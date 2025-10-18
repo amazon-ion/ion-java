@@ -9,14 +9,13 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 /**
  * Writes a bytecode representing a reference to a short-form timestamp. Handles opcodes `0x80`-`0x8C`.
  */
-// TODO: this handler might be worth moving into the same file as either the GenericReferenceOpcodeHandler or
-//  the (eventual) long timestamp handler
+// TODO: this handler might be worth moving into the same file as either the (eventual) long timestamp handler
 internal object ShortTimestampOpcodeHandler : OpcodeToBytecodeHandler {
     /**
      * Maps the precision and offset mode (low nibble of the opcode) to the length of the timestamp's payload
      * in bytes.
      *
-     * Note that this mapping also be expressed with a pretty tight conditional:
+     * Note that this mapping can also be expressed with a pretty tight conditional:
      *
      * ```kotlin
      * when (precisionAndOffsetMode) {

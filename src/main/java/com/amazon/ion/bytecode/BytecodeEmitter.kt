@@ -67,6 +67,7 @@ internal object BytecodeEmitter {
         destination.add3(Instructions.I_INT_I64, (int64 ushr 32).toInt(), int64.toInt())
     }
 
+    @JvmStatic
     fun emitFloatValue(destination: BytecodeBuffer, float: Float) {
         destination.add2(Instructions.I_FLOAT_F32, float.toRawBits())
     }
