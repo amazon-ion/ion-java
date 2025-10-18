@@ -17,86 +17,81 @@ internal object PrimitiveDecoder {
     private const val BYTE_BIT_MASK = 0xFF
     private const val BYTE_BIT_MASK_L = 0xFFL
     private const val INT_BIT_MASK = 0xFF_FF_FF_FFL
+    private const val BYTE_BIT_MASK_UL = 0xFFuL
 
     @JvmStatic
-    private fun ByteArray.getShort(position: Int): Short {
-        return (
-            (this[position].toInt() and 0xFF) or
-                ((this[position + 1].toInt() and 0xFF) shl 8)
-            ).toShort()
-    }
-    @JvmStatic
-    private fun ByteArray.getInt24(position: Int): Int {
-        return (this[position].toInt() and 0xFF) or
-            ((this[position + 1].toInt() and 0xFF) shl 8) or
-            // Shift left into 4th byte and then back down a byte here spreads the sign
-            // across high byte, which is needed for negatives
-            ((this[position + 2].toInt() and 0xFF) shl 24 shr 8)
-    }
-    @JvmStatic
-    private fun ByteArray.getInt(position: Int): Int {
-        return (this[position].toInt() and 0xFF) or
-            ((this[position + 1].toInt() and 0xFF) shl 8) or
-            ((this[position + 2].toInt() and 0xFF) shl 16) or
-            ((this[position + 3].toInt() and 0xFF) shl 24)
-    }
-    @JvmStatic
-    private fun ByteArray.getLong(position: Int): Long {
-        return (this[position].toLong() and 0xFF) or
-            ((this[position + 1].toLong() and 0xFF) shl 8) or
-            ((this[position + 2].toLong() and 0xFF) shl 16) or
-            ((this[position + 3].toLong() and 0xFF) shl 24) or
-            ((this[position + 4].toLong() and 0xFF) shl 32) or
-            ((this[position + 5].toLong() and 0xFF) shl 40) or
-            ((this[position + 6].toLong() and 0xFF) shl 48) or
-            ((this[position + 7].toLong() and 0xFF) shl 56)
-    }
-
-    @JvmStatic
-    fun ByteArray.readFixedInt8AsShort(start: Int): Short {
+    fun readFixedInt8AsShort(source: ByteArray, start: Int): Short {
         // TODO: ion-java#1114
-        if (this.size < start + 1) throw IonException("Incomplete data: start=$start, length=${1}, limit=${this.size}")
-        return this[start].toShort()
+        if (source.size < start + 1) throw IonException("Incomplete data: start=$start, length=1, limit=${source.size}")
+        return source[start].toShort()
     }
 
     @JvmStatic
-    fun ByteArray.readFixedInt16AsShort(start: Int): Short {
+    fun readFixedInt16(source: ByteArray, start: Int): Short {
         // TODO: ion-java#1114
-        if (this.size < start + 2) throw IonException("Incomplete data: start=$start, length=${2}, limit=${this.size}")
-        return this.getShort(start)
+        if (source.size < start + 2) throw IonException("Incomplete data: start=$start, length=2, limit=${source.size}")
+        return read2IntBytes(source[start], source, start).shr(16).toShort()
     }
 
     @JvmStatic
-    fun ByteArray.readFixedInt24AsInt(start: Int): Int {
+    fun readFixedInt24AsInt(source: ByteArray, start: Int): Int {
         // TODO: ion-java#1114
-        if (this.size < start + 3) throw IonException("Incomplete data: start=$start, length=${3}, limit=${this.size}")
-        return this.getInt24(start)
+        if (source.size < start + 3) throw IonException("Incomplete data: start=$start, length=3, limit=${source.size}")
+        return read3IntBytes(source[start], source, start).shr(8)
     }
 
     @JvmStatic
-    fun ByteArray.readFixedInt32AsInt(start: Int): Int {
+    fun readFixedInt32(source: ByteArray, start: Int): Int {
         // TODO: ion-java#1114
-        if (this.size < start + 4) throw IonException("Incomplete data: start=$start, length=${4}, limit=${this.size}")
-        return this.getInt(start)
+        if (source.size < start + 4) throw IonException("Incomplete data: start=$start, length=4, limit=${source.size}")
+        return read4IntBytes(source[start], source, start)
     }
 
     @JvmStatic
-    fun ByteArray.readFixedIntAsInt(start: Int, length: Int): Int {
+    fun readFixedInt64(source: ByteArray, start: Int): Long {
         // TODO: ion-java#1114
-        if (this.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${this.size}")
-        return (this.getInt(start - 4 + length) shr ((4 - length) * 8))
+        if (source.size < start + 8) throw IonException("Incomplete data: start=$start, length=8, limit=${source.size}")
+        return read8IntBytes(source[start], source, start)
     }
 
     @JvmStatic
-    fun ByteArray.readFixedIntAsLong(start: Int, length: Int): Long {
+    fun readFixedIntAsLong(source: ByteArray, start: Int, length: Int): Long {
         // TODO: ion-java#1114
-        if (this.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${this.size}")
-        if (length > 4) {
-            // TODO: See if we can simplify some of the calculations
-            return this.getLong(start - 8 + length) shr ((8 - length) * 8)
-        } else {
-            return (this.getInt(start - 4 + length) shr ((4 - length) * 8)).toLong()
+        if (source.size < start + length) throw IonException("Incomplete data: start=$start, length=$length, limit=${source.size}")
+        val firstByte = source[start]
+        return when (length) {
+            1 -> firstByte.toLong()
+            2 -> read2IntBytes(firstByte, source, start).shr(16).toLong()
+            3 -> read3IntBytes(firstByte, source, start).shr(8).toLong()
+            4 -> read4IntBytes(firstByte, source, start).toLong()
+            5 -> read5IntBytes(firstByte, source, start).shr(24)
+            6 -> read6IntBytes(firstByte, source, start).shr(16)
+            7 -> read7IntBytes(firstByte, source, start).shr(8)
+            8 -> read8IntBytes(firstByte, source, start)
+            // TODO: Technically, it's possible that the FixedInt is over-padded with 0-bytes, but we can deal with that later.
+            else -> throw IonException("FixedInt with length $length is too large to fit in a Long")
         }
+    }
+
+    @JvmStatic
+    fun readFixedUInt16(source: ByteArray, position: Int): UShort {
+        // TODO: ion-java#1114
+        if (source.size < position + 2) throw IonException("Incomplete data: start=$position, length=2, limit=${source.size}")
+        return read2IntBytes(source[position], source, position).shr(16).toUShort()
+    }
+
+    @JvmStatic
+    fun readFixedUInt32(source: ByteArray, position: Int): UInt {
+        // TODO: ion-java#1114
+        if (source.size < position + 4) throw IonException("Incomplete data: start=$position, length=4, limit=${source.size}")
+        return read4IntBytes(source[position], source, position).toUInt()
+    }
+
+    @JvmStatic
+    fun readFixedUInt64(source: ByteArray, position: Int): ULong {
+        // TODO: ion-java#1114
+        if (source.size < position + 8) throw IonException("Incomplete data: start=$position, length=8, limit=${source.size}")
+        return read8IntBytes(source[position], source, position).toULong()
     }
 
     // ==== FLEX INT AND UINT FUNCTIONS ==== //
@@ -251,6 +246,33 @@ internal object PrimitiveDecoder {
             }
         }
         return value.toLong().and(INT_BIT_MASK) or numBytes.toLong().shl(Int.SIZE_BITS)
+    }
+
+    /**
+     * Reads a FlexUInt as a ULong. Throws if value is too large for a ULong.
+     */
+    @JvmStatic
+    fun readFlexUIntAsULong(source: ByteArray, position: Int): ULong {
+        val firstByte = source[position]
+        val numBytes = firstByte.countTrailingZeroBits() + 1
+        val value = when (numBytes) {
+            1 -> firstByte.toULong().and(BYTE_BIT_MASK_UL).shr(1)
+            // These `shr` amounts are not arbitrary. See the `read*IntBytes` method documentation.
+            2 -> read2IntBytes(firstByte, source, position).ushr(18).toULong()
+            3 -> read3IntBytes(firstByte, source, position).ushr(11).toULong()
+            4 -> read4IntBytes(firstByte, source, position).ushr(4).toULong()
+            5 -> read5IntBytes(firstByte, source, position).ushr(29).toULong()
+            6 -> read6IntBytes(firstByte, source, position).ushr(22).toULong()
+            7 -> read7IntBytes(firstByte, source, position).ushr(15).toULong()
+            8 -> read8IntBytes(firstByte, source, position).ushr(8).toULong()
+            else -> {
+                val bigInt = readFlexUIntAsBigInteger(source, position)
+                // bitLength() does not include a sign bit.
+                if (bigInt.bitLength() > Long.SIZE_BITS) throw IonException("FlexInt value too large to find in a ULong")
+                bigInt.toLong().toULong()
+            }
+        }
+        return value
     }
 
     /**
