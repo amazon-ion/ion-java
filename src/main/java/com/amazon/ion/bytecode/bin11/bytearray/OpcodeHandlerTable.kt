@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
@@ -15,7 +16,9 @@ internal fun interface OpcodeToBytecodeHandler {
      * writes the representative bytecode to a [BytecodeBuffer].
      *
      * @return The number of additional bytes that had to be read off of [source] to handle this opcode. Should be zero
-     * if it was possible to handle the opcode without reading any additional data.
+     * if it was possible to handle the opcode without reading any additional data. Skipping this many bytes in the
+     * input plus one will position the caller at the start of the next expression (the opcode for an opcode-prefixed
+     * value, or the first byte of a tagless value payload, etc.).
      */
     fun convertOpcodeToBytecode(
         /** The opcode to handle */
@@ -54,6 +57,7 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
+            0x59 -> ReferenceOpcodeHandler(Instructions.I_ANNOTATION_REF)
             0x60 -> Int0OpcodeHandler
             0x61 -> Int8OpcodeHandler
             0x62 -> Int16OpcodeHandler
@@ -64,9 +68,17 @@ internal object OpcodeHandlerTable {
             0x6b -> Float16OpcodeHandler
             0x6c -> Float32OpcodeHandler
             0x6d -> DoubleOpcodeHandler
+            in 0x80..0x8c -> ShortTimestampOpcodeHandler
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
+            0xf5 -> ReferenceOpcodeHandler(Instructions.I_INT_REF)
+            0xf6 -> ReferenceOpcodeHandler(Instructions.I_DECIMAL_REF)
+            0xf7 -> ReferenceOpcodeHandler(Instructions.I_TIMESTAMP_REF)
+            0xf8 -> ReferenceOpcodeHandler(Instructions.I_STRING_REF)
+            0xf9 -> ReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
+            0xfe -> ReferenceOpcodeHandler(Instructions.I_BLOB_REF)
+            0xff -> ReferenceOpcodeHandler(Instructions.I_CLOB_REF)
             else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
             }

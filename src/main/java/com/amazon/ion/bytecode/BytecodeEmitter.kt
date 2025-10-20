@@ -77,4 +77,14 @@ internal object BytecodeEmitter {
         val asLong = double.toRawBits()
         destination.add3(Instructions.I_FLOAT_F64, (asLong ushr 32).toInt(), asLong.toInt())
     }
+
+    @JvmStatic
+    fun emitReference(destination: BytecodeBuffer, instruction: Int, dataLength: Int, dataPosition: Int) {
+        destination.add2(instruction.packInstructionData(dataLength), dataPosition)
+    }
+
+    @JvmStatic
+    fun emitShortTimestampReference(destination: BytecodeBuffer, precisionAndOffsetMode: Int, dataPosition: Int) {
+        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(precisionAndOffsetMode), dataPosition)
+    }
 }
