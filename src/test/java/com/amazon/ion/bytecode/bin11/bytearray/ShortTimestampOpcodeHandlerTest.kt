@@ -32,7 +32,6 @@ class ShortTimestampOpcodeHandlerTest {
         "8A 35 7D CB EA 85 BC 01,       10, 8", // 2023-10-15T11:22:33.444+01:15
         "8B 35 7D CB EA 85 8B C8 06,    11, 9", // 2023-10-15T11:22:33.444555+01:15
         "8C 35 7D CB EA 85 92 61 7F 1A, 12, 10", // 2023-10-15T11:22:33.444555666+01:15
-        // TODO: max/min value, other extremes
     )
     fun `short timestamp opcode handler emits correct bytecode`(
         inputString: String,
