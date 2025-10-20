@@ -9,6 +9,7 @@ import com.amazon.ion.bytecode.BytecodeEmitter
 import com.amazon.ion.bytecode.BytecodeGenerator
 import com.amazon.ion.bytecode.bin11.bytearray.OpcodeHandlerTable
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsBigInteger
+import com.amazon.ion.bytecode.bin11.bytearray.ShortTimestampDecoder
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.ByteSlice
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -65,8 +66,16 @@ internal class ByteArrayBytecodeGenerator11(
         TODO("Not yet implemented")
     }
 
+    // TODO: right now, this function expects the opcode parameter to be the low nibble of the actual opcode (0x0-0xC).
+    //  This is currently what the ShortTimestampOpcodeHandler writes to the I_SHORT_TIMESTAMP_REF bytecode. This might
+    //  not be correct behavior. If this is acceptable, this parameter should probably be renamed, since it isn't the
+    //  actual opcode of the encoded timestamp. If this isn't, then ShortTimestampOpcodeHandler needs fixed.
+    //  The justification for this behavior is that ShortTimestampOpcodeHandler already separates the low nibble of the
+    //  opcode for use in a lookup table, so we might as well propagate that value to the bytecode instead of the full
+    //  opcode - especially since, in its current implementation, ShortTimestampDecoder.readTimestamp() also uses the
+    //  low nibble in a lookup table.
     override fun readShortTimestampReference(position: Int, opcode: Int): Timestamp {
-        TODO("Not yet implemented")
+        return ShortTimestampDecoder.readTimestamp(source, position, opcode)
     }
 
     override fun readTimestampReference(position: Int, length: Int): Timestamp {
