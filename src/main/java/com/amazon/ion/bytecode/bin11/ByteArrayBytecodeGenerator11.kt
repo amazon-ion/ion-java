@@ -25,7 +25,7 @@ internal class ByteArrayBytecodeGenerator11(
     private val source: ByteArray,
     private var i: Int,
 ) : BytecodeGenerator {
-    private val decoder: Utf8StringDecoder = Utf8StringDecoderPool.getInstance().orCreate
+    private val utf8Decoder: Utf8StringDecoder = Utf8StringDecoderPool.getInstance().orCreate
 
     override fun refill(
         destination: BytecodeBuffer,
@@ -84,7 +84,7 @@ internal class ByteArrayBytecodeGenerator11(
 
     override fun readTextReference(position: Int, length: Int): String {
         val buffer = ByteBuffer.wrap(source, position, length)
-        return decoder.decode(buffer, length)
+        return utf8Decoder.decode(buffer, length)
     }
 
     override fun readBytesReference(position: Int, length: Int): ByteSlice {
