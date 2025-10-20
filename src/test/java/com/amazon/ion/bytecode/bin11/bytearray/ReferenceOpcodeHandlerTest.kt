@@ -42,11 +42,12 @@ internal class ReferenceOpcodeHandlerTest {
         )
 
         val testTemplates = listOf(
-            // FlexUInt representation of payload length
-            // |                Decimal payload length
-            // |                |   Expected payload start position
-            // |                |   |        Expected end position after handling
-            // |                |   |        |
+            /*
+              FlexUInt length prefix for referenced payload
+              |                 Decimal payload length
+              |                 |   Expected payload start position
+              |                 |   |        Expected end position after handling
+              |                 |   |        | */
             "03,                1,  2,       3",
             "05,                2,  2,       4",
             "07,                3,  2,       5",

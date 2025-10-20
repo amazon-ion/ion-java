@@ -9,8 +9,13 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 
 /**
  * Writes a bytecode representing a reference to a variable-length payload of a particular data type.
- * Handles opcodes followed by a FlexUInt length and payload (`0x59`, `0xF5`-`0xF9`, `0xFE`, `0xFF`).
+ * Handles similar opcodes followed by a FlexUInt length and simple payload (`0x59`, `0xF5`-`0xF9`, `0xFE`, `0xFF`).
  */
+// Some other files (TagglessUIntHandlers) use a different convention for defining opcode handlers using lambdas.
+// I will probably go through and refactor these object-based opcode handler definitions to make them consistent with
+// this in a future pull request. This may require pulling the logic for this handler into a helper function and
+// having separate handlers for each opcode handled here that call that helper. This however is similar to what I have
+// already been doing for now.
 internal class ReferenceOpcodeHandler(
     /**
      * The instruction to write when the handler is invoked. Should be a `I_*_REF` type.
