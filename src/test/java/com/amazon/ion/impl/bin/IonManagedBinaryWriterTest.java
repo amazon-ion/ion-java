@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import com.amazon.ion.IonDatagram;
@@ -282,10 +269,14 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
 
     @Test
     public void testAutoFlush_twiceBlockSize() throws IOException {
-        IonReader reader = system().newReader(singleTopLevelValue_13B.toByteArray());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
+        writer.writeString("abcdefghijklmnopqrstuvwxyz"); // Write a 27-byte IonString.
+        writer.close();
+        IonReader reader = system().newReader(out.toByteArray());
         ByteArrayOutputStream actual = new ByteArrayOutputStream();
-        // Set the actual writer block size as 5 bytes. The test data is a 13-byte IonString "taco_burrito".
-        IonBinaryWriterBuilder builder = IonBinaryWriterBuilder.standard().withAutoFlushEnabled(autoFlushMode.isEnabled()).withBlockSize(5);
+        // Set the actual writer block size as 10 bytes. The test data is a 27-byte IonString "abcdefghijklmnopqrstuvwxyz".
+        IonBinaryWriterBuilder builder = IonBinaryWriterBuilder.standard().withAutoFlushEnabled(autoFlushMode.isEnabled()).withBlockSize(10);
         IonWriter actualWriter = builder.build(actual);
         while (reader.next() != null) {
             actualWriter.writeValue(reader);
@@ -293,9 +284,9 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
         actualWriter.close();
         if (lstAppendMode.isEnabled() && autoFlushMode.isEnabled()) {
             // When auto-flush is enabled, no flush is expected since this is a single top-level value and should continue encoding until this value is completed.
-            assertArrayEquals(actual.toByteArray(), singleTopLevelValue_13B.toByteArray());
+            assertArrayEquals(actual.toByteArray(), out.toByteArray());
         }
-        assertEquivalentDataModel(actual, singleTopLevelValue_13B);
+        assertEquivalentDataModel(actual, out);
     }
 
     @Test

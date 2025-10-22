@@ -52,7 +52,7 @@ public class _Private_RecyclingQueue<T> {
 
     /**
      * @param initialCapacity the initial capacity of the underlying collection.
-     * @param elementFactory the factory used to create a new element on {@link #push()} when the queue has
+     * @param elementFactory the factory used to create a new element on {@link #push(Recycler)} when the queue has
      *                       not previously grown to the new depth.
      */
     public _Private_RecyclingQueue(int initialCapacity, ElementFactory<T> elementFactory) {
@@ -73,7 +73,7 @@ public class _Private_RecyclingQueue<T> {
     /**
      * Pushes an element onto the top of the queue, instantiating a new element only if the queue has not
      * previously grown to the new depth.
-     * @return the element at the top of the queue after the push. This element must be initialized by the caller.
+     * @return the index of the element at the top of the queue after the push. This element must be initialized by the caller.
      */
     public int push(Recycler<T> recycler) {
         currentIndex++;
@@ -85,6 +85,23 @@ public class _Private_RecyclingQueue<T> {
         }
         recycler.recycle(top);
         return currentIndex;
+    }
+
+    /**
+     * Pushes an element onto the top of the queue, instantiating a new element only if the queue has not
+     * previously grown to the new depth.
+     * @return the element at the top of the queue after the push.
+     */
+    public T pushAndGet(Recycler<T> recycler) {
+        currentIndex++;
+        if (currentIndex >= elements.size()) {
+            top = elementFactory.newElement();
+            elements.add(top);
+        }  else {
+            top = elements.get(currentIndex);
+        }
+        recycler.recycle(top);
+        return top;
     }
 
     /**
