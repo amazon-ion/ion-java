@@ -88,7 +88,7 @@ internal class ByteArrayBytecodeGenerator11(
     }
 
     override fun readBytesReference(position: Int, length: Int): ByteSlice {
-        return ByteSlice(source, position, position + length - 1)
+        return ByteSlice(source, position, position + length)
     }
 
     override fun ionMinorVersion(): Int {
