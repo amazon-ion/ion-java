@@ -12,12 +12,31 @@ import org.junit.jupiter.params.provider.Arguments
 import java.nio.charset.StandardCharsets
 
 /**
- * Test cases for every binary 1.1 opcode supported by the bytecode generator
+ * Test cases for every binary 1.1 opcode supported by the bytecode generator. Test cases have the following components:
+ * - Hex string of input bytes to test
+ * - Decimal string of expected bytecode after compiling the input bytes
+ * - String representation of the value encoded by these bytes. This is opcode-specific and up to individual opcode
+ *   handlers to parse and understand. Not every test case supplies this as of yet
+ *
+ * Bytecode can contain placeholders in the form `%pos:<number>%`, which should be replaced with `<number>` plus the
+ * index of the first byte of the binary in the input. For example, if a bytecode string contains `%pos:30%` and the
+ * test suite is writing the binary at index 0 of a byte array passed to a
+ * [ByteArrayBytecodeGenerator11], then the placeholder should be replaced with `30`, and if the binary were written at
+ * index 5, the placeholder should be replaced with `35`. This allows tests cases where the resulting bytecode is
+ * sensitive to the opcode's position in the input (e.g. `OP_*_REF` codes) to be reused across test cases that use them
+ * at different offsets. Pass the decimal string to [replacePositionTemplates] to parse these placeholders.
  */
 object OpcodeTestCases {
 
     private const val THIS_NAME = "com.amazon.ion.bytecode.bin11.OpcodeTestCases"
 
+    /**
+     * Parse any placeholders in the form `%pos:<number>%` in [string] to `<number>` plus [position]. Reveals the
+     * correct bytecode for opcodes that are sensitive to their position in the input.
+     *
+     * [position] should be the index in a BytecodeGenerator's input at which you are writing the corresponding
+     * binary-encoded value.
+     */
     @JvmStatic
     fun replacePositionTemplates(string: String, position: Int): String {
         return Regex("%pos:(\\d+)%").replace(string) { matchResult ->
