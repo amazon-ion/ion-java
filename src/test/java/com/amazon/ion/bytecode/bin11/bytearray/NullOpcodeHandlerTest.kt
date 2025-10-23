@@ -2,37 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
-import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
-import com.amazon.ion.bytecode.ir.Instructions
-import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.util.ConstantPool
-import com.amazon.ion.bytecode.util.unsignedToInt
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
+import com.amazon.ion.bytecode.bin11.OpcodeTestCases.NULL_OPCODE_CASES
+import com.amazon.ion.bytecode.bin11.bytearray.OpcodeHandlerTestUtil.shouldCompile
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 class NullOpcodeHandlerTest {
 
-    @Test
-    fun `handler emits null bytecode for null opcode`() {
-        val byteArray: ByteArray = "8E".hexStringToByteArray()
-        val buffer = BytecodeBuffer()
-
-        var position = 0
-        val opcode = byteArray[position++].unsignedToInt()
-        position += NullOpcodeHandler.convertOpcodeToBytecode(
-            opcode,
-            byteArray,
-            position,
-            buffer,
-            ConstantPool(0),
-            intArrayOf(),
-            intArrayOf(),
-            arrayOf()
-        )
-
-        val expectedInstruction = Instructions.I_NULL_NULL
-        assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
-        assertEquals(1, position)
+    @ParameterizedTest
+    @MethodSource(NULL_OPCODE_CASES)
+    fun `null opcode handler emits correct bytecode`(input: String, bytecode: String) {
+        NullOpcodeHandler.shouldCompile(input, bytecode)
     }
 }

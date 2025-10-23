@@ -2,61 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
-import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
+import com.amazon.ion.bytecode.bin11.OpcodeTestCases.BOOLEAN_OPCODE_CASES
+import com.amazon.ion.bytecode.bin11.bytearray.OpcodeHandlerTestUtil.shouldCompile
 import com.amazon.ion.bytecode.ir.Instructions
-import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
-import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.util.ConstantPool
-import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 class BooleanOpcodeHandlerTest {
 
-    @Test
-    fun `handler emits true bytecode for true opcode`() {
-        val byteArray: ByteArray = "6E".hexStringToByteArray()
-        val buffer = BytecodeBuffer()
-
-        var position = 0
-        val opcode = byteArray[position++].unsignedToInt()
-        position += BooleanOpcodeHandler.convertOpcodeToBytecode(
-            opcode,
-            byteArray,
-            position,
-            buffer,
-            ConstantPool(0),
-            intArrayOf(),
-            intArrayOf(),
-            arrayOf()
-        )
-
-        val expectedInstruction = Instructions.I_BOOL.packInstructionData(1)
-        assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
-        assertEquals(1, position)
-    }
-
-    @Test
-    fun `handler emits false bytecode for false opcode`() {
-        val byteArray: ByteArray = "6F".hexStringToByteArray()
-        val buffer = BytecodeBuffer()
-
-        var position = 0
-        val opcode = byteArray[position++].unsignedToInt()
-        position += BooleanOpcodeHandler.convertOpcodeToBytecode(
-            opcode,
-            byteArray,
-            position,
-            buffer,
-            ConstantPool(0),
-            intArrayOf(),
-            intArrayOf(),
-            arrayOf()
-        )
-
-        val expectedInstruction = Instructions.I_BOOL.packInstructionData(0)
-        assertEqualBytecode(intArrayOf(expectedInstruction), buffer.toArray())
-        assertEquals(1, position)
+    @ParameterizedTest
+    @MethodSource(BOOLEAN_OPCODE_CASES)
+    fun `boolean opcode handler emits correct bytecode`(input: String, bytecode: String, expectedValue: String) {
+        val buffer = BooleanOpcodeHandler.shouldCompile(input, bytecode)
+        val expectedBool = expectedValue.toBoolean()
+        val representedBool = when (Instructions.getData(buffer.get(0))) {
+            1 -> true
+            0 -> false
+            else -> fail("Unexpected packed instruction emitted from boolean opcode compiler: ${buffer.get(0)}")
+        }
+        assertEquals(expectedBool, representedBool)
     }
 }
