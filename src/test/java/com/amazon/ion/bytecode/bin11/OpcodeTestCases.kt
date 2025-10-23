@@ -258,7 +258,7 @@ object OpcodeTestCases {
             "04 00 02,      16384,  4",
             "FC FF FF,    2097151,  4",
             "08 00 00 02, 2097152,  5",
-            "F8 FF FF 03, 4194303,  5", // maximum length of a payload
+            // Testing up to max length causes OOM errors on java 8
             "01,                0,  2", // zero-length payload  TODO: is this legal?
             "00 18 00 00 00 00 00 00 00 00 00 00, 1, 13", // overlong encoding on the FlexUInt
         )
@@ -270,11 +270,15 @@ object OpcodeTestCases {
                 val expectedPayloadStartPosition = expectedPayloadStartPosStr.trim().toInt()
                 val expectedBytecodeString = "${instruction.packInstructionData(payloadLength)} %pos:$expectedPayloadStartPosition%"
 
+                val inputBytesSB = StringBuilder(payloadLength * 3 + flexUIntStr.length + 4)
+                inputBytesSB.append("${opcode.toSingleHexByte()} $flexUIntStr ")
                 // Create a dummy payload for this value with all bytes set to zeros.
                 // Not actually looked at by this test, but simulates an encoded value the handler would actually
                 // encounter during parsing.
-                val payload = "00 ".repeat(payloadLength)
-                val inputBytes = "${opcode.toString(16).uppercase().padStart(2, '0')} $flexUIntStr $payload"
+                for (i in 0 until payloadLength) {
+                    inputBytesSB.append("00 ")
+                }
+                val inputBytes = inputBytesSB.toString()
                 arguments.add(Arguments.of(inputBytes, expectedBytecodeString))
             }
         }
