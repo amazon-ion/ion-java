@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class ShortTimestampDecoderTest {
+
     @ParameterizedTest
     @CsvSource(
         "80 35,                          2023T",

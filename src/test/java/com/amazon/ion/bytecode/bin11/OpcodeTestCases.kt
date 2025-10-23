@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets
  * - Hex string of input bytes to test
  * - Decimal string of expected bytecode after compiling the input bytes
  * - String representation of the value encoded by these bytes. This is opcode-specific and up to individual opcode
- *   handlers to parse and understand. Not every test case supplies this as of yet
+ *   handlers to parse and understand. Not every test case supplies this.
  *
  * Bytecode can contain placeholders in the form `%pos:<number>%`, which should be replaced with `<number>` plus the
  * index of the first byte of the binary in the input. For example, if a bytecode string contains `%pos:30%` and the
@@ -48,8 +48,8 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun booleanOpcodeCases() = listOf(
-        "6E, ${Instructions.I_BOOL.packInstructionData(1)}",
-        "6F, ${Instructions.I_BOOL.packInstructionData(0)}",
+        "6E, ${Instructions.I_BOOL.packInstructionData(1)}, true",
+        "6F, ${Instructions.I_BOOL.packInstructionData(0)}, false",
     ).toArguments()
 
     const val NULL_OPCODE_CASES = "$THIS_NAME#nullOpcodeCases"
@@ -102,44 +102,44 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun float0OpcodeCases() = listOf(
-        "6A, ${Instructions.I_FLOAT_F32} 0",
+        "6A, ${Instructions.I_FLOAT_F32} 0, 0",
     ).toArguments()
 
     const val FLOAT16_OPCODE_CASES = "$THIS_NAME#float16OpcodeCases"
 
     @JvmStatic
     fun float16OpcodeCases() = listOf(
-        "6B 01 00, ${Instructions.I_FLOAT_F32} 864026624", // smallest positive subnormal number
-        "6B FF 03, ${Instructions.I_FLOAT_F32} 947896320", // largest subnormal number
-        "6B 00 04, ${Instructions.I_FLOAT_F32} 947912704", // smallest positive normal number
-        "6B FF 7B, ${Instructions.I_FLOAT_F32} 1199562752", // largest normal number
-        "6B FF 3B, ${Instructions.I_FLOAT_F32} 1065345024", // largest number less than one
-        "6B 00 3C, ${Instructions.I_FLOAT_F32} 1065353216",
-        "6B 01 3C, ${Instructions.I_FLOAT_F32} 1065361408", // smallest number larger than one
+        "6B 01 00, ${Instructions.I_FLOAT_F32} 864026624,  0.000000059604645", // smallest positive subnormal number
+        "6B FF 03, ${Instructions.I_FLOAT_F32} 947896320,  0.000060975552", // largest subnormal number
+        "6B 00 04, ${Instructions.I_FLOAT_F32} 947912704,  0.00006103515625", // smallest positive normal number
+        "6B FF 7B, ${Instructions.I_FLOAT_F32} 1199562752, 65504", // largest normal number
+        "6B FF 3B, ${Instructions.I_FLOAT_F32} 1065345024, 0.99951172", // largest number less than one
+        "6B 00 3C, ${Instructions.I_FLOAT_F32} 1065353216, 1",
+        "6B 01 3C, ${Instructions.I_FLOAT_F32} 1065361408, 1.00097656", // smallest number larger than one
 
         // Same as above, but negative
-        "6B 01 80, ${Instructions.I_FLOAT_F32} -1283457024",
-        "6B FF 83, ${Instructions.I_FLOAT_F32} -1199587328",
-        "6B 00 84, ${Instructions.I_FLOAT_F32} -1199570944",
-        "6B FF FB, ${Instructions.I_FLOAT_F32} -947920896",
-        "6B FF BB, ${Instructions.I_FLOAT_F32} -1082138624",
-        "6B 00 BC, ${Instructions.I_FLOAT_F32} -1082130432",
-        "6B 01 BC, ${Instructions.I_FLOAT_F32} -1082122240",
+        "6B 01 80, ${Instructions.I_FLOAT_F32} -1283457024, -0.000000059604645",
+        "6B FF 83, ${Instructions.I_FLOAT_F32} -1199587328, -0.000060975552",
+        "6B 00 84, ${Instructions.I_FLOAT_F32} -1199570944, -0.00006103515625",
+        "6B FF FB, ${Instructions.I_FLOAT_F32} -947920896,  -65504",
+        "6B FF BB, ${Instructions.I_FLOAT_F32} -1082138624, -0.99951172",
+        "6B 00 BC, ${Instructions.I_FLOAT_F32} -1082130432, -1",
+        "6B 01 BC, ${Instructions.I_FLOAT_F32} -1082122240, -1.00097656",
 
-        "6B 00 00, ${Instructions.I_FLOAT_F32} 0",
-        "6B 00 80, ${Instructions.I_FLOAT_F32} -2147483648",
-        "6B 00 7C, ${Instructions.I_FLOAT_F32} 2139095040",
-        "6B 00 FC, ${Instructions.I_FLOAT_F32} -8388608",
-        "6B 01 7E, ${Instructions.I_FLOAT_F32} 2143297536", // quiet NaN
-        "6B 01 7C, ${Instructions.I_FLOAT_F32} 2139103232", // signaling NaN
-        "6B 01 FE, ${Instructions.I_FLOAT_F32} -4186112", // negative quiet NaN
-        "6B 01 FC, ${Instructions.I_FLOAT_F32} -8380416", // negative signaling NaN
-        "6B 53 7F, ${Instructions.I_FLOAT_F32} 2146066432", // another quiet NaN
-        "6B 53 FF, ${Instructions.I_FLOAT_F32} -1417216", // another negative quiet NaN
+        "6B 00 00, ${Instructions.I_FLOAT_F32} 0,            0",
+        "6B 00 80, ${Instructions.I_FLOAT_F32} -2147483648, -0",
+        "6B 00 7C, ${Instructions.I_FLOAT_F32} 2139095040,   Infinity",
+        "6B 00 FC, ${Instructions.I_FLOAT_F32} -8388608,    -Infinity",
+        "6B 01 7E, ${Instructions.I_FLOAT_F32} 2143297536,   NaN", // quiet NaN
+        "6B 01 7C, ${Instructions.I_FLOAT_F32} 2139103232,   NaN", // signaling NaN
+        "6B 01 FE, ${Instructions.I_FLOAT_F32} -4186112,     NaN", // negative quiet NaN
+        "6B 01 FC, ${Instructions.I_FLOAT_F32} -8380416,     NaN", // negative signaling NaN
+        "6B 53 7F, ${Instructions.I_FLOAT_F32} 2146066432,   NaN", // another quiet NaN
+        "6B 53 FF, ${Instructions.I_FLOAT_F32} -1417216,     NaN", // another negative quiet NaN
 
-        "6B 00 C0, ${Instructions.I_FLOAT_F32} -1073741824",
-        "6B 55 35, ${Instructions.I_FLOAT_F32} 1051369472",
-        "6B 48 42, ${Instructions.I_FLOAT_F32} 1078525952"
+        "6B 00 C0, ${Instructions.I_FLOAT_F32} -1073741824, -2",
+        "6B 55 35, ${Instructions.I_FLOAT_F32} 1051369472,   0.33325195",
+        "6B 48 42, ${Instructions.I_FLOAT_F32} 1078525952,   3.140625"
     ).toArguments()
 
     const val FLOAT32_OPCODE_CASES = "$THIS_NAME#float32OpcodeCases"
@@ -147,78 +147,82 @@ object OpcodeTestCases {
     @JvmStatic
     fun float32OpcodeCases() = listOf(
         // TODO: cross-check all this stuff one more time
-        "6C 01 00 00 00, ${Instructions.I_FLOAT_F32} 1", // smallest positive subnormal number
-        "6C FF FF 7F 00, ${Instructions.I_FLOAT_F32} 8388607", // largest subnormal number
-        "6C 00 00 80 00, ${Instructions.I_FLOAT_F32} 8388608", // smallest positive normal number
-        "6C FF FF 7F 7F, ${Instructions.I_FLOAT_F32} 2139095039", // largest normal number
-        "6C FF FF 7F 3F, ${Instructions.I_FLOAT_F32} 1065353215", // largest number less than one
-        "6C 00 00 80 3F, ${Instructions.I_FLOAT_F32} 1065353216",
-        "6C 01 00 80 3F, ${Instructions.I_FLOAT_F32} 1065353217", // smallest number larger than one
+        "6C 01 00 00 00, ${Instructions.I_FLOAT_F32} 1,          1.4012984643e-45", // smallest positive subnormal number
+        "6C FF FF 7F 00, ${Instructions.I_FLOAT_F32} 8388607,    1.1754942107e-38", // largest subnormal number
+        "6C 00 00 80 00, ${Instructions.I_FLOAT_F32} 8388608,    1.1754943508e-38", // smallest positive normal number
+        "6C FF FF 7F 7F, ${Instructions.I_FLOAT_F32} 2139095039, 3.4028234664e38", // largest normal number
+        "6C FF FF 7F 3F, ${Instructions.I_FLOAT_F32} 1065353215, 0.999999940395355225", // largest number less than one
+        "6C 00 00 80 3F, ${Instructions.I_FLOAT_F32} 1065353216, 1",
+        "6C 01 00 80 3F, ${Instructions.I_FLOAT_F32} 1065353217, 1.00000011920928955", // smallest number larger than one
 
         // Same as above, but negative
-        "6C 01 00 00 80, ${Instructions.I_FLOAT_F32} -2147483647",
-        "6C FF FF 7F 80, ${Instructions.I_FLOAT_F32} -2139095041",
-        "6C 00 00 80 80, ${Instructions.I_FLOAT_F32} -2139095040",
-        "6C FF FF 7F FF, ${Instructions.I_FLOAT_F32} -8388609",
-        "6C FF FF 7F BF, ${Instructions.I_FLOAT_F32} -1082130433",
-        "6C 00 00 80 BF, ${Instructions.I_FLOAT_F32} -1082130432",
-        "6C 01 00 80 BF, ${Instructions.I_FLOAT_F32} -1082130431",
+        "6C 01 00 00 80, ${Instructions.I_FLOAT_F32} -2147483647, -1.4012984643e-45",
+        "6C FF FF 7F 80, ${Instructions.I_FLOAT_F32} -2139095041, -1.1754942107e-38",
+        "6C 00 00 80 80, ${Instructions.I_FLOAT_F32} -2139095040, -1.1754943508e-38",
+        "6C FF FF 7F FF, ${Instructions.I_FLOAT_F32} -8388609,    -3.4028234664e38",
+        "6C FF FF 7F BF, ${Instructions.I_FLOAT_F32} -1082130433, -0.999999940395355225",
+        "6C 00 00 80 BF, ${Instructions.I_FLOAT_F32} -1082130432, -1",
+        "6C 01 00 80 BF, ${Instructions.I_FLOAT_F32} -1082130431, -1.00000011920928955",
 
-        "6C 00 00 00 00, ${Instructions.I_FLOAT_F32} 0",
-        "6C 00 00 00 80, ${Instructions.I_FLOAT_F32} -2147483648",
-        "6C 00 00 80 7F, ${Instructions.I_FLOAT_F32} 2139095040",
-        "6C 00 00 80 FF, ${Instructions.I_FLOAT_F32} -8388608",
-        "6C 01 00 C0 7F, ${Instructions.I_FLOAT_F32} 2143289345", // quiet NaN
-        "6C 01 00 80 7F, ${Instructions.I_FLOAT_F32} 2139095041", // signaling NaN
-        "6C 01 00 C0 FF, ${Instructions.I_FLOAT_F32} -4194303", // negative quiet NaN
-        "6C 01 00 80 FF, ${Instructions.I_FLOAT_F32} -8388607", // negative signaling NaN
+        "6C 00 00 00 00, ${Instructions.I_FLOAT_F32} 0,            0",
+        "6C 00 00 00 80, ${Instructions.I_FLOAT_F32} -2147483648, -0",
+        "6C 00 00 80 7F, ${Instructions.I_FLOAT_F32} 2139095040,   Infinity",
+        "6C 00 00 80 FF, ${Instructions.I_FLOAT_F32} -8388608,    -Infinity",
+        "6C 01 00 C0 7F, ${Instructions.I_FLOAT_F32} 2143289345,   NaN", // quiet NaN
+        "6C 01 00 80 7F, ${Instructions.I_FLOAT_F32} 2139095041,   NaN", // signaling NaN
+        "6C 01 00 C0 FF, ${Instructions.I_FLOAT_F32} -4194303,     NaN", // negative quiet NaN
+        "6C 01 00 80 FF, ${Instructions.I_FLOAT_F32} -8388607,     NaN", // negative signaling NaN
 
-        "6C 00 00 00 C0, ${Instructions.I_FLOAT_F32} -1073741824",
-        "6C AB AA AA 3E, ${Instructions.I_FLOAT_F32} 1051372203",
-        "6C DB 0F 49 40, ${Instructions.I_FLOAT_F32} 1078530011"
+        "6C 00 00 00 C0, ${Instructions.I_FLOAT_F32} -1073741824, -2",
+        "6C AB AA AA 3E, ${Instructions.I_FLOAT_F32} 1051372203,   0.333333343267440796",
+        "6C DB 0F 49 40, ${Instructions.I_FLOAT_F32} 1078530011,   3.14159274101257324"
     ).toArguments()
 
     const val FLOAT64_OPCODE_CASES = "$THIS_NAME#float64OpcodeCases"
 
     @JvmStatic
     fun float64OpcodeCases() = listOf(
-        "6D 01 00 00 00 00 00 00 00, ${Instructions.I_FLOAT_F64} 0 1", // smallest positive subnormal number
-        "6D FF FF FF FF FF FF 0F 00, ${Instructions.I_FLOAT_F64} 1048575 -1", // largest subnormal number
-        "6D 00 00 00 00 00 00 10 00, ${Instructions.I_FLOAT_F64} 1048576 0", // smallest positive normal number
-        "6D FF FF FF FF FF FF EF 7F, ${Instructions.I_FLOAT_F64} 2146435071 -1", // largest normal number
-        "6D FF FF FF FF FF FF EF 3F, ${Instructions.I_FLOAT_F64} 1072693247 -1", // largest number less than one
-        "6D 00 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248 0",
-        "6D 01 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248 1", // smallest number larger than one
-        "6D 02 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248 2", // the second smallest number greater than 1
+        "6D 01 00 00 00 00 00 00 00, ${Instructions.I_FLOAT_F64} 0           1, 4.9406564584124654e-324", // smallest positive subnormal number
+        "6D FF FF FF FF FF FF 0F 00, ${Instructions.I_FLOAT_F64} 1048575    -1, 2.2250738585072009e-308", // largest subnormal number
+        "6D 00 00 00 00 00 00 10 00, ${Instructions.I_FLOAT_F64} 1048576     0, 2.2250738585072014e-308", // smallest positive normal number
+        "6D FF FF FF FF FF FF EF 7F, ${Instructions.I_FLOAT_F64} 2146435071 -1, 1.7976931348623157e308", // largest normal number
+        "6D FF FF FF FF FF FF EF 3F, ${Instructions.I_FLOAT_F64} 1072693247 -1, 0.99999999999999988898", // largest number less than one
+        "6D 00 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248  0, 1",
+        "6D 01 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248  1, 1.0000000000000002220", // smallest number larger than one
+        "6D 02 00 00 00 00 00 F0 3F, ${Instructions.I_FLOAT_F64} 1072693248  2, 1.0000000000000004441", // the second smallest number greater than 1
 
         // Same as above, but negative
-        "6D 01 00 00 00 00 00 00 80, ${Instructions.I_FLOAT_F64} -2147483648 1",
-        "6D FF FF FF FF FF FF 0F 80, ${Instructions.I_FLOAT_F64} -2146435073 -1",
-        "6D 00 00 00 00 00 00 10 80, ${Instructions.I_FLOAT_F64} -2146435072 0",
-        "6D FF FF FF FF FF FF EF FF, ${Instructions.I_FLOAT_F64} -1048577 -1",
-        "6D FF FF FF FF FF FF EF BF, ${Instructions.I_FLOAT_F64} -1074790401 -1",
-        "6D 00 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400 0",
-        "6D 01 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400 1",
-        "6D 02 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400 2",
+        "6D 01 00 00 00 00 00 00 80, ${Instructions.I_FLOAT_F64} -2147483648  1, -4.9406564584124654e-324",
+        "6D FF FF FF FF FF FF 0F 80, ${Instructions.I_FLOAT_F64} -2146435073 -1, -2.2250738585072009e-308",
+        "6D 00 00 00 00 00 00 10 80, ${Instructions.I_FLOAT_F64} -2146435072  0, -2.2250738585072014e-308",
+        "6D FF FF FF FF FF FF EF FF, ${Instructions.I_FLOAT_F64} -1048577    -1, -1.7976931348623157e308",
+        "6D FF FF FF FF FF FF EF BF, ${Instructions.I_FLOAT_F64} -1074790401 -1, -0.99999999999999988898",
+        "6D 00 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400  0, -1",
+        "6D 01 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400  1, -1.0000000000000002220",
+        "6D 02 00 00 00 00 00 F0 BF, ${Instructions.I_FLOAT_F64} -1074790400  2, -1.0000000000000004441",
 
-        "6D 00 00 00 00 00 00 00 00, ${Instructions.I_FLOAT_F64} 0 0",
-        "6D 00 00 00 00 00 00 00 80, ${Instructions.I_FLOAT_F64} -2147483648 0",
-        "6D 00 00 00 00 00 00 F0 7F, ${Instructions.I_FLOAT_F64} 2146435072 0",
-        "6D 00 00 00 00 00 00 F0 FF, ${Instructions.I_FLOAT_F64} -1048576 0",
-        "6D 01 00 00 00 00 00 F8 7F, ${Instructions.I_FLOAT_F64} 2146959360 1", // quiet NaN
-        "6D 01 00 00 00 00 00 F0 7F, ${Instructions.I_FLOAT_F64} 2146435072 1", // signaling NaN
-        "6D 01 00 00 00 00 00 F8 FF, ${Instructions.I_FLOAT_F64} -524288 1", // negative quiet NaN
-        "6D 01 00 00 00 00 00 F0 FF, ${Instructions.I_FLOAT_F64} -1048576 1", // negative signaling NaN
-        "6D FF FF FF FF FF FF FF 7F, ${Instructions.I_FLOAT_F64} 2147483647 -1", // another quiet NaN
-        "6D FF FF FF FF FF FF FF FF, ${Instructions.I_FLOAT_F64} -1 -1", // another negative quiet NaN
+        "6D 00 00 00 00 00 00 00 00, ${Instructions.I_FLOAT_F64} 0           0,  0",
+        "6D 00 00 00 00 00 00 00 80, ${Instructions.I_FLOAT_F64} -2147483648 0, -0",
+        "6D 00 00 00 00 00 00 F0 7F, ${Instructions.I_FLOAT_F64} 2146435072  0,  Infinity",
+        "6D 00 00 00 00 00 00 F0 FF, ${Instructions.I_FLOAT_F64} -1048576    0, -Infinity",
+        "6D 01 00 00 00 00 00 F8 7F, ${Instructions.I_FLOAT_F64} 2146959360  1,  NaN", // quiet NaN
+        "6D 01 00 00 00 00 00 F0 7F, ${Instructions.I_FLOAT_F64} 2146435072  1,  NaN", // signaling NaN
+        "6D 01 00 00 00 00 00 F8 FF, ${Instructions.I_FLOAT_F64} -524288     1,  NaN", // negative quiet NaN
+        "6D 01 00 00 00 00 00 F0 FF, ${Instructions.I_FLOAT_F64} -1048576    1,  NaN", // negative signaling NaN
+        "6D FF FF FF FF FF FF FF 7F, ${Instructions.I_FLOAT_F64} 2147483647 -1,  NaN", // another quiet NaN
+        "6D FF FF FF FF FF FF FF FF, ${Instructions.I_FLOAT_F64} -1         -1,  NaN", // another negative quiet NaN
 
-        "6D 00 00 00 00 00 00 00 C0, ${Instructions.I_FLOAT_F64} -1073741824 0",
-        "6D 55 55 55 55 55 55 D5 3F, ${Instructions.I_FLOAT_F64} 1070945621 1431655765",
-        "6D 18 2D 44 54 FB 21 09 40, ${Instructions.I_FLOAT_F64} 1074340347 1413754136"
+        "6D 00 00 00 00 00 00 00 C0, ${Instructions.I_FLOAT_F64} -1073741824 0, -2",
+        "6D 55 55 55 55 55 55 D5 3F, ${Instructions.I_FLOAT_F64} 1070945621 1431655765, 0.33333333333333331483",
+        "6D 18 2D 44 54 FB 21 09 40, ${Instructions.I_FLOAT_F64} 1074340347 1413754136, 3.141592653589793116"
     ).toArguments()
 
     const val REFERENCE_OPCODE_CASES = "$THIS_NAME#referenceOpcodeCases"
 
+    /**
+     * Generates tests for handlers that emit similar *_REF bytecode (instructions packed with a UInt22 reference length
+     * and followed by a UInt32 position of the data).
+     */
     @JvmStatic
     fun referenceOpcodeCases(): List<Arguments> {
         val arguments = mutableListOf<Arguments>()
@@ -337,45 +341,61 @@ object OpcodeTestCases {
         return arguments
     }
 
-    const val INT16_EMITTING_OPCODE_CASES = "$THIS_NAME#int16EmittingOpcodeCases"
+    const val INT0_OPCODE_CASES = "$THIS_NAME#int0OpcodeCases"
 
     @JvmStatic
-    fun int16EmittingOpcodeCases() = listOf(
-        "60,       ${Instructions.I_INT_I16.packInstructionData(0)}", // 0-byte
-        "61 32,    ${Instructions.I_INT_I16.packInstructionData(50)}", // 1-byte positive
-        "61 97,    ${Instructions.I_INT_I16.packInstructionData(-105)}", // 1-byte negative
-        "62 26 73, ${Instructions.I_INT_I16.packInstructionData(29478)}", // 2-byte positive
-        "62 50 FC, ${Instructions.I_INT_I16.packInstructionData(-944)}", // 2-byte negative
-        "62 00 00, ${Instructions.I_INT_I16.packInstructionData(0)}", // 2-byte overlong 0
-        "62 FF FF, ${Instructions.I_INT_I16.packInstructionData(-1)}", // 2-byte overlong -1
-        "61 7F,    ${Instructions.I_INT_I16.packInstructionData(127)}",
-        "62 80 00, ${Instructions.I_INT_I16.packInstructionData(128)}", // length boundary
-        "61 80,    ${Instructions.I_INT_I16.packInstructionData(-128)}",
-        "62 7F FF, ${Instructions.I_INT_I16.packInstructionData(-129)}", // length boundary
-        "62 FF 7F, ${Instructions.I_INT_I16.packInstructionData(32767)}", // max value
-        "62 00 80, ${Instructions.I_INT_I16.packInstructionData(-32768)}", // min value
+    fun int0OpcodeCases() = listOf(
+        "60, ${Instructions.I_INT_I16.packInstructionData(0)}, 0", // 0-byte
     ).toArguments()
 
-    const val INT32_EMITTING_OPCODE_CASES = "$THIS_NAME#int32EmittingOpcodeCases"
+    const val INT8_OPCODE_CASES = "$THIS_NAME#int8OpcodeCases"
 
     @JvmStatic
-    fun int32EmittingOpcodeCases() = listOf(
-        "63 40 42 0F,    ${Instructions.I_INT_I32} 1000000", // 3-byte positive
-        "63 4F 34 8B,    ${Instructions.I_INT_I32} -7654321", // 3-byte negative
-        "64 3B C4 42 7E, ${Instructions.I_INT_I32} 2118304827", // 4-byte positive
-        "64 57 97 13 E9, ${Instructions.I_INT_I32} -384592041", // 4-byte negative
-        "64 00 00 00 00, ${Instructions.I_INT_I32} 0", // 4-byte overlong 0
-        "64 FF FF FF FF, ${Instructions.I_INT_I32} -1", // 4-byte overlong -1
+    fun int8OpcodeCases() = listOf(
+        "61 32, ${Instructions.I_INT_I16.packInstructionData(50)}, 50", // 1-byte positive
+        "61 97, ${Instructions.I_INT_I16.packInstructionData(-105)}, -105", // 1-byte negative
+        "61 7F, ${Instructions.I_INT_I16.packInstructionData(127)}, 127", // max value
+        "61 80, ${Instructions.I_INT_I16.packInstructionData(-128)}, -128", // min value
+    ).toArguments()
 
-        "63 00 80 00,    ${Instructions.I_INT_I32} 32768", // min positive, length boundary from i16
-        "63 FF FF 7F,    ${Instructions.I_INT_I32} 8388607",
-        "64 00 00 80 00, ${Instructions.I_INT_I32} 8388608", // length boundary
-        "64 FF FF FF 7F, ${Instructions.I_INT_I32} ${Int.MAX_VALUE}", // max value
+    const val INT16_OPCODE_CASES = "$THIS_NAME#int16OpcodeCases"
 
-        "63 FF 7F FF,    ${Instructions.I_INT_I32} -32769", // max negative, length boundary from i16
-        "63 00 00 80,    ${Instructions.I_INT_I32} -8388608",
-        "64 FF FF 7F FF, ${Instructions.I_INT_I32} -8388609", // length boundary
-        "64 00 00 00 80, ${Instructions.I_INT_I32} ${Int.MIN_VALUE}", // min value
+    @JvmStatic
+    fun int16OpcodeCases() = listOf(
+        "62 26 73, ${Instructions.I_INT_I16.packInstructionData(29478)}, 29478", // 2-byte positive
+        "62 50 FC, ${Instructions.I_INT_I16.packInstructionData(-944)}, -944", // 2-byte negative
+        "62 00 00, ${Instructions.I_INT_I16.packInstructionData(0)}, 0", // 2-byte overlong 0
+        "62 FF FF, ${Instructions.I_INT_I16.packInstructionData(-1)}, -1", // 2-byte overlong -1
+        "62 80 00, ${Instructions.I_INT_I16.packInstructionData(128)}, 128", // min positive
+        "62 7F FF, ${Instructions.I_INT_I16.packInstructionData(-129)}, -129", // max negative
+        "62 FF 7F, ${Instructions.I_INT_I16.packInstructionData(32767)}, 32767", // max value
+        "62 00 80, ${Instructions.I_INT_I16.packInstructionData(-32768)}, -32768", // min value
+    ).toArguments()
+
+    const val INT24_OPCODE_CASES = "$THIS_NAME#int24OpcodeCases"
+
+    @JvmStatic
+    fun int24OpcodeCases() = listOf(
+        "63 40 42 0F,    ${Instructions.I_INT_I32} 1000000, 1000000", // 3-byte positive
+        "63 4F 34 8B,    ${Instructions.I_INT_I32} -7654321, -7654321", // 3-byte negative
+        "63 00 80 00,    ${Instructions.I_INT_I32} 32768, 32768", // min positive, length boundary from i16
+        "63 FF FF 7F,    ${Instructions.I_INT_I32} 8388607, 8388607", // max value
+        "63 FF 7F FF,    ${Instructions.I_INT_I32} -32769, -32769", // max negative, length boundary from i16
+        "63 00 00 80,    ${Instructions.I_INT_I32} -8388608, -8388608", // min value
+    ).toArguments()
+
+    const val INT32_OPCODE_CASES = "$THIS_NAME#int32OpcodeCases"
+
+    @JvmStatic
+    fun int32OpcodeCases() = listOf(
+        "64 3B C4 42 7E, ${Instructions.I_INT_I32} 2118304827, 2118304827", // 4-byte positive
+        "64 57 97 13 E9, ${Instructions.I_INT_I32} -384592041, -384592041", // 4-byte negative
+        "64 00 00 00 00, ${Instructions.I_INT_I32} 0, 0", // 4-byte overlong 0
+        "64 FF FF FF FF, ${Instructions.I_INT_I32} -1, -1", // 4-byte overlong -1
+        "64 00 00 80 00, ${Instructions.I_INT_I32} 8388608, 8388608", // length boundary
+        "64 FF FF FF 7F, ${Instructions.I_INT_I32} ${Int.MAX_VALUE}, ${Int.MAX_VALUE}", // max value
+        "64 FF FF 7F FF, ${Instructions.I_INT_I32} -8388609, -8388609", // length boundary
+        "64 00 00 00 80, ${Instructions.I_INT_I32} ${Int.MIN_VALUE}, ${Int.MIN_VALUE}", // min value
     ).toArguments()
 
     const val INT64_EMITTING_OPCODE_CASES = "$THIS_NAME#int64EmittingOpcodeCases"
