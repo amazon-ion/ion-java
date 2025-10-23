@@ -146,7 +146,6 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun float32OpcodeCases() = listOf(
-        // TODO: cross-check all this stuff one more time
         "6C 01 00 00 00, ${Instructions.I_FLOAT_F32} 1,          1.4012984643e-45", // smallest positive subnormal number
         "6C FF FF 7F 00, ${Instructions.I_FLOAT_F32} 8388607,    1.1754942107e-38", // largest subnormal number
         "6C 00 00 80 00, ${Instructions.I_FLOAT_F32} 8388608,    1.1754943508e-38", // smallest positive normal number
@@ -352,9 +351,9 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun int8OpcodeCases() = listOf(
-        "61 32, ${Instructions.I_INT_I16.packInstructionData(50)}, 50", // 1-byte positive
+        "61 32, ${Instructions.I_INT_I16.packInstructionData(50)},    50", // 1-byte positive
         "61 97, ${Instructions.I_INT_I16.packInstructionData(-105)}, -105", // 1-byte negative
-        "61 7F, ${Instructions.I_INT_I16.packInstructionData(127)}, 127", // max value
+        "61 7F, ${Instructions.I_INT_I16.packInstructionData(127)},   127", // max value
         "61 80, ${Instructions.I_INT_I16.packInstructionData(-128)}, -128", // min value
     ).toArguments()
 
@@ -362,13 +361,13 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun int16OpcodeCases() = listOf(
-        "62 26 73, ${Instructions.I_INT_I16.packInstructionData(29478)}, 29478", // 2-byte positive
-        "62 50 FC, ${Instructions.I_INT_I16.packInstructionData(-944)}, -944", // 2-byte negative
-        "62 00 00, ${Instructions.I_INT_I16.packInstructionData(0)}, 0", // 2-byte overlong 0
-        "62 FF FF, ${Instructions.I_INT_I16.packInstructionData(-1)}, -1", // 2-byte overlong -1
-        "62 80 00, ${Instructions.I_INT_I16.packInstructionData(128)}, 128", // min positive
-        "62 7F FF, ${Instructions.I_INT_I16.packInstructionData(-129)}, -129", // max negative
-        "62 FF 7F, ${Instructions.I_INT_I16.packInstructionData(32767)}, 32767", // max value
+        "62 26 73, ${Instructions.I_INT_I16.packInstructionData(29478)},   29478", // 2-byte positive
+        "62 50 FC, ${Instructions.I_INT_I16.packInstructionData(-944)},   -944", // 2-byte negative
+        "62 00 00, ${Instructions.I_INT_I16.packInstructionData(0)},       0", // 2-byte overlong 0
+        "62 FF FF, ${Instructions.I_INT_I16.packInstructionData(-1)},     -1", // 2-byte overlong -1
+        "62 80 00, ${Instructions.I_INT_I16.packInstructionData(128)},     128", // min positive
+        "62 7F FF, ${Instructions.I_INT_I16.packInstructionData(-129)},   -129", // max negative
+        "62 FF 7F, ${Instructions.I_INT_I16.packInstructionData(32767)},   32767", // max value
         "62 00 80, ${Instructions.I_INT_I16.packInstructionData(-32768)}, -32768", // min value
     ).toArguments()
 
@@ -376,11 +375,11 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun int24OpcodeCases() = listOf(
-        "63 40 42 0F,    ${Instructions.I_INT_I32} 1000000, 1000000", // 3-byte positive
+        "63 40 42 0F,    ${Instructions.I_INT_I32} 1000000,   1000000", // 3-byte positive
         "63 4F 34 8B,    ${Instructions.I_INT_I32} -7654321, -7654321", // 3-byte negative
-        "63 00 80 00,    ${Instructions.I_INT_I32} 32768, 32768", // min positive, length boundary from i16
-        "63 FF FF 7F,    ${Instructions.I_INT_I32} 8388607, 8388607", // max value
-        "63 FF 7F FF,    ${Instructions.I_INT_I32} -32769, -32769", // max negative, length boundary from i16
+        "63 00 80 00,    ${Instructions.I_INT_I32} 32768,     32768", // min positive, length boundary from i16
+        "63 FF FF 7F,    ${Instructions.I_INT_I32} 8388607,   8388607", // max value
+        "63 FF 7F FF,    ${Instructions.I_INT_I32} -32769,   -32769", // max negative, length boundary from i16
         "63 00 00 80,    ${Instructions.I_INT_I32} -8388608, -8388608", // min value
     ).toArguments()
 
@@ -388,13 +387,13 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun int32OpcodeCases() = listOf(
-        "64 3B C4 42 7E, ${Instructions.I_INT_I32} 2118304827, 2118304827", // 4-byte positive
+        "64 3B C4 42 7E, ${Instructions.I_INT_I32}  2118304827, 2118304827", // 4-byte positive
         "64 57 97 13 E9, ${Instructions.I_INT_I32} -384592041, -384592041", // 4-byte negative
-        "64 00 00 00 00, ${Instructions.I_INT_I32} 0, 0", // 4-byte overlong 0
+        "64 00 00 00 00, ${Instructions.I_INT_I32}  0,  0", // 4-byte overlong 0
         "64 FF FF FF FF, ${Instructions.I_INT_I32} -1, -1", // 4-byte overlong -1
-        "64 00 00 80 00, ${Instructions.I_INT_I32} 8388608, 8388608", // length boundary
-        "64 FF FF FF 7F, ${Instructions.I_INT_I32} ${Int.MAX_VALUE}, ${Int.MAX_VALUE}", // max value
+        "64 00 00 80 00, ${Instructions.I_INT_I32}  8388608,  8388608", // length boundary
         "64 FF FF 7F FF, ${Instructions.I_INT_I32} -8388609, -8388609", // length boundary
+        "64 FF FF FF 7F, ${Instructions.I_INT_I32} ${Int.MAX_VALUE}, ${Int.MAX_VALUE}", // max value
         "64 00 00 00 80, ${Instructions.I_INT_I32} ${Int.MIN_VALUE}, ${Int.MIN_VALUE}", // min value
     ).toArguments()
 

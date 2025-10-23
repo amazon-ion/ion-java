@@ -28,8 +28,8 @@ class ShortTimestampDecoderTest {
         "8B 35 7D CB EA 85 8B C8 06,     2023-10-15T11:22:33.444555+01:15",
         "8C 35 7D CB EA 85 92 61 7F 1A,  2023-10-15T11:22:33.444555666+01:15",
     )
-    fun `short timestamps are decoded correctly`(bytecode: String, expectedValue: String) {
-        val data = bytecode.hexStringToByteArray()
+    fun `short timestamps are decoded correctly`(input: String, expectedValue: String) {
+        val data = input.hexStringToByteArray()
         val opcode = data[0].unsignedToInt()
         val timestamp = ShortTimestampDecoder.readTimestamp(data, 1, opcode and 0xF)
         val expectedTimestamp = Timestamp.valueOf(expectedValue.trim())
