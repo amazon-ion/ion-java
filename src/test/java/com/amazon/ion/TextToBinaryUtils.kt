@@ -100,8 +100,7 @@ object TextToBinaryUtils {
     }
 
     /**
-     * Helper function for generating FlexUInt hex strings from an unsigned integer. Useful for test
-     * cases that programmatically generate length-prefixed payloads.
+     * Prints the hex representation of an integer as a single byte, e.g. FF for -1
      */
     @JvmStatic
     fun Int.toSingleHexByte(): String {

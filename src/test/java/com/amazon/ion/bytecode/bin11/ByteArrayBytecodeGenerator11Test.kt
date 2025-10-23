@@ -72,8 +72,8 @@ class ByteArrayBytecodeGenerator11Test {
     }
 
     /**
-     * Concatenates all the tests for all supported opcodes together into a single test string. This tests the REFILL
-     * behavior and validates that reference instructions that appear in the middle of the input are handled correctly.
+     * Concatenates all the tests for all supported non-system opcodes together into a single test string. This
+     * validates that reference instructions that appear in the middle of the input are handled correctly.
      */
     @Test
     fun `generator produces correct bytecode for sequence of all supported opcodes`() {
@@ -97,8 +97,7 @@ class ByteArrayBytecodeGenerator11Test {
             stringReferenceOpcodeCases() +
             lobReferenceOpcodeCases()
 
-        // Build up the input bytes and expected bytecode from the individual opcode tests. Each compiled top-level
-        // value will be separated by I_REFILL.
+        // Build up the input bytes and expected bytecode from the individual opcode tests.
         var bytesRead = 0
         opcodeTests.forEach { args ->
             val (inputBytesString: String, expectedBytecodeString) = args.get().map { it as String }
@@ -106,13 +105,11 @@ class ByteArrayBytecodeGenerator11Test {
             inputData = inputData.plus(nextBytes)
             val nextBytecode = replacePositionTemplates(expectedBytecodeString, bytesRead)
                 .decimalStringToIntArray()
-            expectedBytecode = expectedBytecode.plus(nextBytecode.plus(Instructions.I_REFILL))
             bytesRead += nextBytes.size
+            expectedBytecode = expectedBytecode.plus(nextBytecode)
         }
 
-        // Replace the last REFILL added by the loop with an END_OF_INPUT. We don't want a refill followed by nothing
-        // and then EOF.
-        expectedBytecode[expectedBytecode.size - 1] = Instructions.I_END_OF_INPUT
+        expectedBytecode = expectedBytecode.plus(Instructions.I_END_OF_INPUT)
 
         val generator = ByteArrayBytecodeGenerator11(inputData, 0)
         val bytecodeBuffer = BytecodeBuffer()

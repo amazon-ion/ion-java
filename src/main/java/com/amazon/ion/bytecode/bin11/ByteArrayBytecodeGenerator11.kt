@@ -23,7 +23,7 @@ import java.nio.ByteBuffer
 @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "constructor does not make a defensive copy of source as a performance optimization")
 internal class ByteArrayBytecodeGenerator11(
     private val source: ByteArray,
-    private var i: Int,
+    private var currentPosition: Int,
 ) : BytecodeGenerator {
     private val utf8Decoder: Utf8StringDecoder = Utf8StringDecoderPool.getInstance().orCreate
 
@@ -34,24 +34,23 @@ internal class ByteArrayBytecodeGenerator11(
         macroIndices: IntArray,
         symTab: Array<String?>
     ) {
-        // For now, write a single instruction to the bytecode buffer, plus the refill or EOF instruction.
-        // The strategy here will need to be revisited.
-        val opcode = source[i++].unsignedToInt()
-        val handler = OpcodeHandlerTable.handler(opcode)
-        i += handler.convertOpcodeToBytecode(
-            opcode,
-            source,
-            i,
-            destination,
-            constantPool,
-            macroSrc,
-            macroIndices,
-            symTab
-        )
+        var opcode = 0
+        while (currentPosition < source.size && !isSystemValue(opcode)) {
+            opcode = source[currentPosition++].unsignedToInt()
+            val handler = OpcodeHandlerTable.handler(opcode)
+            currentPosition += handler.convertOpcodeToBytecode(
+                opcode,
+                source,
+                currentPosition,
+                destination,
+                constantPool,
+                macroSrc,
+                macroIndices,
+                symTab
+            )
+        }
 
-        // Emit the refill or end of input instruction so caller knows what to do once they run out
-        // of bytecode in the buffer.
-        if (i < source.size) {
+        if (currentPosition < source.size) {
             BytecodeEmitter.emitRefill(destination)
         } else {
             BytecodeEmitter.emitEndOfInput(destination)
@@ -66,14 +65,6 @@ internal class ByteArrayBytecodeGenerator11(
         TODO("Not yet implemented")
     }
 
-    // TODO: right now, this function expects the opcode parameter to be the low nibble of the actual opcode (0x0-0xC).
-    //  This is currently what the ShortTimestampOpcodeHandler writes to the I_SHORT_TIMESTAMP_REF bytecode. This might
-    //  not be correct behavior. If this is acceptable, this parameter should probably be renamed, since it isn't the
-    //  actual opcode of the encoded timestamp. If this isn't, then ShortTimestampOpcodeHandler needs fixed.
-    //  The justification for this behavior is that ShortTimestampOpcodeHandler already separates the low nibble of the
-    //  opcode for use in a lookup table, so we might as well propagate that value to the bytecode instead of the full
-    //  opcode - especially since, in its current implementation, ShortTimestampDecoder.readTimestamp() also uses the
-    //  low nibble in a lookup table.
     override fun readShortTimestampReference(position: Int, opcode: Int): Timestamp {
         return ShortTimestampDecoder.readTimestamp(source, position, opcode)
     }
@@ -97,9 +88,13 @@ internal class ByteArrayBytecodeGenerator11(
 
     override fun getGeneratorForMinorVersion(minorVersion: Int): BytecodeGenerator {
         return when (minorVersion) {
-            1 -> ByteArrayBytecodeGenerator11(source, i)
+            1 -> ByteArrayBytecodeGenerator11(source, currentPosition)
             // TODO: update with ByteArrayBytecodeGenerator10 once it implements BytecodeGenerator
             else -> throw IonException("Minor version $minorVersion not yet implemented for ByteArray-backed data sources.")
         }
+    }
+
+    private fun isSystemValue(opcode: Int): Boolean {
+        return opcode in 0xE0..0xE8
     }
 }
