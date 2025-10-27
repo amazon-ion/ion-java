@@ -11,6 +11,8 @@ import java.math.BigDecimal
 
 /**
  * Helper class for decoding the various short timestamp encoding variants from a [ByteArray].
+ *
+ * TODO(perf): avoid auto-boxing the `0` integer for the offset when constructing the Timestamp instance.
  */
 internal object ShortTimestampDecoder {
     private const val MASK_4 = 0b1111

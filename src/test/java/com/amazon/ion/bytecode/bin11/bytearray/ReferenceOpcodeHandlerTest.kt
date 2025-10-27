@@ -32,7 +32,7 @@ internal class ReferenceOpcodeHandlerTest {
             OpCode.VARIABLE_LENGTH_SYMBOL -> ReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
             OpCode.VARIABLE_LENGTH_BLOB -> ReferenceOpcodeHandler(Instructions.I_BLOB_REF)
             OpCode.VARIABLE_LENGTH_CLOB -> ReferenceOpcodeHandler(Instructions.I_CLOB_REF)
-            else -> fail("Opcode is not a variable-length reference opcode: 0x${opcode.toSingleHexByte()}")
+            else -> fail("Opcode is not a variable-length reference opcode: 0x${opcode.toByte().toHexString()}")
         }
         handler.shouldCompile(input, bytecode)
     }
