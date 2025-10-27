@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
-import com.amazon.ion.TextToBinaryUtils.toSingleHexByte
 import com.amazon.ion.bytecode.bin11.OpCode
 import com.amazon.ion.bytecode.bin11.OpcodeTestCases.REFERENCE_OPCODE_CASES
 import com.amazon.ion.bytecode.bin11.bytearray.OpcodeHandlerTestUtil.shouldCompile
@@ -19,6 +18,7 @@ internal class ReferenceOpcodeHandlerTest {
      * Test that variable-length payload opcodes generate the correct *_REF bytecode.
      * Does not validate the actual payload in any way.
      */
+    @OptIn(ExperimentalStdlibApi::class) // for Byte.toHexString()
     @ParameterizedTest
     @MethodSource(REFERENCE_OPCODE_CASES)
     fun `handlers for OP_X_REF opcodes emit correct bytecode`(input: String, bytecode: String) {

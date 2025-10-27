@@ -86,9 +86,17 @@ object TextToBinaryUtils {
      * Converts a byte array to a string of hex bytes, such as "A5 0F EC 52".
      * The purpose of this method is to make it easier to read and write test assertions.
      */
+    @OptIn(ExperimentalStdlibApi::class)
     @JvmStatic
     fun ByteArray.byteArrayToHexString(): String {
-        return this.joinToString(" ") { it.toUByte().toString(16).padStart(2, '0') }
+        return this.toHexString(
+            HexFormat {
+                upperCase = true
+                bytes {
+                    byteSeparator = " "
+                }
+            }
+        )
     }
 
     /**
@@ -97,13 +105,5 @@ object TextToBinaryUtils {
     @JvmStatic
     fun String.decimalStringToIntArray(): IntArray {
         return octetStringToIntArray(this, 10)
-    }
-
-    /**
-     * Prints the hex representation of an integer as a single byte, e.g. FF for -1
-     */
-    @JvmStatic
-    fun Int.toSingleHexByte(): String {
-        return this.toUByte().toString(16).padStart(2, '0')
     }
 }

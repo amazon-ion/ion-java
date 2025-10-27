@@ -4,7 +4,6 @@ package com.amazon.ion.bytecode.bin11
 
 import com.amazon.ion.TextToBinaryUtils.byteArrayToHexString
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
-import com.amazon.ion.TextToBinaryUtils.toSingleHexByte
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.impl.bin.PrimitiveEncoder
@@ -26,6 +25,7 @@ import java.nio.charset.StandardCharsets
  * sensitive to the opcode's position in the input (e.g. `OP_*_REF` codes) to be reused across test cases that use them
  * at different offsets. Pass the decimal string to [replacePositionTemplates] to parse these placeholders.
  */
+@OptIn(ExperimentalStdlibApi::class) // for Byte.toHexString()
 object OpcodeTestCases {
 
     private const val THIS_NAME = "com.amazon.ion.bytecode.bin11.OpcodeTestCases"
@@ -81,20 +81,20 @@ object OpcodeTestCases {
 
     @JvmStatic
     fun shortTimestampOpcodeCases() = listOf(
-        "80 35,                          ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x0)} %pos:1%, 2023T",
-        "81 35 05,                       ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x1)} %pos:1%, 2023-10T",
-        "82 35 7D,                       ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x2)} %pos:1%, 2023-10-15T",
-        "83 35 7D CB 0A,                 ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x3)} %pos:1%, 2023-10-15T11:22Z",
-        "84 35 7D CB 1A 02,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x4)} %pos:1%, 2023-10-15T11:22:33Z",
-        "84 35 7D CB 12 02,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x4)} %pos:1%, 2023-10-15T11:22:33-00:00",
-        "85 35 7D CB 12 F2 06,           ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x5)} %pos:1%, 2023-10-15T11:22:33.444-00:00",
-        "86 35 7D CB 12 2E 22 1B,        ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x6)} %pos:1%, 2023-10-15T11:22:33.444555-00:00",
-        "87 35 7D CB 12 4A 86 FD 69,     ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x7)} %pos:1%, 2023-10-15T11:22:33.444555666-00:00",
-        "88 35 7D CB EA 01,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x8)} %pos:1%, 2023-10-15T11:22+01:15",
-        "89 35 7D CB EA 85,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x9)} %pos:1%, 2023-10-15T11:22:33+01:15",
-        "8A 35 7D CB EA 85 BC 01,        ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0xA)} %pos:1%, 2023-10-15T11:22:33.444+01:15",
-        "8B 35 7D CB EA 85 8B C8 06,     ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0xB)} %pos:1%, 2023-10-15T11:22:33.444555+01:15",
-        "8C 35 7D CB EA 85 92 61 7F 1A,  ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0xC)} %pos:1%, 2023-10-15T11:22:33.444555666+01:15",
+        "80 35,                          ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x80)} %pos:1%, 2023T",
+        "81 35 05,                       ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x81)} %pos:1%, 2023-10T",
+        "82 35 7D,                       ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x82)} %pos:1%, 2023-10-15T",
+        "83 35 7D CB 0A,                 ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x83)} %pos:1%, 2023-10-15T11:22Z",
+        "84 35 7D CB 1A 02,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x84)} %pos:1%, 2023-10-15T11:22:33Z",
+        "84 35 7D CB 12 02,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x84)} %pos:1%, 2023-10-15T11:22:33-00:00",
+        "85 35 7D CB 12 F2 06,           ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x85)} %pos:1%, 2023-10-15T11:22:33.444-00:00",
+        "86 35 7D CB 12 2E 22 1B,        ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x86)} %pos:1%, 2023-10-15T11:22:33.444555-00:00",
+        "87 35 7D CB 12 4A 86 FD 69,     ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x87)} %pos:1%, 2023-10-15T11:22:33.444555666-00:00",
+        "88 35 7D CB EA 01,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x88)} %pos:1%, 2023-10-15T11:22+01:15",
+        "89 35 7D CB EA 85,              ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x89)} %pos:1%, 2023-10-15T11:22:33+01:15",
+        "8A 35 7D CB EA 85 BC 01,        ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x8A)} %pos:1%, 2023-10-15T11:22:33.444+01:15",
+        "8B 35 7D CB EA 85 8B C8 06,     ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x8B)} %pos:1%, 2023-10-15T11:22:33.444555+01:15",
+        "8C 35 7D CB EA 85 92 61 7F 1A,  ${Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x8C)} %pos:1%, 2023-10-15T11:22:33.444555666+01:15",
         // TODO: add tests for max/min values, other extremes
     ).toArguments()
 
@@ -271,7 +271,7 @@ object OpcodeTestCases {
                 val expectedBytecodeString = "${instruction.packInstructionData(payloadLength)} %pos:$expectedPayloadStartPosition%"
 
                 val inputBytesSB = StringBuilder(payloadLength * 3 + flexUIntStr.length + 4)
-                inputBytesSB.append("${opcode.toSingleHexByte()} $flexUIntStr ")
+                inputBytesSB.append("${opcode.toByte().toHexString()} $flexUIntStr ")
                 // Create a dummy payload for this value with all bytes set to zeros.
                 // Not actually looked at by this test, but simulates an encoded value the handler would actually
                 // encounter during parsing.
@@ -337,7 +337,7 @@ object OpcodeTestCases {
             val expectedPayloadStartPosition = flexUIntStr.hexStringToByteArray().size + 1
             val expectedBytecodeString = "${Instructions.I_BLOB_REF.packInstructionData(lobSize)} %pos:$expectedPayloadStartPosition%"
 
-            val inputBytes = "${OpCode.VARIABLE_LENGTH_BLOB.toSingleHexByte()} $flexUIntStr $it"
+            val inputBytes = "${OpCode.VARIABLE_LENGTH_BLOB.toByte().toHexString()} $flexUIntStr $it"
             arguments.add(Arguments.of(inputBytes, expectedBytecodeString, it))
         }
 

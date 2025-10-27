@@ -84,17 +84,7 @@ internal object BytecodeEmitter {
     }
 
     @JvmStatic
-    fun emitShortTimestampReference(destination: BytecodeBuffer, precisionAndOffsetMode: Int, dataPosition: Int) {
-        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(precisionAndOffsetMode), dataPosition)
-    }
-
-    @JvmStatic
-    fun emitRefill(destination: BytecodeBuffer) {
-        destination.add(Instructions.I_REFILL)
-    }
-
-    @JvmStatic
-    fun emitEndOfInput(destination: BytecodeBuffer) {
-        destination.add(Instructions.I_END_OF_INPUT)
+    fun emitShortTimestampReference(destination: BytecodeBuffer, opcode: Int, dataPosition: Int) {
+        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(opcode), dataPosition)
     }
 }

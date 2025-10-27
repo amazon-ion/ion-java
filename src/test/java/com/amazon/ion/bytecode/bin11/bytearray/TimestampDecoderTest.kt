@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class ShortTimestampDecoderTest {
+class TimestampDecoderTest {
 
     @ParameterizedTest
     @CsvSource(
@@ -31,7 +31,7 @@ class ShortTimestampDecoderTest {
     fun `short timestamps are decoded correctly`(input: String, expectedValue: String) {
         val data = input.hexStringToByteArray()
         val opcode = data[0].unsignedToInt()
-        val timestamp = ShortTimestampDecoder.readTimestamp(data, 1, opcode and 0xF)
+        val timestamp = TimestampDecoder.readShortTimestamp(data, 1, opcode)
         val expectedTimestamp = Timestamp.valueOf(expectedValue.trim())
         assertEquals(expectedTimestamp, timestamp)
     }

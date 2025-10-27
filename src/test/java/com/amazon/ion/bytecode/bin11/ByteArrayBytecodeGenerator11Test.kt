@@ -24,9 +24,8 @@ import com.amazon.ion.bytecode.bin11.OpcodeTestCases.SHORT_TIMESTAMP_OPCODE_CASE
 import com.amazon.ion.bytecode.bin11.OpcodeTestCases.STRING_REFERENCE_OPCODE_CASES
 import com.amazon.ion.bytecode.bin11.OpcodeTestCases.TYPED_NULL_OPCODE_CASES
 import com.amazon.ion.bytecode.bin11.OpcodeTestCases.replacePositionTemplates
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder
 import com.amazon.ion.bytecode.ir.Instructions
-import com.amazon.ion.bytecode.util.BytecodeBuffer
-import com.amazon.ion.bytecode.util.ConstantPool
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -56,44 +55,35 @@ class ByteArrayBytecodeGenerator11Test {
     @ParameterizedTest
     @MethodSource(SHORT_TIMESTAMP_OPCODE_CASES)
     fun `generator can read short timestamp references`(encodedTimestampBytes: String, expectedBytecodeString: String, expectedTimestampString: String) {
-        val timestampReferenceBytes = encodedTimestampBytes.hexStringToByteArray()
-        val generator = ByteArrayBytecodeGenerator11(timestampReferenceBytes, 0)
-        val bytecode = BytecodeBuffer()
-        generator.refill(bytecode, ConstantPool(), intArrayOf(), intArrayOf(), arrayOf())
-
-        val timestampPrecisionAndOffsetMode = Instructions.getData(bytecode.get(0))
-        val timestampPosition = bytecode.get(1)
+        val bytes = encodedTimestampBytes.hexStringToByteArray()
+        val generator = ByteArrayBytecodeGenerator11(bytes, 0)
+        val opcode = bytes[0].toInt().and(0xFF)
         val expectedTimestamp = Timestamp.valueOf(expectedTimestampString)
-        val readTimestamp = generator.readShortTimestampReference(timestampPosition, timestampPrecisionAndOffsetMode)
+        val readTimestamp = generator.readShortTimestampReference(1, opcode)
         assertEquals(expectedTimestamp, readTimestamp)
     }
 
     @ParameterizedTest
     @MethodSource(STRING_REFERENCE_OPCODE_CASES)
     fun `generator can read string references`(encodedStringBytes: String, expectedBytecodeString: String, expectedString: String) {
-        val stringReferenceBytes = encodedStringBytes.hexStringToByteArray()
-        val generator = ByteArrayBytecodeGenerator11(stringReferenceBytes, 0)
-        val bytecode = BytecodeBuffer()
-        generator.refill(bytecode, ConstantPool(), intArrayOf(), intArrayOf(), arrayOf())
-
-        val stringLength = Instructions.getData(bytecode.get(0))
-        val stringPosition = bytecode.get(1)
-        val readString = generator.readTextReference(stringPosition, stringLength)
+        val bytes = encodedStringBytes.hexStringToByteArray()
+        val generator = ByteArrayBytecodeGenerator11(bytes, 0)
+        // Size of input minus the opcode and FlexUInt length prefix
+        val length = bytes.size - PrimitiveDecoder.lengthOfFlexIntOrUIntAt(bytes, 1) - 1
+        val position = bytes.size - length
+        val readString = generator.readTextReference(position, length)
         assertEquals(expectedString, readString)
     }
 
     @ParameterizedTest
     @MethodSource(LOB_REFERENCE_OPCODE_CASES)
     fun `generator can read lob references`(encodedLobBytes: String, expectedBytecodeString: String, expectedLobBytes: String) {
-        val lobReferenceBytes = encodedLobBytes.hexStringToByteArray()
-        val generator = ByteArrayBytecodeGenerator11(lobReferenceBytes, 0)
-        val bytecode = BytecodeBuffer()
-        generator.refill(bytecode, ConstantPool(), intArrayOf(), intArrayOf(), arrayOf())
-
-        val lobLength = Instructions.getData(bytecode.get(0))
-        val lobPosition = bytecode.get(1)
+        val bytes = encodedLobBytes.hexStringToByteArray()
+        val generator = ByteArrayBytecodeGenerator11(bytes, 0)
+        val length = bytes.size - PrimitiveDecoder.lengthOfFlexIntOrUIntAt(bytes, 1) - 1
+        val position = bytes.size - length
         val expectedLob = expectedLobBytes.hexStringToByteArray()
-        val readLob = generator.readBytesReference(lobPosition, lobLength).newByteArray()
+        val readLob = generator.readBytesReference(position, length).newByteArray()
         assertArrayEquals(expectedLob, readLob)
     }
 }
