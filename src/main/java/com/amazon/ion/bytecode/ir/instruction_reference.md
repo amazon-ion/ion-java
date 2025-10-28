@@ -79,9 +79,9 @@ This instruction indicates that there is a String value, and the text of the str
 | NULL_BLOB             | `0x57` | `01010` | `111` | `00` | -                     | -            |                                                                 |
 | LIST_START            | `0x58` | `01011` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |
 | NULL_LIST             | `0x5F` | `01011` | `111` | `00` | -                     | -            |                                                                 |
-| SEXP_START            | `0x60` | `01100` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
+| SEXP_START            | `0x60` | `01100` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |
 | NULL_SEXP             | `0x67` | `01100` | `111` | `00` | -                     | -            |                                                                 |
-| STRUCT_START          | `0x68` | `01101` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |                                                          
+| STRUCT_START          | `0x68` | `01101` | `000` | `11` | bytecode_length (u22) | -            | Length must include the END_CONTAINER instruction               |
 | NULL_STRUCT           | `0x6F` | `01101` | `111` | `00` | -                     | -            |                                                                 |
 | ANNOTATION_CP         | `0x70` | `01110` | `000` | `00` | cp_index (u22)        | -            | Non-null [String] in constant pool                              |
 | ANNOTATION_REF        | `0x71` | `01110` | `001` | `01` | ref_length (u22)      | offset (u32) | Reference to UTF-8 bytes                                        |
@@ -90,7 +90,7 @@ This instruction indicates that there is a String value, and the text of the str
 | FIELD_NAME_REF        | `0x79` | `01111` | `001` | `01` | ref_length (u22)      | offset (u32) | Reference to UTF-8 bytes                                        |
 | FIELD_NAME_SID        | `0x7A` | `01111` | `010` | `00` | sid (u22)             | -            |                                                                 |
 | IVM                   | `0x80` | `10000` | `000` | `00` | version (u8, u8)      | -            | version is packed as u8 major, u8 minor                         |
-| DIRECTIVE_SET_SYMBOLS | `0x88` | `10001` | `000` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |                                        
+| DIRECTIVE_SET_SYMBOLS | `0x88` | `10001` | `000` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
 | DIRECTIVE_ADD_SYMBOLS | `0x89` | `10001` | `001` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
 | DIRECTIVE_SET_MACROS  | `0x8A` | `10001` | `010` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
 | DIRECTIVE_ADD_MACROS  | `0x8B` | `10001` | `011` | `00` | -                     | -            | Must have END_CONTAINER instruction to delimit end of directive |
@@ -126,6 +126,18 @@ Possible TODOs:
 [^0xBA]: Potential inclusion to make it possible to expose comments from Ion text, or it could reference arbitrary data
          from inside a lengthy NOP. Comments that are longer than u22 max value could be encoded using multiple comment 
          instructions. The span should include the comment-delimiting characters.
+
+## Integers
+
+* All eagerly-read integer values MUST be encoded using the instruction with the smallest integer size in which the integer value can fit.
+* The length value for an `INT_REF` instruction must include the sign bit.
+
+## Exposing unevaluated macro invocations
+
+* Generators may be configured to expose some or all macro invocations.
+* Generators should expose macro invocations using the `INVOKE` instruction
+* The `INVOKE` instruction is followed by one argument for each parameter in the signature (making any "no argument" expressions explicit).
+* The arguments are followed by the `END_CONTAINER` instruction. (TODO: Should we have a distinct `END_INVOKE` instruction?)
 
 ## Directive Content
 

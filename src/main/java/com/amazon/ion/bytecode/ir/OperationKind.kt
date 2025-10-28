@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.ir
 
+import com.amazon.ion.IonType
+
 /**
  * Constants defining the different categories of operations for the bytecode instruction set.
  *
@@ -96,6 +98,29 @@ internal object OperationKind {
             END -> "END"
             METADATA -> "METADATA"
             else -> throw IllegalArgumentException("Not a valid instruction kind: $instructionKind")
+        }
+    }
+
+    /**
+     * Returns the [IonType] corresponding to the operation kind, if any.
+     */
+    @JvmStatic
+    fun ionTypeOf(operationKind: Int): IonType? {
+        return when (operationKind) {
+            NULL -> IonType.NULL
+            BOOL -> IonType.BOOL
+            INT -> IonType.INT
+            FLOAT -> IonType.FLOAT
+            DECIMAL -> IonType.DECIMAL
+            TIMESTAMP -> IonType.TIMESTAMP
+            STRING -> IonType.STRING
+            SYMBOL -> IonType.SYMBOL
+            CLOB -> IonType.CLOB
+            BLOB -> IonType.BLOB
+            LIST -> IonType.LIST
+            SEXP -> IonType.SEXP
+            STRUCT -> IonType.STRUCT
+            else -> null
         }
     }
 }
