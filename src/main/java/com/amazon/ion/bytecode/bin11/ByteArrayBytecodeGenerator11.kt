@@ -50,9 +50,7 @@ internal class ByteArrayBytecodeGenerator11(
             )
         }
 
-        if (currentPosition < source.size) {
-            destination.add(Instructions.I_REFILL)
-        } else {
+        if (currentPosition >= source.size) {
             destination.add(Instructions.I_END_OF_INPUT)
         }
     }
