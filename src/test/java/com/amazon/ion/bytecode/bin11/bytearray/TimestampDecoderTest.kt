@@ -27,6 +27,7 @@ class TimestampDecoderTest {
         "8A 35 7D CB EA 85 BC 01,        2023-10-15T11:22:33.444+01:15",
         "8B 35 7D CB EA 85 8B C8 06,     2023-10-15T11:22:33.444555+01:15",
         "8C 35 7D CB EA 85 92 61 7F 1A,  2023-10-15T11:22:33.444555666+01:15",
+        // TODO: add min/max values, other extremes
     )
     fun `short timestamps are decoded correctly`(input: String, expectedValue: String) {
         val data = input.hexStringToByteArray()

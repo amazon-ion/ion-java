@@ -4,6 +4,9 @@ package com.amazon.ion.bytecode.bin11
 
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.Timestamp
+import com.amazon.ion.bytecode.GeneratorTestUtil.shouldGenerate
+import com.amazon.ion.bytecode.ir.Instructions
+import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.impl.bin.PrimitiveEncoder
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -13,6 +16,39 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.nio.charset.StandardCharsets
 
 internal object ByteArrayBytecodeGenerator11Test {
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "64 4F 97 21 C5 " + // int32 -987654321
+                "86 35 7D CB 12 2E 22 1B " + // short TS reference to 2023-10-15T11:22:33.444555-00:00
+                "8F 0C " + // null struct
+                "6A " + // float 0e0
+                "6D 18 2D 44 54 FB 21 09 40 " + // float64 3.141592653589793
+                "FE 31 49 20 61 70 70 6c 61 75 64 20 79 6f 75 72 20 63 75 72 69 6f 73 69 74 79 " + // 24-byte blob
+                "6F " // false
+        ]
+    )
+    fun `generator can compile input containing multiple simple opcodes`(inputBytesString: String) {
+        val f64pi = 3.141592653589793
+        val expectedBytecode = intArrayOf(
+            Instructions.I_INT_I32, -987654321,
+            Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(0x86), 6,
+            Instructions.I_NULL_STRUCT,
+            Instructions.I_FLOAT_F32, 0,
+            Instructions.I_FLOAT_F64, f64pi.toRawBits().ushr(32).and(0xFFFFFFFF).toInt(), f64pi.toRawBits().toInt(),
+            Instructions.I_BLOB_REF.packInstructionData(24), 27,
+            Instructions.I_BOOL.packInstructionData(0),
+            Instructions.I_END_OF_INPUT
+        )
+
+        val bytes = inputBytesString.hexStringToByteArray()
+        val generator = ByteArrayBytecodeGenerator11(bytes, 0)
+        generator.shouldGenerate(expectedBytecode)
+    }
+
+    // TODO: add tests cases for more complicated cases like nested containers, macro compilation, annots., etc.
+    //  once those features are implemented
 
     @ParameterizedTest
     @CsvSource(
