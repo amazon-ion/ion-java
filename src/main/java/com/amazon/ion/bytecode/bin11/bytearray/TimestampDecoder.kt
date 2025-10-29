@@ -8,7 +8,17 @@ import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
-import com.amazon.ion.impl.bin.Ion_1_1_Constants.*
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_O_TIMESTAMP_FRACTION_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_O_TIMESTAMP_OFFSET_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_O_TIMESTAMP_SECOND_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_TIMESTAMP_DAY_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_TIMESTAMP_HOUR_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_TIMESTAMP_MINUTE_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_TIMESTAMP_MONTH_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_U_TIMESTAMP_FRACTION_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_U_TIMESTAMP_SECOND_BIT_OFFSET
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_U_TIMESTAMP_UTC_FLAG
+import com.amazon.ion.impl.bin.Ion_1_1_Constants.S_U_TIMESTAMP_UTC_FLAG_L
 import java.math.BigDecimal
 
 /**

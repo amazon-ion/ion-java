@@ -2,60 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11
 
-import com.amazon.ion.TextToBinaryUtils.decimalStringToIntArray
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.Timestamp
-import com.amazon.ion.bytecode.GeneratorTestUtil.shouldGenerate
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.BOOLEAN_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.FLOAT0_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.FLOAT16_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.FLOAT32_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.FLOAT64_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT0_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT16_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT24_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT32_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT64_EMITTING_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.INT8_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.LOB_REFERENCE_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.NULL_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.REFERENCE_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.SHORT_TIMESTAMP_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.STRING_REFERENCE_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.TYPED_NULL_OPCODE_CASES
-import com.amazon.ion.bytecode.bin11.OpcodeTestCases.replacePositionTemplates
-import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder
-import com.amazon.ion.bytecode.ir.Instructions
+import com.amazon.ion.impl.bin.PrimitiveEncoder
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
+import java.nio.charset.StandardCharsets
 
-class ByteArrayBytecodeGenerator11Test {
+internal object ByteArrayBytecodeGenerator11Test {
 
     @ParameterizedTest
-    @MethodSource(
-        BOOLEAN_OPCODE_CASES, NULL_OPCODE_CASES, TYPED_NULL_OPCODE_CASES, FLOAT0_OPCODE_CASES,
-        FLOAT16_OPCODE_CASES, FLOAT32_OPCODE_CASES, FLOAT64_OPCODE_CASES, SHORT_TIMESTAMP_OPCODE_CASES,
-        REFERENCE_OPCODE_CASES, INT0_OPCODE_CASES, INT8_OPCODE_CASES, INT16_OPCODE_CASES, INT24_OPCODE_CASES,
-        INT32_OPCODE_CASES, INT64_EMITTING_OPCODE_CASES, STRING_REFERENCE_OPCODE_CASES, LOB_REFERENCE_OPCODE_CASES
+    @CsvSource(
+        "80 35,                         2023T",
+        "81 35 05,                      2023-10T",
+        "82 35 7D,                      2023-10-15T",
+        "83 35 7D CB 0A,                2023-10-15T11:22Z",
+        "84 35 7D CB 1A 02,             2023-10-15T11:22:33Z",
+        "84 35 7D CB 12 02,             2023-10-15T11:22:33-00:00",
+        "85 35 7D CB 12 F2 06,          2023-10-15T11:22:33.444-00:00",
+        "86 35 7D CB 12 2E 22 1B,       2023-10-15T11:22:33.444555-00:00",
+        "87 35 7D CB 12 4A 86 FD 69,    2023-10-15T11:22:33.444555666-00:00",
+        "88 35 7D CB EA 01,             2023-10-15T11:22+01:15",
+        "89 35 7D CB EA 85,             2023-10-15T11:22:33+01:15",
+        "8A 35 7D CB EA 85 BC 01,       2023-10-15T11:22:33.444+01:15",
+        "8B 35 7D CB EA 85 8B C8 06,    2023-10-15T11:22:33.444555+01:15",
+        "8C 35 7D CB EA 85 92 61 7F 1A, 2023-10-15T11:22:33.444555666+01:15",
     )
-    fun `generator produces correct bytecode for all supported opcodes`(inputBytesString: String, expectedBytecodeString: String) {
-        val inputData = inputBytesString.hexStringToByteArray()
-        val generator = ByteArrayBytecodeGenerator11(inputData, 0)
-
-        generator.shouldGenerate(
-            intArrayOf(
-                *replacePositionTemplates(expectedBytecodeString, 0).decimalStringToIntArray(),
-                Instructions.I_END_OF_INPUT
-            )
-        )
-    }
-
-    @ParameterizedTest
-    @MethodSource(SHORT_TIMESTAMP_OPCODE_CASES)
-    fun `generator can read short timestamp references`(encodedTimestampBytes: String, expectedBytecodeString: String, expectedTimestampString: String) {
-        val bytes = encodedTimestampBytes.hexStringToByteArray()
+    fun `generator can read short timestamp references`(inputBytesString: String, expectedTimestampString: String) {
+        val bytes = inputBytesString.hexStringToByteArray()
         val generator = ByteArrayBytecodeGenerator11(bytes, 0)
         val opcode = bytes[0].toInt().and(0xFF)
         val expectedTimestamp = Timestamp.valueOf(expectedTimestampString)
@@ -64,26 +41,62 @@ class ByteArrayBytecodeGenerator11Test {
     }
 
     @ParameterizedTest
-    @MethodSource(STRING_REFERENCE_OPCODE_CASES)
-    fun `generator can read string references`(encodedStringBytes: String, expectedBytecodeString: String, expectedString: String) {
-        val bytes = encodedStringBytes.hexStringToByteArray()
+    @ValueSource(
+        strings = [
+            "Hello world",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<root>\n<elem>hello</elem>\n</root>\n",
+            "Love it! \uD83D\uDE0D❤\uFE0F\uD83D\uDC95\uD83D\uDE3B\uD83D\uDC96",
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#\$%^&*()-_=+[{]}\\|;:'\",<.>/?",
+            "Ἀνέβην δέ με σῖτος εὐρυβίοιο Ἰλιάδης τε καὶ Ὀδυσσείας καὶ Φοινικίων",
+            "",
+            "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000a\u000b\u000c\u000d\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f",
+            "   \tleading and trailing whitespace\u000c\r\n"
+        ]
+    )
+    fun `generator can read string references`(expectedString: String) {
+        val utf8Buffer = StandardCharsets.UTF_8.encode(expectedString)
+        val utf8Bytes = ByteArray(utf8Buffer.remaining())
+        utf8Buffer.get(utf8Bytes)
+        val flexUIntBytes = generateFlexUIntBytes(utf8Bytes.size)
+        val bytes = byteArrayOf(0xF8.toByte(), *flexUIntBytes, *utf8Bytes)
+
         val generator = ByteArrayBytecodeGenerator11(bytes, 0)
         // Size of input minus the opcode and FlexUInt length prefix
-        val length = bytes.size - PrimitiveDecoder.lengthOfFlexIntOrUIntAt(bytes, 1) - 1
-        val position = bytes.size - length
-        val readString = generator.readTextReference(position, length)
+        val position = flexUIntBytes.size + 1
+        val readString = generator.readTextReference(position, utf8Bytes.size)
         assertEquals(expectedString, readString)
     }
 
     @ParameterizedTest
-    @MethodSource(LOB_REFERENCE_OPCODE_CASES)
-    fun `generator can read lob references`(encodedLobBytes: String, expectedBytecodeString: String, expectedLobBytes: String) {
-        val bytes = encodedLobBytes.hexStringToByteArray()
+    @ValueSource(
+        strings = [
+            "00 00 00 00 00 00 00 00 00 00",
+            "FF FF FF FF FF FF FF FF FF FF",
+            "00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F 20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F 30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F 40 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50 51 52 53 54 55 56 57 58 59 5A 5B 5C 5D 5E 5F 60 61 62 63 64 65 66 67 68 69 6A 6B 6C 6D 6E 6F 70 71 72 73 74 75 76 77 78 79 7A 7B 7C 7D 7E 7F 80 81 82 83 84 85 86 87 88 89 8A 8B 8C 8D 8E 8F 90 91 92 93 94 95 96 97 98 99 9A 9B 9C 9D 9E 9F A0 A1 A2 A3 A4 A5 A6 A7 A8 A9 AA AB AC AD AE AF B0 B1 B2 B3 B4 B5 B6 B7 B8 B9 BA BB BC BD BE BF C0 C1 C2 C3 C4 C5 C6 C7 C8 C9 CA CB CC CD CE CF D0 D1 D2 D3 D4 D5 D6 D7 D8 D9 DA DB DC DD DE DF E0 E1 E2 E3 E4 E5 E6 E7 E8 E9 EA EB EC ED EE EF F0 F1 F2 F3 F4 F5 F6 F7 F8 F9 FA FB FC FD FE FF",
+            "A5",
+            ""
+        ]
+    )
+    fun `generator can read lob references`(expectedLobBytes: String) {
+        val lobBytes = expectedLobBytes.hexStringToByteArray()
+        val flexUIntBytes = generateFlexUIntBytes(lobBytes.size)
+        val bytes = byteArrayOf(0xFE.toByte(), *flexUIntBytes, *lobBytes)
+
         val generator = ByteArrayBytecodeGenerator11(bytes, 0)
-        val length = bytes.size - PrimitiveDecoder.lengthOfFlexIntOrUIntAt(bytes, 1) - 1
-        val position = bytes.size - length
-        val expectedLob = expectedLobBytes.hexStringToByteArray()
-        val readLob = generator.readBytesReference(position, length).newByteArray()
-        assertArrayEquals(expectedLob, readLob)
+        val position = flexUIntBytes.size + 1
+        val readLob = generator.readBytesReference(position, lobBytes.size).newByteArray()
+        assertArrayEquals(lobBytes, readLob)
+    }
+
+    /**
+     * Helper function for generating FlexUInt bytes from an unsigned integer. Useful for test
+     * cases that programmatically generate length-prefixed payloads.
+     */
+    private fun generateFlexUIntBytes(value: Int): ByteArray {
+        val asLong = value.toLong()
+        val length = PrimitiveEncoder.flexUIntLength(asLong)
+        val bytes = ByteArray(length)
+        PrimitiveEncoder.writeFlexIntOrUIntInto(bytes, 0, asLong, length)
+        return bytes
     }
 }

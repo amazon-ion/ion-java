@@ -25,23 +25,6 @@ object TextToBinaryUtils {
     }
 
     /**
-     * Converts a string of octets in the given radix to an int array. Octets must be separated by a space.
-     * @param octetString the string of space-separated octets.
-     * @param radix the radix of the octets in the string.
-     * @return a new int array.
-     */
-    @JvmStatic
-    private fun octetStringToIntArray(octetString: String, radix: Int): IntArray {
-        if (octetString.isEmpty()) return IntArray(0)
-        val intsAsStrings = octetString.split(" +".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        val intsAsInts = IntArray(intsAsStrings.size)
-        for (i in intsAsInts.indices) {
-            intsAsInts[i] = intsAsStrings[i].toInt(radix)
-        }
-        return intsAsInts
-    }
-
-    /**
      * Converts a string of binary octets, such as "10010111 00010011", to a byte array.
      */
     @JvmStatic
@@ -80,30 +63,5 @@ object TextToBinaryUtils {
     @JvmStatic
     fun ByteArray.byteArrayToBitString(): String {
         return this.joinToString(" ") { it.toUByte().toString(2).padStart(8, '0') }
-    }
-
-    /**
-     * Converts a byte array to a string of hex bytes, such as "A5 0F EC 52".
-     * The purpose of this method is to make it easier to read and write test assertions.
-     */
-    @OptIn(ExperimentalStdlibApi::class)
-    @JvmStatic
-    fun ByteArray.byteArrayToHexString(): String {
-        return this.toHexString(
-            HexFormat {
-                upperCase = true
-                bytes {
-                    byteSeparator = " "
-                }
-            }
-        )
-    }
-
-    /**
-     * Converts a string of decimal integers, such as "105 -9349549 0 -12 99999", to an int array.
-     */
-    @JvmStatic
-    fun String.decimalStringToIntArray(): IntArray {
-        return octetStringToIntArray(this, 10)
     }
 }
