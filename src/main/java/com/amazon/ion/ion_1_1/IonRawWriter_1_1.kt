@@ -223,7 +223,7 @@ interface IonRawWriter_1_1 {
      * If [macroName] is non-null, and the implementation supports invoking macros by name, then the implementation
      * MUST write the macro name rather than the macro id.
      */
-    fun stepInTaglessElementList(macroId: Int, macroName: String?)
+    fun stepInTaglessElementList(macroId: Int, macroName: String?, lengthPrefixed: Boolean)
 
     /**
      * Starts a tagless-element s-exp, using the given opcode for its child elements.
@@ -238,7 +238,7 @@ interface IonRawWriter_1_1 {
      * If [macroName] is non-null, and the implementation supports invoking macros by name, then the implementation
      * MUST write the macro name rather than the macro id.
      */
-    fun stepInTaglessElementSExp(macroId: Int, macroName: String?)
+    fun stepInTaglessElementSExp(macroId: Int, macroName: String?, lengthPrefixed: Boolean)
 
     /**
      * Steps into a tagless E-Expression.
@@ -246,14 +246,6 @@ interface IonRawWriter_1_1 {
      * Caller is responsible to ensure this is called only when it is valid to write a tagless e-expression.
      */
     fun stepInTaglessEExp()
-
-    /**
-     * Writes an integer value without writing the opcode, using the [implicitOpcode] to determine the correct
-     * encoding for the value payload.
-     *
-     * @throws com.amazon.ion.IonException If the [implicitOpcode] is not a valid opcode for a tagless int value.
-     */
-    fun writeTaglessInt(implicitOpcode: Int, value: Int)
 
     /**
      * Writes an integer value without writing the opcode, using the [implicitOpcode] to determine the correct

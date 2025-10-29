@@ -1195,7 +1195,6 @@ class IonRawBinaryWriterTest_1_1 {
     fun `write tagless integers`(value: BigInteger, encoding: TaglessScalarType, expectedBytes: String) {
         // This writes the ints completely out of context so that we can test them apart from a macro or container.
         assertWriterOutputEquals(expectedBytes) { writeTaglessInt(encoding.getOpcode(), value) }
-        assertWriterOutputEquals(expectedBytes) { writeTaglessInt(encoding.getOpcode(), value.toInt()) }
         assertWriterOutputEquals(expectedBytes) { writeTaglessInt(encoding.getOpcode(), value.toLong()) }
     }
 
@@ -1280,7 +1279,34 @@ class IonRawBinaryWriterTest_1_1 {
             61 06
         """
         ) {
-            stepInTaglessElementList(1, "foo")
+            stepInTaglessElementList(1, "foo", false)
+            stepInTaglessEExp()
+            writeAbsentArgument()
+            writeInt(5)
+            stepOut()
+            stepInTaglessEExp()
+            writeAbsentArgument()
+            writeInt(6)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write tagless element list with length-prefixed macro-shape`() {
+        assertWriterOutputEquals(
+            """
+            5B F4 03    | List, length-prefixed macro 1
+            05          | Length = 2 (children)
+            07
+            E0
+            61 05
+            07
+            E0
+            61 06
+        """
+        ) {
+            stepInTaglessElementList(1, "foo", true)
             stepInTaglessEExp()
             writeAbsentArgument()
             writeInt(5)
@@ -1299,7 +1325,7 @@ class IonRawBinaryWriterTest_1_1 {
             val taglessOp = TaglessScalarType.INT_16.getOpcode()
             stepInTaglessElementList(taglessOp)
             stepOut()
-            stepInTaglessElementList(1, "foo")
+            stepInTaglessElementList(1, "foo", false)
             stepOut()
         }
     }
@@ -1336,7 +1362,34 @@ class IonRawBinaryWriterTest_1_1 {
             61 06
         """
         ) {
-            stepInTaglessElementSExp(1, "foo")
+            stepInTaglessElementSExp(1, "foo", false)
+            stepInTaglessEExp()
+            writeAbsentArgument()
+            writeInt(5)
+            stepOut()
+            stepInTaglessEExp()
+            writeAbsentArgument()
+            writeInt(6)
+            stepOut()
+            stepOut()
+        }
+    }
+
+    @Test
+    fun `write tagless element sexp with length-prefixed macro-shape`() {
+        assertWriterOutputEquals(
+            """
+            5C F4 03    | Sexp, length-prefixed macro 1
+            05          | Length = 2 (children)
+            07
+            E0
+            61 05
+            07
+            E0
+            61 06
+        """
+        ) {
+            stepInTaglessElementSExp(1, "foo", true)
             stepInTaglessEExp()
             writeAbsentArgument()
             writeInt(5)
@@ -1355,7 +1408,7 @@ class IonRawBinaryWriterTest_1_1 {
             val taglessOp = TaglessScalarType.INT_16.getOpcode()
             stepInTaglessElementSExp(taglessOp)
             stepOut()
-            stepInTaglessElementSExp(1, "foo")
+            stepInTaglessElementSExp(1, "foo", false)
             stepOut()
         }
     }

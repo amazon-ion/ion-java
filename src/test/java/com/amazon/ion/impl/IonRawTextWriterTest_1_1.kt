@@ -791,11 +791,11 @@ class IonRawTextWriterTest_1_1 {
             stepOut()
         }
         assertWriterOutputEquals("[{:foo} ]") {
-            stepInTaglessElementList(1, "foo")
+            stepInTaglessElementList(1, "foo", false)
             stepOut()
         }
         assertWriterOutputEquals("[{:foo} ]", builderConfigurator = { withPrettyPrinting() }) {
-            stepInTaglessElementList(1, "foo")
+            stepInTaglessElementList(1, "foo", false)
             stepOut()
         }
     }
@@ -826,7 +826,7 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `write a tagless element list with macro-shape`() {
         assertWriterOutputEquals("[{:foo} (1 2),(3 4)]") {
-            stepInTaglessElementList(1, "foo")
+            stepInTaglessElementList(1, "foo", false)
             stepInTaglessEExp()
             writeInt(1)
             writeInt(2)
@@ -850,11 +850,11 @@ class IonRawTextWriterTest_1_1 {
             stepOut()
         }
         assertWriterOutputEquals("({:foo} )") {
-            stepInTaglessElementSExp(1, "foo")
+            stepInTaglessElementSExp(1, "foo", false)
             stepOut()
         }
         assertWriterOutputEquals("({:foo} )", builderConfigurator = { withPrettyPrinting() }) {
-            stepInTaglessElementSExp(1, "foo")
+            stepInTaglessElementSExp(1, "foo", false)
             stepOut()
         }
     }
@@ -883,7 +883,7 @@ class IonRawTextWriterTest_1_1 {
     @Test
     fun `write a tagless element sexp with macro-shape`() {
         assertWriterOutputEquals("({:123} (1 2) (3 4))") {
-            stepInTaglessElementSExp(123, null)
+            stepInTaglessElementSExp(123, null, false)
             stepInTaglessEExp()
             writeInt(1)
             writeInt(2)

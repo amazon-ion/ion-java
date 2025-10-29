@@ -269,13 +269,13 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
 
     @Test
     public void testAutoFlush_twiceBlockSize() throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        IonWriter writer = IonBinaryWriterBuilder.standard().build(out);
-        writer.writeString("abcdefghijklmnopqrstuvwxyz"); // Write a 27-byte IonString.
+        ByteArrayOutputStream expected = new ByteArrayOutputStream();
+        IonWriter writer = IonBinaryWriterBuilder.standard().build(expected);
+        writer.writeString("abcdefghijklmnopqrstuvwxyz"); // Write a 28-byte (typeId + length + content) IonString.
         writer.close();
-        IonReader reader = system().newReader(out.toByteArray());
+        IonReader reader = system().newReader(expected.toByteArray());
         ByteArrayOutputStream actual = new ByteArrayOutputStream();
-        // Set the actual writer block size as 10 bytes. The test data is a 27-byte IonString "abcdefghijklmnopqrstuvwxyz".
+        // Set the actual writer block size as 10 bytes. The test data is a 28-byte IonString "abcdefghijklmnopqrstuvwxyz".
         IonBinaryWriterBuilder builder = IonBinaryWriterBuilder.standard().withAutoFlushEnabled(autoFlushMode.isEnabled()).withBlockSize(10);
         IonWriter actualWriter = builder.build(actual);
         while (reader.next() != null) {
@@ -284,9 +284,9 @@ public class IonManagedBinaryWriterTest extends IonManagedBinaryWriterTestCase
         actualWriter.close();
         if (lstAppendMode.isEnabled() && autoFlushMode.isEnabled()) {
             // When auto-flush is enabled, no flush is expected since this is a single top-level value and should continue encoding until this value is completed.
-            assertArrayEquals(actual.toByteArray(), out.toByteArray());
+            assertArrayEquals(expected.toByteArray(), actual.toByteArray());
         }
-        assertEquivalentDataModel(actual, out);
+        assertEquivalentDataModel(actual, expected);
     }
 
     @Test

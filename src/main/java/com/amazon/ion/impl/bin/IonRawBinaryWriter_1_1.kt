@@ -22,9 +22,12 @@ import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.PREFIXED_SEX
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.PREFIXED_STRUCT_FS
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.PREFIXED_STRUCT_SID
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.PREFIXED_STRUCT_SID_TO_FS
+import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.PREFIXED_TAGLESS_EEXP
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TAGLESS_EEXP
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TE_LIST
+import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TE_LIST_W_LENGTH_PREFIXED_MACRO
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TE_SEXP
+import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TE_SEXP_W_LENGTH_PREFIXED_MACRO
 import com.amazon.ion.impl.bin.IonRawBinaryWriter_1_1.ContainerType.TOP
 import com.amazon.ion.impl.bin.WriteBuffer.fixedIntLength
 import com.amazon.ion.impl.bin.WriteBuffer.flexIntLength
@@ -67,28 +70,31 @@ class IonRawBinaryWriter_1_1 internal constructor(
         const val EEXP = 1
         const val PREFIXED_EEXP = 2
         const val TAGLESS_EEXP = 3
+        const val PREFIXED_TAGLESS_EEXP = 4
 
         // NOTE: All data model containers are deliberately grouped together to make it easier to check for zero-length containers.
 
-        const val TE_LIST = 4
-        const val TE_SEXP = 5
-        const val PREFIXED_LIST = 6
-        const val PREFIXED_SEXP = 7
-        const val DELIMITED_LIST = 8
-        const val DELIMITED_SEXP = 9
+        const val TE_LIST = 5
+        const val TE_SEXP = 6
+        const val TE_LIST_W_LENGTH_PREFIXED_MACRO = 7
+        const val TE_SEXP_W_LENGTH_PREFIXED_MACRO = 8
+        const val PREFIXED_LIST = 9
+        const val PREFIXED_SEXP = 10
+        const val DELIMITED_LIST = 11
+        const val DELIMITED_SEXP = 12
 
         // NOTE: All struct encodings are deliberately at the end so that we can check if it's a struct by just seeing if
         // currentContainer.type >= DELIMITED_STRUCT_SID
 
-        const val DELIMITED_STRUCT_SID = 10
+        const val DELIMITED_STRUCT_SID = 13
         /** Represents a struct that started out in SID mode and has switched to FlexSym */
-        const val DELIMITED_STRUCT_SID_TO_FS = 11
-        const val DELIMITED_STRUCT_FS = 12
+        const val DELIMITED_STRUCT_SID_TO_FS = 14
+        const val DELIMITED_STRUCT_FS = 15
 
-        const val PREFIXED_STRUCT_SID = 13
+        const val PREFIXED_STRUCT_SID = 16
         /** Represents a struct that started out in SID mode and has switched to FlexSym */
-        const val PREFIXED_STRUCT_SID_TO_FS = 14
-        const val PREFIXED_STRUCT_FS = 15
+        const val PREFIXED_STRUCT_SID_TO_FS = 17
+        const val PREFIXED_STRUCT_FS = 18
     }
 
     private class ContainerInfo(
@@ -129,6 +135,8 @@ class IonRawBinaryWriter_1_1 internal constructor(
         fun from(out: OutputStream, blockSize: Int, preallocation: Int): IonRawBinaryWriter_1_1 {
             return IonRawBinaryWriter_1_1(out, WriteBuffer(BlockAllocatorProviders.basicProvider().vendAllocator(blockSize)) {}, preallocation)
         }
+
+        private val IVM_BYTES = byteArrayOf(0xE0.toByte(), 1, 1, 0xEA.toByte())
     }
 
     private val utf8StringEncoder = Utf8StringEncoderPool.getInstance().getOrCreate()
@@ -196,7 +204,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun writeIVM() {
         confirm(currentContainer.type == TOP) { "IVM can only be written at the top level of an Ion stream." }
-        buffer.writeBytes(byteArrayOf(0xE0.toByte(), 1, 1, 0xEA.toByte()))
+        buffer.writeBytes(IVM_BYTES)
     }
 
     override fun writeAnnotations(annotation0: Int) {
@@ -509,9 +517,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
 
     override fun stepInEExp(id: Int, usingLengthPrefix: Boolean) {
         // Length-prefixed e-expression format:
-        //     F5 <flexuint-address> <flexuint-length> <presence-bitmap> <args...>
+        //     F4 <flexuint-address> <flexuint-length> <args...>
         // Non-length-prefixed e-expression format:
-        //     <address/opcode> <presence-bitmap> <args...>
+        //     <address/opcode> <args...>
 
         if (usingLengthPrefix) {
             currentContainer = containerStack.push { it.reset(PREFIXED_EEXP, buffer.position()) }
@@ -558,7 +566,10 @@ class IonRawBinaryWriter_1_1 internal constructor(
             buffer.truncate(currentContainer.position + 1)
             buffer.writeUInt8At(currentContainer.position, zeroLengthOpcode.toLong())
         } else when (currentContainer.type) {
-            TE_LIST, TE_SEXP -> {
+            TE_LIST,
+            TE_SEXP,
+            TE_LIST_W_LENGTH_PREFIXED_MACRO,
+            TE_SEXP_W_LENGTH_PREFIXED_MACRO -> {
                 // Add one byte to account for the op code
                 thisContainerTotalLength += currentContainer.metadataOffset + writeCurrentContainerLength(lengthPrefixPreallocation, currentContainer.numChildren.toLong())
             }
@@ -593,8 +604,6 @@ class IonRawBinaryWriter_1_1 internal constructor(
             PREFIXED_STRUCT_SID_TO_FS -> {
                 // Add one byte to account for the op code
                 thisContainerTotalLength++
-                // Write closing delimiter if we're in a delimited container.
-                // Update length prefix if we're in a prefixed container.
                 val contentLength = currentContainer.length
                 if (contentLength <= 0xF) {
                     // Clean up any unused space that was pre-allocated.
@@ -615,10 +624,11 @@ class IonRawBinaryWriter_1_1 internal constructor(
                 // Add this to account for the opcode/address
                 thisContainerTotalLength += currentContainer.metadataOffset
             }
-            PREFIXED_EEXP -> {
-                // NOTE: We could check if the length is 0 to see if we can go back and rewrite this as a
-                // non-length-prefixed e-exp, but we won't because that's easier done in the managed writer, which
-                // already has knowledge of the macro signature.
+            PREFIXED_EEXP,
+            PREFIXED_TAGLESS_EEXP -> {
+                // NOTE: For the (non-tagless) prefixed case, we could check if the length is 0 to see if we can go back
+                // and rewrite this as a non-length-prefixed e-exp, but we won't because that's easier done in the managed
+                // writer, which already has knowledge of the macro signature.
 
                 // Add to account for the opcode, address, and length prefix
                 thisContainerTotalLength += currentContainer.metadataOffset + writeCurrentContainerLength(lengthPrefixPreallocation)
@@ -630,7 +640,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
             else -> throw IonException("Nothing to step out of.")
         }
 
-        val justExitedContainer = containerStack.pop()
+        containerStack.pop() // This is the container we just exited. We don't need to do anything more with it.
         val newCurrentContainer = containerStack.peek()
         // Update the length of the new current container to include the length of the container that we just stepped out of.
         newCurrentContainer.length += thisContainerTotalLength
@@ -648,6 +658,9 @@ class IonRawBinaryWriter_1_1 internal constructor(
     private fun writeCurrentContainerLength(numPreAllocatedLengthPrefixBytes: Int, lengthToWrite: Long = currentContainer.length): Int {
         val lengthPosition = currentContainer.position + currentContainer.metadataOffset
         val lengthPrefixBytesRequired = flexUIntLength(lengthToWrite)
+        // TODO(perf): Patch Points are required when there is less space pre-allocated than is required. However, this
+        //    also uses patch points even when there is _more_ space allocated that required. Check whether it's faster
+        //    to shift bytes around in order to close/cover the excess space that was pre-allocated for the length.
         if (lengthPrefixBytesRequired == numPreAllocatedLengthPrefixBytes) {
             // We have enough space, so write in the correct length.
             buffer.writeFlexIntOrUIntAt(lengthPosition, lengthToWrite, lengthPrefixBytesRequired)
@@ -718,10 +731,17 @@ class IonRawBinaryWriter_1_1 internal constructor(
         buffer.reserve(lengthPrefixPreallocation)
     }
 
-    override fun stepInTaglessElementList(macroId: Int, macroName: String?) {
-        currentContainer = containerStack.push { it.reset(TE_LIST, buffer.position()) }
+    override fun stepInTaglessElementList(macroId: Int, macroName: String?, lengthPrefixed: Boolean) {
+        val start = buffer.position()
         buffer.writeByte(OpCode.TAGLESS_ELEMENT_LIST)
-        currentContainer.metadataOffset += writeEExpMacroIdWithoutLengthPrefix(macroId)
+        if (lengthPrefixed) {
+            currentContainer = containerStack.push { it.reset(TE_LIST_W_LENGTH_PREFIXED_MACRO, start) }
+            buffer.writeByte(OpCode.LENGTH_PREFIXED_MACRO_INVOCATION)
+            currentContainer.metadataOffset += 1 + buffer.writeFlexUInt(macroId)
+        } else {
+            currentContainer = containerStack.push { it.reset(TE_LIST, start) }
+            currentContainer.metadataOffset += writeEExpMacroIdWithoutLengthPrefix(macroId)
+        }
         buffer.reserve(lengthPrefixPreallocation)
     }
 
@@ -732,41 +752,31 @@ class IonRawBinaryWriter_1_1 internal constructor(
         buffer.reserve(lengthPrefixPreallocation)
     }
 
-    override fun stepInTaglessElementSExp(macroId: Int, macroName: String?) {
-        currentContainer = containerStack.push { it.reset(TE_SEXP, buffer.position()) }
+    override fun stepInTaglessElementSExp(macroId: Int, macroName: String?, lengthPrefixed: Boolean) {
+        val start = buffer.position()
         buffer.writeByte(OpCode.TAGLESS_ELEMENT_SEXP)
-        currentContainer.metadataOffset += writeEExpMacroIdWithoutLengthPrefix(macroId)
+        if (lengthPrefixed) {
+            currentContainer = containerStack.push { it.reset(TE_SEXP_W_LENGTH_PREFIXED_MACRO, start) }
+            buffer.writeByte(OpCode.LENGTH_PREFIXED_MACRO_INVOCATION)
+            currentContainer.metadataOffset += 1 + buffer.writeFlexUInt(macroId)
+        } else {
+            currentContainer = containerStack.push { it.reset(TE_SEXP, start) }
+            currentContainer.metadataOffset += writeEExpMacroIdWithoutLengthPrefix(macroId)
+        }
         buffer.reserve(lengthPrefixPreallocation)
     }
 
     override fun stepInTaglessEExp() {
-        currentContainer = containerStack.push { it.reset(TAGLESS_EEXP, buffer.position()) }
-    }
-
-    override fun writeTaglessInt(implicitOpcode: Int, value: Int) {
-        val currentContainer = currentContainer
-        when (implicitOpcode) {
-            OpCode.INT_8,
-            OpCode.INT_16,
-            OpCode.INT_32,
-            OpCode.INT_64 -> {
-                val length = implicitOpcode - OpCode.INT_0
-                buffer.writeFixedIntOrUInt(value.toLong(), length)
-                currentContainer.length += length
+        when (currentContainer.type) {
+            TE_LIST_W_LENGTH_PREFIXED_MACRO,
+            TE_SEXP_W_LENGTH_PREFIXED_MACRO -> {
+                currentContainer = containerStack.push { it.reset(PREFIXED_TAGLESS_EEXP, buffer.position()) }
+                buffer.reserve(lengthPrefixPreallocation)
+                currentContainer.metadataOffset = 0
             }
-            OpCode.TE_UINT_8,
-            OpCode.TE_UINT_16,
-            OpCode.TE_UINT_32,
-            OpCode.TE_UINT_64 -> {
-                val length = implicitOpcode - 0xE0
-                buffer.writeFixedIntOrUInt(value.toLong(), length)
-                currentContainer.length += length
-            }
-            OpCode.TE_FLEX_INT -> currentContainer.length += buffer.writeFlexInt(value.toLong())
-            OpCode.TE_FLEX_UINT -> currentContainer.length += buffer.writeFlexUInt(value)
-            else -> throw IonException("Not a valid tagless int opcode: $implicitOpcode")
+            TE_LIST,
+            TE_SEXP -> currentContainer = containerStack.push { it.reset(TAGLESS_EEXP, buffer.position()) }
         }
-        currentContainer.numChildren++
     }
 
     override fun writeTaglessInt(implicitOpcode: Int, value: Long) {

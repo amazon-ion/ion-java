@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import java.io.Closeable;
@@ -38,6 +25,10 @@ import java.util.List;
     public WriteBuffer(final BlockAllocator allocator, Runnable endOfBlockCallBack)
     {
         if (allocator.getBlockSize() < 10) {
+            // This restriction means that we should never have to write a FlexInt or FlexUInt across a block boundary
+            // because blocks are always big enough to hold a long written as a FlexInt or FlexUInt.
+            // If we're near the end of a block, we'll just start a new block a little early to avoid having to write
+            // across the boundary.
             throw new IllegalArgumentException("WriteBuffer requires an allocator with a block size of at least 10.");
         }
 
@@ -167,7 +158,7 @@ import java.util.List;
         block.limit++;
     }
 
-    /** Writes a single octet to the buffer, expanding if necessary. */
+    /** Writes two octets to the buffer, expanding if necessary. */
     public void write2Bytes(final byte octet0, final byte octet1)
     {
         if (remaining() < 2)
