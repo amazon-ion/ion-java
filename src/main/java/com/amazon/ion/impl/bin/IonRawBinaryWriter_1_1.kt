@@ -776,6 +776,7 @@ class IonRawBinaryWriter_1_1 internal constructor(
             }
             TE_LIST,
             TE_SEXP -> currentContainer = containerStack.push { it.reset(TAGLESS_EEXP, buffer.position()) }
+            else -> throw IonException("Cannot step into a tagless e-expression here unless in a tagless-element sequence.")
         }
     }
 
