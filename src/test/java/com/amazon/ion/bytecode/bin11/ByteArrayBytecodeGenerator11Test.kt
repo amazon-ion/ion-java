@@ -17,19 +17,20 @@ import java.nio.charset.StandardCharsets
 
 internal object ByteArrayBytecodeGenerator11Test {
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            "64 4F 97 21 C5 " + // int32 -987654321
-                "86 35 7D CB 12 2E 22 1B " + // short TS reference to 2023-10-15T11:22:33.444555-00:00
-                "8F 0C " + // null struct
-                "6A " + // float 0e0
-                "6D 18 2D 44 54 FB 21 09 40 " + // float64 3.141592653589793
-                "FE 31 49 20 61 70 70 6c 61 75 64 20 79 6f 75 72 20 63 75 72 69 6f 73 69 74 79 " + // 24-byte blob
-                "6F " // false
-        ]
-    )
-    fun `generator can compile input containing multiple simple opcodes`(inputBytesString: String) {
+    @Test
+    fun `generator can compile input containing multiple simple opcodes`() {
+        val inputBytesString = """
+            64 4F 97 21 C5             | int -987654321
+            86 35 7D CB 12 2E 22 1B    | timestamp 2023-10-15T11:22:33.444555-00:00
+            8F 0C                      | null.struct
+            6A                         | float 0e0
+            6D 18 2D 44 54 FB 21 09 40 | float 3.141592653589793
+            FE 31                      | 24-byte blob
+            49 20 61 70 70 6c 61 75    |
+            64 20 79 6f 75 72 20 63    |
+            75 72 69 6f 73 69 74 79    |
+            6F                         | false
+        """.cleanCommentedHexBytes()
         val f64pi = 3.141592653589793
         val expectedBytecode = intArrayOf(
             Instructions.I_INT_I32, -987654321,
