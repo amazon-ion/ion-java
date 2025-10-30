@@ -56,7 +56,7 @@ internal object TimestampDecoder {
         val yearMonthAndDay = readFixedInt16(source, position).toInt()
         val year = yearMonthAndDay.and(MASK_7)
         val month = yearMonthAndDay.shr(S_TIMESTAMP_MONTH_BIT_OFFSET).and(MASK_4)
-        val day = yearMonthAndDay.shr(S_TIMESTAMP_DAY_BIT_OFFSET)
+        val day = yearMonthAndDay.shr(S_TIMESTAMP_DAY_BIT_OFFSET).and(MASK_5)
 
         return Timestamp.forDay(year + 1970, month, day)
     }
