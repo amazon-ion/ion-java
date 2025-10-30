@@ -80,9 +80,7 @@ internal class ByteArrayBytecodeGenerator11(
         return ByteSlice(source, position, position + length)
     }
 
-    override fun ionMinorVersion(): Int {
-        return 1
-    }
+    override fun ionMinorVersion(): Int = 1
 
     override fun getGeneratorForMinorVersion(minorVersion: Int): BytecodeGenerator {
         return when (minorVersion) {
