@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl.bin;
 
 import java.io.Closeable;
@@ -32,10 +19,19 @@ import java.util.List;
     private Block current;
     private int index;
     private Runnable endOfBlockCallBack;
+    private byte[] scratch = new byte[32];
 
 
     public WriteBuffer(final BlockAllocator allocator, Runnable endOfBlockCallBack)
     {
+        if (allocator.getBlockSize() < 10) {
+            // This restriction means that we should never have to write a FlexInt or FlexUInt across a block boundary
+            // because blocks are always big enough to hold a long written as a FlexInt or FlexUInt.
+            // If we're near the end of a block, we'll just start a new block a little early to avoid having to write
+            // across the boundary.
+            throw new IllegalArgumentException("WriteBuffer requires an allocator with a block size of at least 10.");
+        }
+
         this.allocator = allocator;
         this.blocks = new ArrayList<Block>();
 
@@ -90,11 +86,48 @@ import java.util.List;
     {
         final int index = index(position);
         final int offset = offset(position);
-        final Block block = blocks.get(index);
-        this.index = index;
-        block.limit = offset;
-        current = block;
+        while (this.index != index) {
+            blocks.remove(this.index--);
+        }
+        current = blocks.get(index);
+        current.limit = offset;
     }
+
+    /**
+     * Moves forward without writing any data.
+     *
+     * There is no guarantee as to what values the reserved bytes will have.
+     * Only use this method if you will overwrite the bytes later with valid data, or if you have already written dato
+     * to these bytes.
+     *
+     * Returns the position of the first reserved byte.
+     */
+    public long reserve(int numBytes) {
+        long startOfReservedBytes = position();
+        // It would also fit in the current block if numBytes == current.remaining(), but then we would have to
+        // increment `index` and check whether to allocate a new block. So, we'll optimize the early return for the most
+        // common situation, and lump the == case into the slower path.
+        if (numBytes < current.remaining()) {
+            current.limit += numBytes;
+            return startOfReservedBytes;
+        }
+
+        while (numBytes > 0) {
+            int numBytesInThisBlock = Math.min(current.remaining(), numBytes);
+            current.limit += numBytesInThisBlock;
+            numBytes -= numBytesInThisBlock;
+
+            if (current.remaining() == 0) {
+                if (index == blocks.size() - 1) {
+                    allocateNewBlock();
+                }
+                index++;
+                current = blocks.get(index);
+            }
+        }
+        return startOfReservedBytes;
+    }
+
 
     /** Returns the amount of capacity left in the current block. */
     public int remaining()
@@ -123,6 +156,26 @@ import java.util.List;
         final Block block = current;
         block.data[block.limit] = octet;
         block.limit++;
+    }
+
+    /** Writes two octets to the buffer, expanding if necessary. */
+    public void write2Bytes(final byte octet0, final byte octet1)
+    {
+        if (remaining() < 2)
+        {
+            if (index == blocks.size() - 1)
+            {
+                allocateNewBlock();
+            }
+            index++;
+            current = blocks.get(index);
+        }
+        final Block block = current;
+        final byte[] data = block.data;
+        int limit = block.limit;
+        data[limit++] = octet0;
+        data[limit++] = octet1;
+        block.limit = limit;
     }
 
     // slow in the sense that we do all kind of block boundary checking
@@ -1304,12 +1357,49 @@ import java.util.List;
     }
 
     /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
+    public int writeFlexUInt(final int value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
+        }
+        int numBytes = PrimitiveEncoder.flexUIntLength(value);
+        // writeFlexIntOrUIntAt does not advance index or limit, so we reserve the bytes, and then write out the number
+        long position = reserve(numBytes);
+        writeFlexIntOrUIntAt(position, value, numBytes);
+        return numBytes;
+    }
+
+    /** Writes a FlexUInt to this WriteBuffer, returning the number of bytes that were needed to encode the value */
     public int writeFlexUInt(final long value) {
         if (value < 0) {
             throw new IllegalArgumentException("Attempted to write a FlexUInt for " + value);
         }
         int numBytes = flexUIntLength(value);
         return writeFlexIntOrUInt(value, numBytes);
+    }
+
+    /**
+     * Writes a FlexInt or FlexUInt to this WriteBuffer at the specified position.
+     *
+     * Because the flex int and flex uint encodings are so similar, we can use this method to write either one as long
+     * as we provide the correct number of bytes needed to encode the value.
+     *
+     * If the allocator's block size is ever less than 10 bytes, this may throw an IndexOutOfBoundsException.
+     */
+    public void writeFlexIntOrUIntAt(final long position, final long value, final int numBytes) {
+        int index = index(position);
+        Block block = blocks.get(index);
+        int dataOffset = offset(position);
+        if (dataOffset + numBytes < block.capacity()) {
+            PrimitiveEncoder.writeFlexIntOrUIntInto(block.data, dataOffset, value, numBytes);
+        } else {
+            PrimitiveEncoder.writeFlexIntOrUIntInto(scratch, 0, value, numBytes);
+            if (index == blocks.size() - 1) {
+                allocateNewBlock();
+            }
+            for (int i = 0; i < numBytes; i++) {
+                writeUInt8At(position + i, scratch[i]);
+            }
+        }
     }
 
     /**
@@ -1424,14 +1514,8 @@ import java.util.List;
 
     /** Get the length of FixedInt for the provided value. */
     public static int fixedIntLength(final long value) {
-        int numMagnitudeBitsRequired;
-        if (value < 0) {
-            int numLeadingOnes = Long.numberOfLeadingZeros(~value);
-            numMagnitudeBitsRequired = 64 - numLeadingOnes;
-        } else {
-            int numLeadingZeros = Long.numberOfLeadingZeros(value);
-            numMagnitudeBitsRequired = 64 - numLeadingZeros;
-        }
+        int numLeadingSignBits = java.lang.Long.numberOfLeadingZeros((value >> 63) ^ value);
+        int numMagnitudeBitsRequired = 64 - numLeadingSignBits;
         return numMagnitudeBitsRequired / 8 + 1;
     }
 
@@ -1491,6 +1575,7 @@ import java.util.List;
      * either one as long as we provide the correct number of bytes needed to encode the value.
      */
     private int _writeFixedIntOrUInt(final long value, final int numBytes) {
+        // TODO(perf): Test whether it's faster to have nested `if` or to have a single `switch`.
         writeByte((byte) value);
         if (numBytes > 1) {
             writeByte((byte) (value >> 8));
@@ -1514,6 +1599,18 @@ import java.util.List;
             }
         }
         return numBytes;
+    }
+
+    /**
+     * Writes a FixedInt or FixedUInt for an arbitrarily large integer that is represented
+     * as a byte array in which the most significant byte is the first in the array, and the least
+     * significant byte is the last in the array.
+     */
+    public int writeFixedIntOrUInt(final byte[] value) {
+        for (int i = value.length - 1; i >= 0; i--) {
+            writeByte(value[i]);
+        }
+        return value.length;
     }
 
     /** Write the entire buffer to output stream. */

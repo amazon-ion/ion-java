@@ -457,7 +457,7 @@ class IonRawTextWriter_1_1 internal constructor(
         output.appendAscii(" ")
     }
 
-    override fun stepInTaglessElementList(macroId: Int, macroName: String?) {
+    override fun stepInTaglessElementList(macroId: Int, macroName: String?, lengthPrefixed: Boolean) {
         stepInList(usingLengthPrefix = false) // Arg here doesn't actually matter.
         writeMacroEncodingTag(macroName ?: macroId.toString())
         output.appendAscii(" ")
@@ -470,7 +470,7 @@ class IonRawTextWriter_1_1 internal constructor(
         output.appendAscii(" ")
     }
 
-    override fun stepInTaglessElementSExp(macroId: Int, macroName: String?) {
+    override fun stepInTaglessElementSExp(macroId: Int, macroName: String?, lengthPrefixed: Boolean) {
         stepInSExp(usingLengthPrefix = false) // Arg here doesn't actually matter.
         writeMacroEncodingTag(macroName ?: macroId.toString())
         output.appendAscii(" ")
@@ -480,11 +480,6 @@ class IonRawTextWriter_1_1 internal constructor(
         // Looks like a SExp, so we'll start this way and switch it to EExp.
         stepInSExp(usingLengthPrefix = false) // Arg here doesn't actually matter.
         currentContainer = EExpression
-    }
-
-    override fun writeTaglessInt(implicitOpcode: Int, value: Int) {
-        // TODO: Consider checking the opcode
-        writeInt(value.toLong())
     }
 
     override fun writeTaglessInt(implicitOpcode: Int, value: Long) {
