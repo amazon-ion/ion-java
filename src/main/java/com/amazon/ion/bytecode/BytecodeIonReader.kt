@@ -198,6 +198,7 @@ internal class BytecodeIonReader(private var generator: BytecodeGenerator) : Ion
         minorVersion = ionVersionInt.toByte()
         generator = generator.getGeneratorForMinorVersion(ionVersionInt)
         symbolTable = EncodingContextManager.SYSTEM_SYMBOLS
+        constantPool.clear()
         context.reset()
     }
 

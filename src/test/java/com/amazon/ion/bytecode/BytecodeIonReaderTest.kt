@@ -939,7 +939,7 @@ class BytecodeIonReaderTest {
                 isNullValue shouldBe false
 
                 stepIn()
-                // Stepping out early in that we didn't even look to see if there is a value in the list
+                // Stepping out early in that we didn't even look to see if there is a value in the sexp
                 stepOut()
 
                 next() shouldBe IonType.INT
@@ -1137,7 +1137,7 @@ class BytecodeIonReaderTest {
                 isNullValue shouldBe false
 
                 stepIn()
-                // Stepping out early in that we didn't even look to see if there is a value in the list
+                // Stepping out early in that we didn't even look to see if there is a value in the struct
                 stepOut()
 
                 next() shouldBe IonType.INT
