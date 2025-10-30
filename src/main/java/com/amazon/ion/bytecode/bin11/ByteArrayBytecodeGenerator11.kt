@@ -34,7 +34,7 @@ internal class ByteArrayBytecodeGenerator11(
         macroIndices: IntArray,
         symTab: Array<String?>
     ) {
-        var opcode = 0
+        var opcode = -1
         while (currentPosition < source.size && !isSystemValue(opcode)) {
             opcode = source[currentPosition++].unsignedToInt()
             val handler = OpcodeHandlerTable.handler(opcode)
