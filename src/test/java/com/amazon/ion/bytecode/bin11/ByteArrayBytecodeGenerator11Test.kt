@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11
 
+import com.amazon.ion.TextToBinaryUtils.cleanCommentedHexBytes
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.Timestamp
 import com.amazon.ion.bytecode.GeneratorTestUtil.shouldGenerate
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.impl.bin.PrimitiveEncoder
+import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
@@ -15,7 +17,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.nio.charset.StandardCharsets
 
-internal object ByteArrayBytecodeGenerator11Test {
+internal class ByteArrayBytecodeGenerator11Test {
 
     @Test
     fun `generator can compile input containing multiple simple opcodes`() {
