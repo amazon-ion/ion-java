@@ -172,7 +172,7 @@ internal object SymbolTableHelper {
         }
 
         if (dest.size() == checkpoint) {
-            // Truncate to remove the use directive
+            // Truncate to remove the USE directive
             dest.truncate(checkpoint - 1)
         } else {
             // Close the USE directive
@@ -293,7 +293,7 @@ internal object SymbolTableHelper {
      * Annotations are ignored in symbols and imports lists, so this handles skipping the annotations.
      */
     @JvmStatic
-    private fun iterateList(
+    private inline fun iterateList(
         source: ByteArray,
         position: Int,
         length: Int,
