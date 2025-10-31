@@ -14,6 +14,8 @@ import org.junit.jupiter.api.assertThrows
 
 object GeneratorTestUtil {
 
+    internal fun BytecodeGenerator.shouldGenerate(vararg expectedBytecode: Int) = shouldGenerate(expectedBytecode)
+
     internal fun BytecodeGenerator.shouldGenerate(
         expectedBytecode: IntArray,
         expectedConstantPool: ConstantPool? = null,
@@ -23,7 +25,7 @@ object GeneratorTestUtil {
 
         val generator = this
 
-        val outputBytecode = BytecodeBuffer()
+        val outputBytecode = BytecodeBuffer(256)
         val constantPool = ConstantPool(32)
 
         val macroIndices = mutableListOf(0)

@@ -121,6 +121,7 @@ internal fun readTimestampReference(valueBytes: ByteArray, position: Int, length
  * Reads a Decimal value from the given byte array.
  */
 internal fun readDecimalReference(valueBytes: ByteArray, position: Int, end: Int): Decimal {
+    if (position >= end) return Decimal.ZERO
     var p = position
     val exponentValueAndLength = VarIntHelper.readVarIntValueAndLength(valueBytes, p)
     p += exponentValueAndLength.toInt() and 0xFF
