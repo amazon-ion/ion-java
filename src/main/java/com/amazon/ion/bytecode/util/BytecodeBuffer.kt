@@ -142,10 +142,22 @@ internal class BytecodeBuffer private constructor(
      * @param length the number of bytecode instructions to copy
      */
     fun addSlice(values: BytecodeBuffer, startInclusive: Int, length: Int) {
+        addSlice(values.data, startInclusive, length)
+    }
+
+    /**
+     * Appends a slice of bytecode instructions from an [IntArray] to this buffer.
+     * The buffer will automatically grow if necessary to accommodate the new instructions.
+     *
+     * @param values the source `IntArray` to copy from
+     * @param startInclusive the starting index in the source array (inclusive)
+     * @param length the number of bytecode instructions to copy
+     */
+    fun addSlice(values: IntArray, startInclusive: Int, length: Int) {
         val thisNumberOfValues = this.numberOfValues
         val newNumberOfValues = thisNumberOfValues + length
         val data = ensureCapacity(newNumberOfValues)
-        System.arraycopy(values.data, startInclusive, data, thisNumberOfValues, length)
+        System.arraycopy(values, startInclusive, data, thisNumberOfValues, length)
         this.numberOfValues = newNumberOfValues
     }
 

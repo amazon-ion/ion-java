@@ -49,7 +49,7 @@ internal class ConstantPool private constructor(
     /**
      * Returns the `i`th int in the list.
      */
-    override fun get(i: Int): Any? {
+    override operator fun get(i: Int): Any? {
         if (i < 0 || i >= numberOfValues) {
             throw IndexOutOfBoundsException("Invalid index $i requested from IntList with $numberOfValues values.")
         }

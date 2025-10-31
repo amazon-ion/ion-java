@@ -9,7 +9,7 @@ interface AppendableConstantPoolView {
     /** Adds a value to the constant pool, returning the index assigned to the value. */
     fun add(value: Any?): Int
     /** Retrieves a value from the constant pool. */
-    fun get(i: Int): Any?
+    operator fun get(i: Int): Any?
 
     val size: Int
 }
