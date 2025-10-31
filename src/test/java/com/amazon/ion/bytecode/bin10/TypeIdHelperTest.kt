@@ -10,6 +10,119 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class TypeIdHelperTest {
 
+    /*
+    fun isVariableLength(typeId: Int): Boolean = typeId.and(LOW_NIBBLE_MASK) == VAR_LENGTH_LOW_NIBBLE
+     */
+
+    @ParameterizedTest
+    @CsvSource(
+        "0x10, false",
+        "0x21, false",
+        "0x32, false",
+        "0x43, false",
+        "0x54, false",
+        "0x65, false",
+        "0x8F, true",
+        "0x9F, true",
+        "0xAF, true",
+        "0xBF, true",
+    )
+    fun testIsNull(tid: Int, expected: Boolean) {
+        assertEquals(expected, TypeIdHelper.isNull(tid))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "0x10, false",
+        "0x20, true",
+        "0x21, true",
+        "0x22, true",
+        "0x24, true",
+        "0x28, true",
+        "0x2E, true",
+        "0x2F, false",
+        "0x30, false",
+        "0x32, false",
+        "0x34, false",
+        "0x43, false",
+        "0x54, false",
+        "0x65, false",
+        "0x8F, false",
+        "0x9F, false",
+        "0xAF, false",
+        "0xBF, false",
+    )
+    fun testIsNonNullPositiveInt(tid: Int, expected: Boolean) {
+        assertEquals(expected, TypeIdHelper.isNonNullPositiveInt(tid))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "0x10, false",
+        "0x21, false",
+        "0x32, false",
+        "0x43, false",
+        "0x54, false",
+        "0x65, false",
+        "0x80, true",
+        "0x82, true",
+        "0x84, true",
+        "0x88, true",
+        "0x8E, true",
+        "0x8F, false",
+        "0x9F, false",
+        "0xAF, false",
+        "0xBF, false",
+    )
+    fun testIsNonNullString(tid: Int, expected: Boolean) {
+        assertEquals(expected, TypeIdHelper.isNonNullString(tid))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "0x10, false",
+        "0x21, false",
+        "0x32, false",
+        "0x43, false",
+        "0x54, false",
+        "0x65, false",
+        "0x8F, false",
+        "0x9F, false",
+        "0xAF, false",
+        "0xBF, false",
+        "0xD0, true",
+        "0xD2, true",
+        "0xD3, true",
+        "0xDE, true",
+        "0xDF, false",
+    )
+    fun testIsNonNullStruct(tid: Int, expected: Boolean) {
+        assertEquals(expected, TypeIdHelper.isNonNullStruct(tid))
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "0x0E, true",
+        "0x10, false",
+        "0x21, false",
+        "0x2E, true",
+        "0x32, false",
+        "0x3E, true",
+        "0x43, false",
+        "0x4E, true",
+        "0x54, false",
+        "0x5E, true",
+        "0x65, false",
+        "0xAF, false",
+        "0xD0, false",
+        "0xDE, true",
+        "0xDF, false",
+        "0xEE, true",
+    )
+    fun testIsVariableLength(tid: Int, expected: Boolean) {
+        assertEquals(expected, TypeIdHelper.isVariableLength(tid))
+    }
+
     @ParameterizedTest
     @CsvSource(
         // Typed values

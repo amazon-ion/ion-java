@@ -16,6 +16,25 @@ class ValueHelpersTest {
 
     @ParameterizedTest
     @CsvSource(
+        "0, 0, 0",
+        "0, 1, 0x01",
+        "1, 1, 0x02",
+        "1, 2, 0x0203",
+        "1, 4, 0x02030405",
+        "2, 3, 0x030405",
+        "2, 8, 0x030405060708090A",
+        "4, 4, 0x05060708",
+        "4, 7, 0x05060708090A0B",
+        "8, 2, 0x090A",
+    )
+    fun testReadUInt(startIndex: Int, length: Int, expected: Long) {
+        val bytes = byteArrayOf(0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB)
+        val result = readUInt(bytes, startIndex, length)
+        assertEquals(expected, result)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
         "0x20, 1",
         "0x21, 1",
         "0x2E, 1",
