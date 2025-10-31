@@ -8,6 +8,29 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 
 internal object TypeIdHelper {
 
+    private const val POSITIVE_INT_HIGH_NIBBLE = 0x20
+    private const val STRING_HIGH_NIBBLE = 0x80
+    private const val STRUCT_HIGH_NIBBLE = 0xD0
+    private const val HIGH_NIBBLE_MASK = 0xF0
+    private const val LOW_NIBBLE_MASK = 0xF
+    private const val NULL_LOW_NIBBLE = 0xF
+    private const val VAR_LENGTH_LOW_NIBBLE = 0xE
+
+    @JvmStatic
+    fun isNonNullPositiveInt(typeId: Int): Boolean = typeId.and(HIGH_NIBBLE_MASK) == POSITIVE_INT_HIGH_NIBBLE && typeId.and(LOW_NIBBLE_MASK) != NULL_LOW_NIBBLE
+
+    @JvmStatic
+    fun isNonNullString(typeId: Int): Boolean = typeId.and(HIGH_NIBBLE_MASK) == STRING_HIGH_NIBBLE && typeId.and(LOW_NIBBLE_MASK) != NULL_LOW_NIBBLE
+
+    @JvmStatic
+    fun isNonNullStruct(typeId: Int): Boolean = typeId.and(HIGH_NIBBLE_MASK) == STRUCT_HIGH_NIBBLE && typeId.and(LOW_NIBBLE_MASK) != NULL_LOW_NIBBLE
+
+    @JvmStatic
+    fun isNull(typeId: Int): Boolean = typeId.and(LOW_NIBBLE_MASK) == NULL_LOW_NIBBLE
+
+    @JvmStatic
+    fun isVariableLength(typeId: Int): Boolean = typeId.and(LOW_NIBBLE_MASK) == VAR_LENGTH_LOW_NIBBLE
+
     /**
      * Returns the IonType for a legal Ion 1.0 typeId.
      *
