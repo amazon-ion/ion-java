@@ -84,7 +84,7 @@ internal object BytecodeEmitter {
     }
 
     @JvmStatic
-    fun emitShortTimestampReference(destination: BytecodeBuffer, precisionAndOffsetMode: Int, dataPosition: Int) {
-        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(precisionAndOffsetMode), dataPosition)
+    fun emitShortTimestampReference(destination: BytecodeBuffer, opcode: Int, dataPosition: Int) {
+        destination.add2(Instructions.I_SHORT_TIMESTAMP_REF.packInstructionData(opcode), dataPosition)
     }
 }

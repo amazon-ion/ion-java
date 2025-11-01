@@ -22,6 +22,7 @@ import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt16
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt24AsInt
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
+import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsBigInteger
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance
@@ -158,6 +159,20 @@ class PrimitiveDecoderTest {
         val data = bits.binaryStringToByteArray()
         val actual = PrimitiveDecoder.readFixedInt64(data, 0)
         assertEquals(expected, actual)
+    }
+
+    @ParameterizedTest
+    @MethodSource(FIXED_INT_8_CASES, FIXED_INT_16_CASES, FIXED_INT_24_CASES, FIXED_INT_32_CASES, FIXED_INT_64_CASES)
+    @CsvSource(
+        " 9223372036854775808, 00000000 00000000 00000000 00000000 00000000 00000000 00000000 10000000 00000000",
+        "-9223372036854775809, 11111111 11111111 11111111 11111111 11111111 11111111 11111111 01111111 11111111",
+        "                   1, 00000001 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+        "                  -1, 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111111",
+    )
+    fun testReadFixedIntAsBigInteger(expectedValue: BigInteger, input: String) {
+        val data = input.binaryStringToByteArray()
+        val value = readFixedIntAsBigInteger(data, 0, data.size)
+        assertEquals(expectedValue, value)
     }
 
     @ParameterizedTest
