@@ -40,12 +40,12 @@ internal object ShortTimestampOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        val precisionAndOffsetMode = opcode and 0xF
         BytecodeEmitter.emitShortTimestampReference(
             destination,
-            precisionAndOffsetMode,
+            opcode,
             position
         )
+        val precisionAndOffsetMode = opcode and 0xF
         return serializedSizeByOpcodeTable[precisionAndOffsetMode]
     }
 }
