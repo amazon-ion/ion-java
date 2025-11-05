@@ -22,7 +22,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 /**
  * Helper to generate Bytecode instructions for Ion 1.0 style symbol tables.
  *
- * We cannot meaningfully read a partial symbol table, si it seems a reasonable requirement that the entire symbol
+ * We cannot meaningfully read a partial symbol table, so it seems a reasonable requirement that the entire symbol
  * table must be buffered before we generate bytecode for it. Therefore, this is re-usable for both continuable and
  * non-continuable bytecode generators.
  *

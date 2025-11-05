@@ -10,9 +10,6 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class TypeIdHelperTest {
 
-    /*
-    fun isVariableLength(typeId: Int): Boolean = typeId.and(LOW_NIBBLE_MASK) == VAR_LENGTH_LOW_NIBBLE
-     */
 
     @ParameterizedTest
     @CsvSource(
