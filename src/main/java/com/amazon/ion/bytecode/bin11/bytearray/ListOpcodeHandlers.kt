@@ -172,10 +172,10 @@ internal object TaglessElementListOpcodeHandler : OpcodeToBytecodeHandler {
             else -> -1
         }
 
-        val containerSizeValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, p)
-        val containerLength = containerSizeValueAndLength.toInt()
-        val prefixLength = containerSizeValueAndLength.shr(Int.SIZE_BITS).toInt()
-        p += prefixLength
+        val childCountValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, p)
+        val childCount = childCountValueAndLength.toInt()
+        val prefixSize = childCountValueAndLength.shr(Int.SIZE_BITS).toInt()
+        p += prefixSize
 
         // If macroAddress > -1, then it is the address of the macro-shaped values,
         // and childOpcode should be ignored.
