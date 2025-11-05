@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.PrimitiveTestCases_1_1
+import com.amazon.ion.TextToBinaryUtils.binaryStringToByteArray
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
+import com.amazon.ion.bytecode.BytecodeUtils
 import com.amazon.ion.bytecode.GeneratorTestUtil.assertEqualBytecode
+import com.amazon.ion.bytecode.bin11.OpCode
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -12,6 +16,8 @@ import com.amazon.ion.bytecode.util.unsignedToInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
+import java.math.BigInteger
 import kotlin.String
 
 class IntOpcodeHandlerTest {
@@ -176,5 +182,41 @@ class IntOpcodeHandlerTest {
 
         val representedInteger = (buffer.get(1).toLong() shl 32) or (buffer.get(2).toLong() and 0xFFFF_FFFF)
         assertEquals(expectedInt64, representedInteger)
+    }
+
+    @ParameterizedTest
+    @MethodSource(PrimitiveTestCases_1_1.FLEX_INT_READ_WRITE_CASES, PrimitiveTestCases_1_1.FLEX_INT_READ_ONLY_CASES)
+    fun testTaglessFlexIntHandler(expectedBigInt: BigInteger, bits: String) {
+        val source = bits.binaryStringToByteArray()
+        val dest = BytecodeBuffer()
+        val cp = ConstantPool()
+        cp.add("dummy value")
+
+        val bytesRead = TAGLESS_FLEX_INT.convertOpcodeToBytecode(OpCode.TE_FLEX_INT, source, 0, dest, cp, intArrayOf(), intArrayOf(), arrayOf())
+
+        when (bytesRead) {
+            1, 2, 3, 4 -> {
+                assertEqualBytecode(
+                    intArrayOf(Instructions.I_INT_I32, expectedBigInt.toInt()),
+                    dest.toArray()
+                )
+            }
+            5, 6, 7, 8, 9 -> {
+                val expectedLong = expectedBigInt.toLong()
+                assertEqualBytecode(
+                    BytecodeUtils.I64(expectedLong),
+                    dest.toArray()
+                )
+            }
+            else -> {
+                assertEqualBytecode(
+                    intArrayOf(Instructions.I_INT_CP.packInstructionData(1)),
+                    dest.toArray()
+                )
+                assertEquals(expectedBigInt, cp.toArray()[1])
+            }
+        }
+
+        assertEquals(source.size, bytesRead)
     }
 }

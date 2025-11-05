@@ -38,16 +38,20 @@ internal class ByteArrayBytecodeGenerator11(
         while (currentPosition < source.size && !isSystemValue(opcode)) {
             opcode = source[currentPosition++].unsignedToInt()
             val handler = OpcodeHandlerTable.handler(opcode)
-            currentPosition += handler.convertOpcodeToBytecode(
-                opcode,
-                source,
-                currentPosition,
-                destination,
-                constantPool,
-                macroSrc,
-                macroIndices,
-                symTab
-            )
+            try {
+                currentPosition += handler.convertOpcodeToBytecode(
+                    opcode,
+                    source,
+                    currentPosition,
+                    destination,
+                    constantPool,
+                    macroSrc,
+                    macroIndices,
+                    symTab
+                )
+            } catch (e: StackOverflowError) {
+                throw IonException("Ion data nested too deeply", e)
+            }
         }
 
         if (currentPosition >= source.size) {

@@ -6,12 +6,13 @@ import com.amazon.ion.TextToBinaryUtils.cleanCommentedHexBytes
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.Timestamp
 import com.amazon.ion.bytecode.GeneratorTestUtil.shouldGenerate
+import com.amazon.ion.bytecode.GeneratorTestUtil.shouldThrowIonException
+import com.amazon.ion.bytecode.PrimitiveUtils.generateFlexUIntBytes
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
-import com.amazon.ion.impl.bin.PrimitiveEncoder
-import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
@@ -128,15 +129,28 @@ internal class ByteArrayBytecodeGenerator11Test {
         assertArrayEquals(lobBytes, readLob)
     }
 
-    /**
-     * Helper function for generating FlexUInt bytes from an unsigned integer. Useful for test
-     * cases that programmatically generate length-prefixed payloads.
+    /*
+     * ================================================
+     * ==             EXCEPTION HANDLING             ==
+     * ==                                            ==
+     * == Tests that validate that IonException is   ==
+     * == thrown when the generator encounters an    ==
+     * == invalid input.                             ==
+     * ================================================
      */
-    private fun generateFlexUIntBytes(value: Int): ByteArray {
-        val asLong = value.toLong()
-        val length = PrimitiveEncoder.flexUIntLength(asLong)
-        val bytes = ByteArray(length)
-        PrimitiveEncoder.writeFlexIntOrUIntInto(bytes, 0, asLong, length)
-        return bytes
+
+    @Test
+    fun `generator catches stack overflow`() {
+        val testDepth = 60000
+        val bytes = mutableListOf<Byte>()
+        for (i in 0 until testDepth) {
+            bytes.add(OpCode.DELIMITED_LIST.toByte())
+        }
+        for (i in 0 until testDepth) {
+            bytes.add(OpCode.DELIMITED_CONTAINER_END.toByte())
+        }
+
+        val generator = ByteArrayBytecodeGenerator11(bytes.toByteArray(), 0)
+        generator.shouldThrowIonException()
     }
 }
