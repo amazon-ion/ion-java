@@ -48,7 +48,7 @@ internal class IonManagedWriter_1_1(
     private val systemData: IonRawWriter_1_1,
     @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "Not mutable")
     private val options: ManagedWriterOptions_1_1,
-    private val onClose: () -> Unit,
+    private val onClose: Runnable,
 ) : _Private_IonWriter, IonWriter_1_1 {
 
     companion object {
@@ -434,7 +434,7 @@ internal class IonManagedWriter_1_1(
         flush()
         systemData.close()
         userData.close()
-        onClose()
+        onClose.run()
     }
 
     override fun flush() {

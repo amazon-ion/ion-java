@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl
 
+import com.amazon.ion.bytecode.EncodingContextManager.Companion.SYSTEM_SYMBOLS
 import com.amazon.ion.util._Private_FastAppendable
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.io.Closeable
@@ -28,8 +29,14 @@ internal class BufferedAppendableFastAppendable(
     @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "We're intentionally storing a reference to a mutable object because we need to write to it.")
     private val wrapped: Appendable,
     @SuppressFBWarnings("EI_EXPOSE_REP2", justification = "We're intentionally storing a reference to a mutable object because we need to write to it.")
-    private val buffer: StringBuilder = StringBuilder()
+    private val buffer: StringBuilder,
 ) : _Private_FastAppendable, Flushable, Closeable, Appendable by buffer {
+
+    companion object {
+        @JvmStatic operator fun invoke(wrapped: Appendable): BufferedAppendableFastAppendable {
+            return BufferedAppendableFastAppendable(wrapped, StringBuilder())
+        }
+    }
 
     override fun appendAscii(c: Char) { append(c) }
     override fun appendAscii(csq: CharSequence?) { append(csq) }
