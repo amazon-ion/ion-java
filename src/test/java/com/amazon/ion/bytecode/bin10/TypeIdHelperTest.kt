@@ -10,7 +10,6 @@ import org.junit.jupiter.params.provider.CsvSource
 
 class TypeIdHelperTest {
 
-
     @ParameterizedTest
     @CsvSource(
         "0x10, false",

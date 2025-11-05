@@ -105,37 +105,41 @@ internal object SymbolTableHelper {
         var symbolsCpIndexEndExclusive = 0
 
         var hasSeenImports = false
+        var isAppendRequired = false
         var hasSeenSymbols = false
 
         iterateStruct(source, position, structLength) { fieldSid, fieldTid, pos, length ->
             val operationKind = TypeIdHelper.operationKindForTypeId(fieldTid)
             when (fieldSid) {
-                SystemSymbols.IMPORTS_SID -> when (operationKind) {
-                    OperationKind.SYMBOL -> {
-                        if (hasSeenImports) throw IonException("Multiple imports fields found within a single local symbol table.")
-                        hasSeenImports = true
-                        val sid = readUInt(source, pos, length).toInt()
-                        if (sid != SystemSymbols.ION_SYMBOL_TABLE_SID) hasSeenImports = false
-                    }
-                    OperationKind.LIST -> {
-                        if (hasSeenImports) throw IonException("Multiple imports fields found within a single local symbol table.")
-                        hasSeenImports = true
-                        readImportsList(source, pos, length, dest, cp)
+                SystemSymbols.IMPORTS_SID -> {
+                    if (hasSeenImports) throw IonException("Multiple imports fields found within a single local symbol table.")
+                    hasSeenImports = true
+                    when (operationKind) {
+                        OperationKind.SYMBOL -> {
+                            val sid = readUInt(source, pos, length).toInt()
+                            if (sid == SystemSymbols.ION_SYMBOL_TABLE_SID) isAppendRequired = true
+                        }
+                        OperationKind.LIST -> {
+                            readImportsList(source, pos, length, dest, cp)
+                            isAppendRequired = true
+                        }
                     }
                 }
-                SystemSymbols.SYMBOLS_SID -> when (operationKind) {
-                    OperationKind.LIST -> {
-                        if (hasSeenSymbols) throw IonException("Multiple symbols fields found within a single local symbol table.")
-                        hasSeenSymbols = true
-                        symbolsCpIndexStartInclusive = cp.size
-                        readSymbolsList(source, pos, length, cp)
-                        symbolsCpIndexEndExclusive = cp.size
+                SystemSymbols.SYMBOLS_SID -> {
+                    if (hasSeenSymbols) throw IonException("Multiple symbols fields found within a single local symbol table.")
+                    hasSeenSymbols = true
+                    when (operationKind) {
+                        OperationKind.LIST -> {
+                            symbolsCpIndexStartInclusive = cp.size
+                            readSymbolsList(source, pos, length, cp)
+                            symbolsCpIndexEndExclusive = cp.size
+                        }
                     }
                 }
             }
         }
 
-        val directiveOperation = if (hasSeenImports) {
+        val directiveOperation = if (isAppendRequired) {
             // The new local symbols are "appended" to the imports using ADD_SYMBOLS
             if (symbolsCpIndexEndExclusive - symbolsCpIndexStartInclusive == 0) return
             I_DIRECTIVE_ADD_SYMBOLS
@@ -147,8 +151,6 @@ internal object SymbolTableHelper {
             dest.add(I_SYMBOL_CP.packInstructionData(i))
         }
         dest.add(I_END_CONTAINER)
-
-        // TODO: ensure that we emit something for null and empty symbol table structs.
     }
 
     /**

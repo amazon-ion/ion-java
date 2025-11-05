@@ -257,12 +257,9 @@ class SymbolTableHelperTest {
     )
 
     @Test
-    fun `symbol table with symbols field that is not a list and one that is a list`() = expectBytecodeForLst(
+    fun `symbol table with symbols field that is not a list and one that is a list`() = assertFails(
         lstText = """ { symbols: 0, symbols: [] } """,
-        expectedBytecode = intArrayOf(
-            I_DIRECTIVE_SET_SYMBOLS,
-            I_END_CONTAINER,
-        )
+        reason = "Multiple symbols fields"
     )
 
     @Test
