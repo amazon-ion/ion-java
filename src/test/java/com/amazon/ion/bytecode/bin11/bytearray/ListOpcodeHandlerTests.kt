@@ -365,6 +365,8 @@ class ListOpcodeHandlerTests {
      * ================================================
      * ==           TAGLESS ELEMENT LISTS            ==
      * ================================================
+     *
+     * TODO: Test cases for TE Lists using macro shapes.
      */
 
     @Nested
