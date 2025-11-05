@@ -156,6 +156,7 @@ internal val TAGLESS_FLEX_INT = OpcodeToBytecodeHandler { opcode, src, pos, dest
 
     val flexIntLength = PrimitiveDecoder.lengthOfFlexIntOrUIntAt(src, pos)
     when (flexIntLength) {
+        // TODO(perf): See if there's any performance benefit to having a separate case for length=1|2 and using INT_I16 instruction
         1, 2, 3, 4 -> {
             val valueAndLength = PrimitiveDecoder.readFlexIntValueAndLength(src, pos)
             val value = valueAndLength.toInt()
