@@ -13,27 +13,6 @@ import com.amazon.ion.bytecode.util.unsignedToInt
 //   BytecodeEmitter.emitSequence() or similar so this logic is not duplicated in a set of `*SexpOpcodeHandler`s.
 
 /**
- * Writes a list to the bytecode buffer. Handles opcode `0xE0`.
- */
-internal object EmptyListOpcodeHandler : OpcodeToBytecodeHandler {
-    @OptIn(ExperimentalStdlibApi::class)
-    override fun convertOpcodeToBytecode(
-        opcode: Int,
-        source: ByteArray,
-        position: Int,
-        destination: BytecodeBuffer,
-        constantPool: AppendableConstantPoolView,
-        macroSrc: IntArray,
-        macroIndices: IntArray,
-        symbolTable: Array<String?>
-    ): Int {
-        assert(opcode == 0xe0) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-        BytecodeEmitter.emitList(destination) {}
-        return 0
-    }
-}
-
-/**
  * Writes a length prefixed list to the bytecode buffer. Handles opcode `0xB0`-`0xBF`.
  */
 internal object ShortLengthPrefixedListOpcodeHandler : OpcodeToBytecodeHandler {
