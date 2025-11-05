@@ -199,23 +199,33 @@ internal object SymbolTableHelper {
         var catalogVersion: Int = -1
         var maxId: Int = -1
 
+        var hasSeenCatalogName = false
+        var hasSeenCatalogVersion = false
+        var hasSeenMaxId = false
+
         iterateStruct(source, contentStart, contentLength) { fieldSid, fieldTid, pos, length ->
             when (fieldSid) {
-                SystemSymbols.NAME_SID ->
+                SystemSymbols.NAME_SID -> {
+                    if (hasSeenCatalogName) throw IonException("Multiple name fields found within a single import.")
+                    hasSeenCatalogName = true
                     if (TypeIdHelper.isNonNullString(fieldTid)) {
-                        if (catalogName != null) throw IonException("Multiple name fields found within a single import.")
                         catalogName = String(source, pos, length, Charsets.UTF_8)
                     }
-                SystemSymbols.VERSION_SID ->
+                }
+                SystemSymbols.VERSION_SID -> {
+                    if (hasSeenCatalogVersion) throw IonException("Multiple version fields found within a single import.")
+                    hasSeenCatalogVersion = true
                     if (TypeIdHelper.isNonNullPositiveInt(fieldTid)) {
-                        if (catalogVersion > 0) throw IonException("Multiple version fields found within a single import.")
                         catalogVersion = readUInt(source, pos, length).toInt()
                     }
-                SystemSymbols.MAX_ID_SID ->
+                }
+                SystemSymbols.MAX_ID_SID -> {
+                    if (hasSeenMaxId) throw IonException("Multiple max_id fields found within a single import.")
+                    hasSeenMaxId = true
                     if (TypeIdHelper.isNonNullPositiveInt(fieldTid)) {
-                        if (maxId >= 0) throw IonException("Multiple max_id fields found within a single import.")
                         maxId = readUInt(source, pos, length).toInt()
                     }
+                }
             }
         }
 
@@ -255,6 +265,7 @@ internal object SymbolTableHelper {
      * Annotations are ignored in symbol table and import structs, so this handles skipping the annotations.
      */
     @JvmStatic
+    @SuppressFBWarnings("SF_SWITCH_NO_DEFAULT")
     private inline fun iterateStruct(
         source: ByteArray,
         start: Int,
@@ -272,14 +283,20 @@ internal object SymbolTableHelper {
 
             var typeId = source[p++].unsignedToInt()
 
-            // We ignore annotations inside all symbol table structs and import structs
-            if (TypeIdHelper.operationKindForTypeId(typeId) == OperationKind.ANNOTATIONS) {
-                p += skipAnnotations(typeId, source, p)
-                typeId = source[p++].unsignedToInt()
+            when (TypeIdHelper.operationKindForTypeId(typeId)) {
+                // This is a nop, so we skip this field
+                OperationKind.UNSET -> {
+                    val childLengthAndLengthSize = getLengthForTypeId(typeId, source, p)
+                    p += childLengthAndLengthSize.toInt().and(ONE_BYTE_MASK)
+                    p += childLengthAndLengthSize.shr(ONE_BYTE_SHIFT).toInt()
+                    continue
+                }
+                // We ignore annotations inside all symbol table structs and import structs
+                OperationKind.ANNOTATIONS -> {
+                    p += skipAnnotations(typeId, source, p)
+                    typeId = source[p++].unsignedToInt()
+                }
             }
-
-            // We also skip anything that is null in a symbol table struct or import struct
-            if (TypeIdHelper.isNull(typeId)) continue
 
             val childLengthAndLengthSize = getLengthForTypeId(typeId, source, p)
             p += childLengthAndLengthSize.toInt().and(ONE_BYTE_MASK)
@@ -306,9 +323,19 @@ internal object SymbolTableHelper {
         while (p < end) {
             val typeId = source[p++].unsignedToInt()
 
-            if (TypeIdHelper.operationKindForTypeId(typeId) == OperationKind.ANNOTATIONS) {
-                p += skipAnnotations(typeId, source, p)
-                continue
+            when (TypeIdHelper.operationKindForTypeId(typeId)) {
+                // This is a nop, so we skip this field
+                OperationKind.UNSET -> {
+                    val childLengthAndLengthSize = getLengthForTypeId(typeId, source, p)
+                    p += childLengthAndLengthSize.toInt().and(ONE_BYTE_MASK)
+                    p += childLengthAndLengthSize.shr(ONE_BYTE_SHIFT).toInt()
+                    continue
+                }
+                // We ignore annotations on anything inside a local symbol table.
+                OperationKind.ANNOTATIONS -> {
+                    p += skipAnnotations(typeId, source, p)
+                    continue
+                }
             }
 
             val childLengthAndLengthSize = getLengthForTypeId(typeId, source, p)

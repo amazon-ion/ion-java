@@ -24,6 +24,11 @@ import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayOutputStream
 import com.amazon.ion.SystemSymbols.ION_SYMBOL_TABLE as ion_symbol_table
 
+/**
+ * TODO: Tests for edge cases such as
+ *   - Repeated field name with NOP; i.e.: { symbols: [], symbols: <NOP> } should be okay
+ *   - Repeated field names with nonsense values should always throw an exception, even though the value will be discarded.
+ */
 class SymbolTableHelperTest {
 
     @Test
@@ -427,13 +432,13 @@ class SymbolTableHelperTest {
     )
 
     @Test
-    fun `max_id that is not a non-negative integer should be ignored`() = expectBytecodeForLst(
+    fun `max_id that is not a non-negative integer should be interpreted as null`() = expectBytecodeForLst(
         lstText = """
             { 
                 imports: [ 
-                    {name:"foo", version:2, max_id:-10, max_id:"a", max_id:2.0 },
-                    {name:"bar", version:3, max_id:99, max_id:-10, max_id:"a", max_id:2.0 },
-                    {name:"baz", version:4, max_id:-10, max_id:"a", max_id:2.0, max_id:100 } 
+                    {name:"foo", version:2, max_id:-10 },
+                    {name:"bar", version:3, max_id:"a" },
+                    {name:"baz", version:4, max_id:2.0 } 
                 ]
             } 
             """,
@@ -446,24 +451,24 @@ class SymbolTableHelperTest {
             I_NULL_NULL,
             I_STRING_CP.packInstructionData(1),
             I_INT_I32, 3,
-            I_INT_I32, 99,
+            I_NULL_NULL,
             I_STRING_CP.packInstructionData(2),
             I_INT_I32, 4,
-            I_INT_I32, 100,
+            I_NULL_NULL,
             I_END_CONTAINER,
         ),
         expectedConstantPool = arrayOf("foo", "bar", "baz")
     )
 
     @Test
-    fun `version that is not a positive integer should be ignored`() = expectBytecodeForLst(
+    fun `version that is not a positive integer should be interpreted as 1`() = expectBytecodeForLst(
         lstText = """
             { 
                 imports: [ 
                     {name:"a", version:0 },
-                    {name:"b", version:-10, version:"a", version:2.0 },
-                    {name:"c", version:3, version:-10, version:"a", version:2.0 },
-                    {name:"d", version:-10, version:"a", version:2.0, version:4 } 
+                    {name:"b", version:"a" },
+                    {name:"c", version:-10 },
+                    {name:"d", version:2.0 } ,
                 ]
             } 
             """,
@@ -478,10 +483,10 @@ class SymbolTableHelperTest {
             I_INT_I32, 1,
             I_NULL_NULL,
             I_STRING_CP.packInstructionData(2),
-            I_INT_I32, 3,
+            I_INT_I32, 1,
             I_NULL_NULL,
             I_STRING_CP.packInstructionData(3),
-            I_INT_I32, 4,
+            I_INT_I32, 1,
             I_NULL_NULL,
             I_END_CONTAINER,
         ),
