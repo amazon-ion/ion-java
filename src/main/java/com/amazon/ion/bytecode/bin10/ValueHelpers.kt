@@ -25,6 +25,19 @@ internal fun signForIntTypeId(typeId: Int): Int = (((typeId shr 4) shl 31) shr 3
 internal fun getSignumValueFromLeadingSignBit(byte: Byte): Int = byte.toInt().shr(7).shl(1) + 1
 
 /**
+ * Reads an unsigned integer from a [ByteArray]. Does not perform array bounds checking.
+ */
+internal fun readUInt(source: ByteArray, startIndex: Int, length: Int): Long {
+    var result: Long = 0
+    // TODO(perf): See if it's better to branch on the length and unroll the loops vs having a variable-length loop.
+    val endIndex = startIndex + length
+    for (i in startIndex until endIndex) {
+        result = (result shl 8) or (source[i].toInt() and 0xFF).toLong()
+    }
+    return result
+}
+
+/**
  * Reads a timestamp value from the given byte array.
  */
 internal fun readTimestampReference(valueBytes: ByteArray, position: Int, length: Int): Timestamp {
