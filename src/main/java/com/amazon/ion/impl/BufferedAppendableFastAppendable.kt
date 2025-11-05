@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl
 
-import com.amazon.ion.bytecode.EncodingContextManager.Companion.SYSTEM_SYMBOLS
 import com.amazon.ion.util._Private_FastAppendable
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.io.Closeable
