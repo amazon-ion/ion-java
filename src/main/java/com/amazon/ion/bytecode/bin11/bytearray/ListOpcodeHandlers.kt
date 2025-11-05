@@ -154,7 +154,15 @@ internal object TaglessElementListOpcodeHandler : OpcodeToBytecodeHandler {
         val childOpcode = source[p++].unsignedToInt()
         val macroAddress = when (childOpcode) {
             in 0x00..0x47 -> childOpcode
-            in 0x48..0x4f, 0xf4 -> {
+            in 0x48..0x4f -> {
+                val flexUIntValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, p)
+                val addressLength = flexUIntValueAndLength.shr(Int.SIZE_BITS).toInt()
+                p += flexUIntValueAndLength
+                val lsb = childOpcode - 0x48
+                val msb = flexUIntValueAndLength.toInt() * 8
+                msb + lsb + 72
+            }
+            0xf4 -> {
                 val addressValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, p)
                 val addressValue = addressValueAndLength.toInt()
                 val addressLength = addressValueAndLength.shr(Int.SIZE_BITS).toInt()
