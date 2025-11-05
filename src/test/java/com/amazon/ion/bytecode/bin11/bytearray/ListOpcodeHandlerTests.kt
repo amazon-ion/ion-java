@@ -177,10 +177,11 @@ class ListOpcodeHandlerTests {
         fun `handler compiles nested lists`() {
             val bytes = """
                 FA 63
-                FA 11                        | [null, [[null, null]], null]
-                8E                           |--|     |               |
-                FA 09 FA 05 8E 8E            |--------|               |
-                8E                           |------------------------|
+                FA 11                        | [
+                8E                           |   null,
+                FA 09 FA 05 8E 8E            |   [[null, null]],
+                8E                           |   null,
+                                             | ]
                 FA 41                        | [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
                 61 01 61 02 61 03 61 04
                 61 05 61 06 61 07 61 08
