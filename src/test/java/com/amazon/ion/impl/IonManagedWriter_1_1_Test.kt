@@ -15,6 +15,7 @@ import com.amazon.ion.ion_1_1.IonWriter_1_1
 import com.amazon.ion.ion_1_1.MacroBuilder
 import com.amazon.ion.ion_1_1.MacroImpl
 import com.amazon.ion.ion_1_1.TaglessScalarType
+import com.amazon.ion.system.IonBinaryWriterBuilder
 import com.amazon.ion.system.IonTextWriterBuilder
 import com.amazon.ion.system.IonTextWriterBuilder.NewLineType
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -30,6 +31,16 @@ import java.math.BigInteger
 
 /**
  * TODO: Ensure that tests cover all of [IonManagedWriter_1_1].
+ *
+ * Missing test coverage includes, but not limited to:
+ *   - type validation for tagless macro arguments
+ *   - type validation for TE sequences with scalars
+ *   - type validation for TE sequences with macros
+ *   - Field names and annotations when they are/aren't allowed
+ *   - Absent argument cases, including filling in missing arguments
+ *   - Clobs, tagless floats, TE SExps, IVMs
+ *   - Ion 1.0 symbol tables (including `$ion_symbol_table::null.struct`)
+ *   - Symbols, with and without text, with and without SIDs
  */
 internal class IonManagedWriter_1_1_Test {
 
@@ -97,28 +108,34 @@ internal class IonManagedWriter_1_1_Test {
         // Helper function that writes to a writer and returns the binary Ion
         private fun writeBinary(
             closeWriter: Boolean = true,
-            symbolInliningStrategy: SymbolInliningStrategy = SymbolInliningStrategy.ALWAYS_INLINE,
+            symbolInliningStrategy: SymbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
             lengthPrefixStrategy: LengthPrefixStrategy = LengthPrefixStrategy.CONTAINERS_PREFIXED,
             block: IonManagedWriter_1_1.() -> Unit
         ): ByteArray {
             val output = ByteArrayOutputStream()
 
-            val writer = IonManagedWriter_1_1(
-                userData = IonRawBinaryWriter_1_1.from(output, 1024, 1),
-                systemData = IonRawBinaryWriter_1_1.from(output, 1024, 1),
-                options = ManagedWriterOptions_1_1(
-                    internEncodingDirectiveSymbols = false,
-                    symbolInliningStrategy = symbolInliningStrategy,
-                    lengthPrefixStrategy = lengthPrefixStrategy,
-                    eExpressionIdentifierStrategy = ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_NAME,
-                ),
-                onClose = output::close,
-            )
+            val writer = newIon11BinaryWriter(output, symbolInliningStrategy, lengthPrefixStrategy)
 
             writer.apply(block)
             if (closeWriter) writer.close()
             return output.toByteArray()
         }
+
+        private fun newIon11BinaryWriter(
+            output: ByteArrayOutputStream,
+            symbolInliningStrategy: SymbolInliningStrategy = SymbolInliningStrategy.NEVER_INLINE,
+            lengthPrefixStrategy: LengthPrefixStrategy = LengthPrefixStrategy.CONTAINERS_PREFIXED,
+        ) = IonManagedWriter_1_1(
+            userData = IonRawBinaryWriter_1_1.from(output, 1024, 1),
+            systemData = IonRawBinaryWriter_1_1.from(output, 1024, 1),
+            options = ManagedWriterOptions_1_1(
+                internEncodingDirectiveSymbols = false,
+                symbolInliningStrategy = symbolInliningStrategy,
+                lengthPrefixStrategy = lengthPrefixStrategy,
+                eExpressionIdentifierStrategy = ManagedWriterOptions_1_1.EExpressionIdentifierStrategy.BY_ADDRESS,
+            ),
+            onClose = output::close,
+        )
     }
 
     @Test
@@ -192,18 +209,11 @@ internal class IonManagedWriter_1_1_Test {
     }
 
     @Test
-    fun `write an IVM in a container should write a symbol`() {
-        assertEquals(
-            """
-            $ion_1_1
-            [$ion_1_1]
-            """.trimIndent(),
-            write {
-                stepIn(IonType.LIST)
-                writeIonVersionMarker()
-                stepOut()
-            }
-        )
+    fun `write an IVM in a container should throw an exception`() {
+        write(closeWriter = false) {
+            stepIn(IonType.LIST)
+            assertThrows<IonException> { writeIonVersionMarker() }
+        }
     }
 
     @Test
@@ -296,9 +306,6 @@ internal class IonManagedWriter_1_1_Test {
             writeInt(1)
             endMacro()
         }
-
-        println("Expected: ${expected.toPrettyHexString()}")
-        println("Actual: ${actual.toPrettyHexString()}")
 
         assertArrayEquals(expected, actual)
     }
@@ -752,7 +759,7 @@ internal class IonManagedWriter_1_1_Test {
     fun `writeObject() should write something with a macro representation`() {
         val expected = """
             $ion_1_1
-            (:$ion set_macros (Point2D {x:(:?),y:(:?)}))
+            (:$ion set_macros (Point2D {x:(:? {#int}),y:(:? {#int})}))
             (:Point2D 2 4)
         """.trimIndent()
 
@@ -783,12 +790,13 @@ internal class IonManagedWriter_1_1_Test {
         assertEquals(expected, actual)
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     @Test
     fun `writeObject() should write something with nested macro representation`() {
         val expected = """
             $ion_1_1
-            (:$ion set_macros (Polygon {vertices:(:?),fill:(:?)}) (Point2D {x:(:?),y:(:?)}))
-            (:Polygon [(:Point2D 0 0),(:Point2D 0 1),(:Point2D 1 1),(:Point2D 1 0)] Blue)
+            (:$ion set_macros (Polygon {vertices:(:?),fill:(:? {#symbol})}) (Point2D {x:(:? {#int}),y:(:? {#int})}))
+            (:Polygon [{:Point2D} (0 0),(0 1),(1 1),(1 0)] Blue)
         """.trimIndent()
 
         val data = Polygon(
@@ -802,26 +810,62 @@ internal class IonManagedWriter_1_1_Test {
         )
 
         val actual = write {
-            writeObject(data)
+            data.writeToMacroAware(this)
         }
 
         assertEquals(expected, actual)
     }
 
+    @Test
+    fun `ion 1,1 demo`() {
+        // Writes some data in a few different ways and prints out comparisons.
+
+        val data = Polygon(
+            listOf(
+                Point2D(0, 3),
+                Point2D(0, 8),
+                Point2D(4, 13),
+                Point2D(8, 8),
+                Point2D(8, 3),
+                Point2D(4, 0),
+            ),
+            Colors.Blue,
+        )
+
+        println("\nIon 1.0 Text")
+        println(StringBuilder().also { IonTextWriterBuilder.standard().build(it).use(data::writeTo) })
+
+        println("\nIon 1.1 Text w/ macros")
+        println(write { data.writeToMacroAware(this) })
+
+        println("\nIon 1.0 Binary")
+        calculateSystemAndUserSizes(IonBinaryWriterBuilder.standard()::build, data::writeTo)
+        println("\nIon 1.1 Binary w/o macros")
+        calculateSystemAndUserSizes(::newIon11BinaryWriter, data::writeTo)
+        println("\nIon 1.1 Binary w/ macros")
+        calculateSystemAndUserSizes(::newIon11BinaryWriter, data::writeToMacroAware)
+    }
+
+    private fun <T : IonWriter> calculateSystemAndUserSizes(newWriter: (ByteArrayOutputStream) -> T, writeValue: (T) -> Unit) {
+        val oneValueBytes = ByteArrayOutputStream().also { newWriter(it).use(writeValue) }.toByteArray()
+        val twoValueBytes = ByteArrayOutputStream().also { newWriter(it).use { w -> repeat(2) { writeValue(w) } } }.toByteArray()
+
+        val valueSize = twoValueBytes.size - oneValueBytes.size
+        val ivmSize = 4
+        val systemValueSize = oneValueBytes.size - ivmSize - valueSize
+
+        println("IVM    (4 bytes)  : ${oneValueBytes.copyOfRange(0, ivmSize).toPrettyHexString(wordsPerLine = 32)}")
+        println("SYSTEM ($systemValueSize bytes) : ${oneValueBytes.copyOfRange(ivmSize, ivmSize + systemValueSize).toPrettyHexString(wordsPerLine = 32)}")
+        println("USER   ($valueSize bytes) : ${oneValueBytes.copyOfRange(ivmSize + systemValueSize, oneValueBytes.size).toPrettyHexString(wordsPerLine = 32)}")
+        println("TOTAL: ${oneValueBytes.size} bytes")
+    }
+
     interface WriteAsIon {
         fun writeTo(writer: IonWriter)
         fun writeToMacroAware(writer: IonWriter_1_1)
-
-        fun IonWriter.writeObject(obj: WriteAsIon) {
-            if (this is IonWriter_1_1) {
-                obj.writeToMacroAware(this)
-            } else {
-                obj.writeTo(this)
-            }
-        }
     }
 
-    private data class Polygon(val vertices: List<Point2D>, val fill: Colors?) : WriteAsIon {
+    private data class Polygon(val vertices: List<Point2D>, val fill: Colors) : WriteAsIon {
         init { require(vertices.size >= 3) { "A polygon must have at least 3 edges and 3 vertices" } }
 
         companion object {
@@ -833,7 +877,7 @@ internal class IonManagedWriter_1_1_Test {
                     it.fieldName("vertices")
                         .placeholder()
                         .fieldName("fill")
-                        .placeholder()
+                        .taglessPlaceholder(TaglessScalarType.SYMBOL)
                 }
                 .build()
         }
@@ -843,12 +887,10 @@ internal class IonManagedWriter_1_1_Test {
                 stepIn(IonType.STRUCT)
                 setFieldName("vertices")
                 stepIn(IonType.LIST)
-                vertices.forEach { writeObject(it) }
+                vertices.forEach { it.writeTo(writer) }
                 stepOut()
-                if (fill != null) {
-                    setFieldName("fill")
-                    writeObject(fill)
-                }
+                setFieldName("fill")
+                fill.writeTo(this)
                 stepOut()
             }
         }
@@ -857,10 +899,10 @@ internal class IonManagedWriter_1_1_Test {
 
             with(writer) {
                 startMacro(MACRO_NAME, MACRO)
-                stepIn(IonType.LIST)
-                vertices.forEach { writeObject(it) }
+                stepInTaglessElementList(Point2D.MACRO_NAME, Point2D.MACRO)
+                vertices.forEach { it.writeToMacroAware(this) }
                 stepOut()
-                fill?.let { writeObject(it) } ?: absentArgument()
+                fill.writeToMacroAware(this)
                 endMacro()
             }
         }
@@ -870,9 +912,10 @@ internal class IonManagedWriter_1_1_Test {
         companion object {
             // This is a very long macro name, but by using the qualified class name,
             // there is almost no risk of having a name conflict with another macro.
-            private val MACRO_NAME = Point2D::class.simpleName!!.replace(".", "_")
-            private val MACRO = MacroBuilder.newBuilder().structValue {
-                it.fieldName("x").placeholder().fieldName("y").placeholder()
+            val MACRO_NAME = Point2D::class.simpleName!!.replace(".", "_")
+            val MACRO = MacroBuilder.newBuilder().structValue {
+                it.fieldName("x").taglessPlaceholder(TaglessScalarType.INT)
+                    .fieldName("y").taglessPlaceholder(TaglessScalarType.INT)
             }.build()
         }
 

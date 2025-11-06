@@ -21,6 +21,10 @@ import java.util.function.Consumer
  * exactly one field name.
  *
  * Most users should interact with an [IonWriter] or [IonWriter_1_1] instead of this interface.
+ *
+ * TODO: Consider updating this interface to use pairs of `start___()`/`end___()` methods for lists, sexps, structs, macros.
+ *
+ * TODO: There are unnecessary annotation methods in this interface. Remove them.
  */
 interface IonRawWriter_1_1 {
 

@@ -32,6 +32,8 @@ internal class ManagedWriterOptions_1_1(
         BY_NAME,
         BY_ADDRESS,
     }
+
+    val useMacroNames = eExpressionIdentifierStrategy == EExpressionIdentifierStrategy.BY_NAME
 }
 
 /**

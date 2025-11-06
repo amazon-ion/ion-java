@@ -93,10 +93,8 @@ internal class IonManagedWriterEncodingContext_1_1 {
      *          make sure that any prior e-expressions are still valid. In addition, we would need to re-export all
      *          the other macros from `_` (the default module).
      *        - For now, we're just throwing an Exception.
-     *
-     * Visible for testing.
      */
-    fun getOrAssignMacroAddressAndName(name: String, macro: MacroImpl): Int {
+    private fun getOrAssignMacroAddressAndName(name: String, macro: MacroImpl): Int {
         // TODO: This is O(n), but could be O(1).
         var existingAddress = macroNames.indexOf(name)
         if (existingAddress < 0) {
@@ -131,13 +129,20 @@ internal class IonManagedWriterEncodingContext_1_1 {
      *    2. Check newMacros, if found, return that address
      *    3. Add to newMacros, return new address
      */
-    fun getOrAssignMacroAddress(macro: MacroImpl): Int {
+    private fun getOrAssignMacroAddress(macro: MacroImpl): Int {
         var address = macroTable.getOrDefault(macro, -1)
         if (address >= 0) return address
         address = newMacros.getOrDefault(macro, -1)
         if (address >= 0) return address
 
         return assignMacroAddress(macro)
+    }
+
+    fun getOrAssignMacroAddress(macro: MacroImpl, name: String?): Int {
+        return if (name == null)
+            getOrAssignMacroAddress(macro)
+        else
+            getOrAssignMacroAddressAndName(name, macro)
     }
 
     fun getMacroNameForId(id: Int): String? = macroNames[id]
