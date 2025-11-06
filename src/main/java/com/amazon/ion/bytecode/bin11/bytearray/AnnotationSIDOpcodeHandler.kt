@@ -22,8 +22,6 @@ internal object AnnotationSIDOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode == 0x58) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         val sidValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, position)
         val sid = sidValueAndLength.toInt()
         val length = sidValueAndLength.shr(Int.SIZE_BITS).toInt()

@@ -54,7 +54,7 @@ object GeneratorTestUtil {
      * Asserts that the generator throws an [IonException] when compiling its input (as opposed to a [Throwable] of
      * an incorrect type).
      */
-    internal fun BytecodeGenerator.shouldThrowIonException() {
+    internal fun BytecodeGenerator.refillShouldThrowIonException() {
         assertThrows<IonException> {
             val generator = this
             generator.refill(BytecodeBuffer(), ConstantPool(), EMPTY_MACRO_TABLE, intArrayOf(), DEFAULT_SYMBOL_TABLE)

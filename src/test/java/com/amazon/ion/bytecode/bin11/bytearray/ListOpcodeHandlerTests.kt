@@ -159,7 +159,7 @@ class ListOpcodeHandlerTests {
 
         @Test
         fun `handler compiles large lists`() {
-            val testLength = 10_000_000 // Much larger causes test crash
+            val testLength = 10_000_000 // Much larger causes OutOfMemoryError in gradle test executor
             val bytes = byteArrayOf(
                 OpCode.VARIABLE_LENGTH_LIST.toByte(),
                 *generateFlexUIntBytes(testLength),
@@ -284,7 +284,7 @@ class ListOpcodeHandlerTests {
 
         @Test
         fun `handler compiles large lists`() {
-            val testLength = 10_000_000 // Much larger causes test crash
+            val testLength = 10_000_000 // Much larger causes OutOfMemoryError in gradle test executor
             val bytes = byteArrayOf(
                 OpCode.DELIMITED_LIST.toByte(),
                 *Array<Byte>(testLength) { 0x6E /* true */ }.toByteArray(),
@@ -710,7 +710,7 @@ class ListOpcodeHandlerTests {
 
         @Test
         fun `handler compiles large lists`() {
-            val testLength = 10_000_000 // Much larger causes test crash
+            val testLength = 10_000_000 // Much larger causes OutOfMemoryError in gradle test executor
             val bytes = byteArrayOf(
                 OpCode.TAGLESS_ELEMENT_LIST.toByte(),
                 OpCode.INT_8.toByte(),

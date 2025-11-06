@@ -22,8 +22,6 @@ internal object SymbolSIDOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode in 0x50..0x57) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         val lsb = opcode and 0b111
         val msbValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, position)
         val msb = msbValueAndLength.toInt().shl(3)
@@ -49,8 +47,6 @@ internal object SingleCharSymbolOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode == 0xa1) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         val char = source[position].toInt()
         destination.add(Instructions.I_SYMBOL_CHAR.packInstructionData(char))
         return 1

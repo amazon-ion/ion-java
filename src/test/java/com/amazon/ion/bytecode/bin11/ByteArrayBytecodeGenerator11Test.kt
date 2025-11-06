@@ -5,8 +5,8 @@ package com.amazon.ion.bytecode.bin11
 import com.amazon.ion.TextToBinaryUtils.cleanCommentedHexBytes
 import com.amazon.ion.TextToBinaryUtils.hexStringToByteArray
 import com.amazon.ion.Timestamp
+import com.amazon.ion.bytecode.GeneratorTestUtil.refillShouldThrowIonException
 import com.amazon.ion.bytecode.GeneratorTestUtil.shouldGenerate
-import com.amazon.ion.bytecode.GeneratorTestUtil.shouldThrowIonException
 import com.amazon.ion.bytecode.PrimitiveUtils.generateFlexUIntBytes
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
@@ -151,6 +151,6 @@ internal class ByteArrayBytecodeGenerator11Test {
         }
 
         val generator = ByteArrayBytecodeGenerator11(bytes.toByteArray(), 0)
-        generator.shouldThrowIonException()
+        generator.refillShouldThrowIonException()
     }
 }

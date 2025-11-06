@@ -27,8 +27,6 @@ internal object ShortLengthPrefixedListOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode in 0xb0..0xbf) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         val length = opcode and 0xF
         BytecodeEmitter.emitList(destination) {
             var p = position
@@ -66,8 +64,6 @@ internal object LongLengthPrefixedListOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode == 0xfa) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         val containerSizeUIntValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, position)
         val containerLength = containerSizeUIntValueAndLength.toInt()
         val prefixLength = containerSizeUIntValueAndLength.shr(Int.SIZE_BITS).toInt()
@@ -107,8 +103,6 @@ internal object DelimitedListOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode == 0xf0) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         var p = position
         BytecodeEmitter.emitList(destination) {
             while (true) {
@@ -148,8 +142,6 @@ internal object TaglessElementListOpcodeHandler : OpcodeToBytecodeHandler {
         macroIndices: IntArray,
         symbolTable: Array<String?>
     ): Int {
-        assert(opcode == 0x5b) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
         var p = position
         val childOpcode = source[p++].unsignedToInt()
         val macroAddress = when (childOpcode) {
@@ -157,7 +149,7 @@ internal object TaglessElementListOpcodeHandler : OpcodeToBytecodeHandler {
             in 0x48..0x4f -> {
                 val flexUIntValueAndLength = PrimitiveDecoder.readFlexUIntValueAndLength(source, p)
                 val addressLength = flexUIntValueAndLength.shr(Int.SIZE_BITS).toInt()
-                p += flexUIntValueAndLength
+                p += addressLength
                 val lsb = childOpcode - 0x48
                 val msb = flexUIntValueAndLength.toInt() * 8
                 msb + lsb + 72
@@ -183,7 +175,7 @@ internal object TaglessElementListOpcodeHandler : OpcodeToBytecodeHandler {
         if (macroAddress < 0) {
             val handler = TaglessOpcodeHandlerTable.handler(childOpcode)
             BytecodeEmitter.emitList(destination) {
-                for (i in 0 until containerLength) {
+                for (i in 0 until childCount) {
                     p += handler.convertOpcodeToBytecode(
                         childOpcode,
                         source,

@@ -152,8 +152,6 @@ internal object LongIntOpcodeHandler : OpcodeToBytecodeHandler {
  * */
 @OptIn(ExperimentalStdlibApi::class)
 internal val TAGLESS_FLEX_INT = OpcodeToBytecodeHandler { opcode, src, pos, dest, cp, _, _, _ ->
-    assert(opcode == 0x60) { "Handler cannot compile opcode ${opcode.toHexString()}" }
-
     val flexIntLength = PrimitiveDecoder.lengthOfFlexIntOrUIntAt(src, pos)
     when (flexIntLength) {
         // TODO(perf): See if there's any performance benefit to having a separate case for length=1|2 and using INT_I16 instruction

@@ -50,6 +50,7 @@ internal class ByteArrayBytecodeGenerator11(
                     symTab
                 )
             } catch (e: StackOverflowError) {
+                // TODO: implement recursion limit instead of catching StackOverflowError
                 throw IonException("Ion data nested too deeply", e)
             }
         }
