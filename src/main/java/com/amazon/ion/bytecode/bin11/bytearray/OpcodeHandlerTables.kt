@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode.bin11.bytearray
 
+import com.amazon.ion.IonException
 import com.amazon.ion.bytecode.ir.Instructions
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
@@ -57,7 +58,10 @@ internal fun interface OpcodeToBytecodeHandler {
 internal object OpcodeHandlerTable {
     private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
         when (opcode) {
+            in 0x50..0x57 -> SymbolSIDOpcodeHandler
+            0x58 -> AnnotationSIDOpcodeHandler
             0x59 -> ReferenceOpcodeHandler(Instructions.I_ANNOTATION_REF)
+            0x5b -> TaglessElementListOpcodeHandler
             0x60 -> Int0OpcodeHandler
             0x61 -> Int8OpcodeHandler
             0x62 -> Int16OpcodeHandler
@@ -72,15 +76,59 @@ internal object OpcodeHandlerTable {
             0x8e -> NullOpcodeHandler
             0x8f -> TypedNullOpcodeHandler
             0x6e, 0x6f -> BooleanOpcodeHandler
+            0x91 -> SingleCharSymbolOpcodeHandler
+            in 0xb0..0xbf -> ShortLengthPrefixedListOpcodeHandler
+            0xf0 -> DelimitedListOpcodeHandler
             0xf5 -> ReferenceOpcodeHandler(Instructions.I_INT_REF)
             0xf6 -> ReferenceOpcodeHandler(Instructions.I_DECIMAL_REF)
             0xf7 -> ReferenceOpcodeHandler(Instructions.I_TIMESTAMP_REF)
             0xf8 -> ReferenceOpcodeHandler(Instructions.I_STRING_REF)
             0xf9 -> ReferenceOpcodeHandler(Instructions.I_SYMBOL_REF)
+            0xfa -> LongLengthPrefixedListOpcodeHandler
             0xfe -> ReferenceOpcodeHandler(Instructions.I_BLOB_REF)
             0xff -> ReferenceOpcodeHandler(Instructions.I_CLOB_REF)
             else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
                 TODO("Opcode $opcode not yet implemented")
+            }
+        }
+    }
+
+    /**
+     * Retrieves the appropriate [OpcodeToBytecodeHandler] for a given opcode.
+     *
+     * TODO: this costs an unnecessary function call for every opcode handled. The performance of this
+     *  vs. exposing the lookup table itself and accessing directly by index should be investigated.
+     */
+    fun handler(opcode: Int): OpcodeToBytecodeHandler = table[opcode]
+}
+
+/**
+ * Table mapping numeric opcodes to the appropriate [OpcodeToBytecodeHandler] in a tagless context, allowing for
+ * array-based access to the appropriate handler.
+ */
+internal object TaglessOpcodeHandlerTable {
+    @OptIn(ExperimentalStdlibApi::class)
+    private val table = Array<OpcodeToBytecodeHandler>(256) { opcode ->
+        when (opcode) {
+            0x60 -> TAGLESS_FLEX_INT
+            0x61 -> Int8OpcodeHandler
+            0x62 -> Int16OpcodeHandler
+            0x64 -> Int32OpcodeHandler
+            0x68 -> LongIntOpcodeHandler
+            0x6b -> Float16OpcodeHandler
+            0x6c -> Float32OpcodeHandler
+            0x6d -> DoubleOpcodeHandler
+            in 0x82..0x87 -> ShortTimestampOpcodeHandler
+            0xe0 -> TAGLESS_FLEX_UINT
+            0xe1 -> TAGLESS_FIXED_UINT_8
+            0xe2 -> TAGLESS_FIXED_UINT_16
+            0xe4 -> TAGLESS_FIXED_UINT_32
+            0xe8 -> TAGLESS_FIXED_UINT_64
+            0x70, 0xee -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
+                TODO("Tagless opcode $opcode not yet implemented")
+            }
+            else -> OpcodeToBytecodeHandler { _, _, _, _, _, _, _, _ ->
+                throw IonException("Opcode 0x${opcode.toHexString(HexFormat { upperCase = true })} is not legal in a tagless context")
             }
         }
     }

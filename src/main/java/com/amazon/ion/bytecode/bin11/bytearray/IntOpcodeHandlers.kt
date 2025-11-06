@@ -8,6 +8,8 @@ import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt24As
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt32
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedInt8AsShort
 import com.amazon.ion.bytecode.bin11.bytearray.PrimitiveDecoder.readFixedIntAsLong
+import com.amazon.ion.bytecode.ir.Instructions
+import com.amazon.ion.bytecode.ir.Instructions.packInstructionData
 import com.amazon.ion.bytecode.util.AppendableConstantPoolView
 import com.amazon.ion.bytecode.util.BytecodeBuffer
 
@@ -142,4 +144,32 @@ internal object LongIntOpcodeHandler : OpcodeToBytecodeHandler {
         )
         return fixedIntLength
     }
+}
+
+/** Writes a variable-length integer in a tagless context to the bytecode buffer. Handles tagless opcode `0x60`.
+ * For simplicity this only ever emits `I_INT_I32`, `I_INT_I64`, and `I_INT_CP` bytecode, even if the integer could fit
+ * in `I_INT_I16`.
+ * */
+@OptIn(ExperimentalStdlibApi::class)
+internal val TAGLESS_FLEX_INT = OpcodeToBytecodeHandler { opcode, src, pos, dest, cp, _, _, _ ->
+    val flexIntLength = PrimitiveDecoder.lengthOfFlexIntOrUIntAt(src, pos)
+    when (flexIntLength) {
+        // TODO(perf): See if there's any performance benefit to having a separate case for length=1|2 and using INT_I16 instruction
+        1, 2, 3, 4 -> {
+            val valueAndLength = PrimitiveDecoder.readFlexIntValueAndLength(src, pos)
+            val value = valueAndLength.toInt()
+            dest.add2(Instructions.I_INT_I32, value)
+        }
+        5, 6, 7, 8, 9 -> {
+            val longValue = PrimitiveDecoder.readFlexIntAsLong(src, pos)
+            BytecodeEmitter.emitInt64Value(dest, longValue)
+        }
+        else -> {
+            val bigInt = PrimitiveDecoder.readFlexIntAsBigInteger(src, pos)
+            val cpIndex = cp.size
+            cp.add(bigInt)
+            dest.add(Instructions.I_INT_CP.packInstructionData(cpIndex))
+        }
+    }
+    flexIntLength
 }

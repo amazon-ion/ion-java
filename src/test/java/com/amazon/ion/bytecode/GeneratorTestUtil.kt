@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.bytecode
 
+import com.amazon.ion.IonException
 import com.amazon.ion.SystemSymbols
 import com.amazon.ion.bytecode.ir.Debugger
 import com.amazon.ion.bytecode.ir.Instructions
@@ -9,6 +10,7 @@ import com.amazon.ion.bytecode.util.BytecodeBuffer
 import com.amazon.ion.bytecode.util.ConstantPool
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.assertThrows
 
 object GeneratorTestUtil {
 
@@ -45,6 +47,17 @@ object GeneratorTestUtil {
             assertEquals(expectedBytecodeText, actualBytecodeText)
             // But, in case there's a difference that doesn't show up in the debug rendering, we'll follow it with the original check.
             assertArrayEquals(expectedBytecode, actualBytecode)
+        }
+    }
+
+    /**
+     * Asserts that the generator throws an [IonException] when compiling its input (as opposed to a [Throwable] of
+     * an incorrect type).
+     */
+    internal fun BytecodeGenerator.refillShouldThrowIonException() {
+        assertThrows<IonException> {
+            val generator = this
+            generator.refill(BytecodeBuffer(), ConstantPool(), EMPTY_MACRO_TABLE, intArrayOf(), DEFAULT_SYMBOL_TABLE)
         }
     }
 
