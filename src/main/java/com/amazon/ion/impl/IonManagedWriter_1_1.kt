@@ -31,9 +31,9 @@ import java.util.Date
  *
  * TODO:
  *  - Handling of shared symbol tables
- *  - Proper handling of user-supplied symbol tables
+ *  - Proper handling of user-supplied symbol tables -- if we allow it at all.
  *  - Auto-flush (for binary and text)
- *  - Check that arguments match the signatures of macros/templates (in all cases).
+ *  - Check that arguments match the signatures of macros/templates, including the type of tagless values (in all cases).
  *  - Check that values in TE lists/sexps are the right encoding (in all cases).
  *  - If a macro has a fixed size because it only has tagless parameters, always write it without a length prefix
  *  - Determine if it's faster to read template definitions that use prefixed vs delimited containers, and make this
@@ -182,9 +182,9 @@ internal class IonManagedWriter_1_1(
         }
     }
 
-    private fun _private_clearAnnotations() {
+    private fun clearAnnotations() {
         numAnnotations = 0
-        // erase the first entries to ensure old values don't leak into `_private_hasFirstAnnotation()`
+        // erase the first entries to ensure old values don't leak into isIonSymbolTableAnnotationPresent()
         annotationsIdBuffer[0] = -1
         annotationsTextBuffer[0] = null
     }
@@ -202,7 +202,7 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun setTypeAnnotations(annotations: Array<String>?) {
-        _private_clearAnnotations()
+        clearAnnotations()
         numAnnotations = annotations?.size ?: 0
         ensureAnnotationSpace(numAnnotations)
         annotations?.forEachIndexed { index, text ->
@@ -212,7 +212,7 @@ internal class IonManagedWriter_1_1(
     }
 
     override fun setTypeAnnotationSymbols(annotations: Array<SymbolToken>?) {
-        _private_clearAnnotations()
+        clearAnnotations()
         numAnnotations = annotations?.size ?: 0
         ensureAnnotationSpace(numAnnotations)
         annotations?.forEachIndexed { index, token ->
@@ -226,18 +226,18 @@ internal class IonManagedWriter_1_1(
         when (containerType) {
             IonType.LIST -> {
                 writeTaggedValueFieldNameAndAnnotations()
-                userData.stepInList(options.writeLengthPrefix(ContainerType.LIST, newDepth))
+                userData.stepInList(options.shouldWriteLengthPrefix(ContainerType.LIST, newDepth))
             }
             IonType.SEXP -> {
                 writeTaggedValueFieldNameAndAnnotations()
-                userData.stepInSExp(options.writeLengthPrefix(ContainerType.SEXP, newDepth))
+                userData.stepInSExp(options.shouldWriteLengthPrefix(ContainerType.SEXP, newDepth))
             }
             IonType.STRUCT -> {
                 if (depth == 0 && isIonSymbolTableAnnotationPresent()) {
                     throw IonException("Ion 1.0 symbol tables not permitted in the Ion 1.1 managed writer.")
                 }
                 writeTaggedValueFieldNameAndAnnotations()
-                userData.stepInStruct(options.writeLengthPrefix(ContainerType.STRUCT, newDepth))
+                userData.stepInStruct(options.shouldWriteLengthPrefix(ContainerType.STRUCT, newDepth))
             }
             else -> throw IllegalArgumentException("Not a container type: $containerType")
         }
@@ -248,7 +248,7 @@ internal class IonManagedWriter_1_1(
         require(macro is MacroImpl) { "Provided macro is not an Ion 1.1 macro." }
         writeTaggedValueFieldNameAndAnnotations()
         val macroId = encodingContextManager.getOrAssignMacroAddress(macro, name.takeIf { options.useMacroNames })
-        userData.stepInTaglessElementList(macroId, name, lengthPrefixed = options.writeLengthPrefix(ContainerType.EEXP, macroId))
+        userData.stepInTaglessElementList(macroId, name, lengthPrefixed = options.shouldWriteLengthPrefix(ContainerType.EEXP, macroId))
         containers.push { it.resetForMacroTESequence(macroId) }
     }
 
@@ -262,7 +262,7 @@ internal class IonManagedWriter_1_1(
         require(macro is MacroImpl) { "Provided macro is not an Ion 1.1 macro." }
         writeTaggedValueFieldNameAndAnnotations()
         val macroId = encodingContextManager.getOrAssignMacroAddress(macro, name.takeIf { options.useMacroNames })
-        userData.stepInTaglessElementSExp(macroId, name, lengthPrefixed = options.writeLengthPrefix(ContainerType.EEXP, macroId))
+        userData.stepInTaglessElementSExp(macroId, name, lengthPrefixed = options.shouldWriteLengthPrefix(ContainerType.EEXP, macroId))
         containers.push { it.resetForMacroTESequence(macroId) }
     }
 
@@ -308,11 +308,7 @@ internal class IonManagedWriter_1_1(
             for (i in 0 until numAnnotations) {
                 val annotationText = annotationsTextBuffer[i]
                 val sid = annotationsIdBuffer[i]
-                if (sid >= 0) {
-                    handleSymbolToken(UNKNOWN_SYMBOL_ID, annotationText, SymbolKind.ANNOTATION, userData)
-                } else {
-                    handleSymbolToken(sid, annotationText, SymbolKind.ANNOTATION, userData)
-                }
+                handleSymbolToken(sid, annotationText, SymbolKind.ANNOTATION, userData)
             }
             this.numAnnotations = 0
         }
@@ -321,15 +317,12 @@ internal class IonManagedWriter_1_1(
     override fun writeSymbol(content: String?) {
         val container = containers.peek()
         if (container.childIsTaggedValue()) {
-            if (content == null) {
-                writeTaggedValueFieldNameAndAnnotations()
-                userData.writeNull(IonType.SYMBOL)
-            } else {
-                if (numAnnotations > 0 && depth == 0 && ION_VERSION_MARKER_REGEX.matches(content)) {
+            writeTaggedValueFieldNameAndAnnotations()
+            content.writeMaybeNull(IonType.SYMBOL) {
+                if (numAnnotations > 0 && depth == 0 && ION_VERSION_MARKER_REGEX.matches(it)) {
                     throw IonException("Can't write a top-level symbol that is the same as an IVM.")
                 }
-                writeTaggedValueFieldNameAndAnnotations()
-                handleSymbolToken(UNKNOWN_SYMBOL_ID, content, SymbolKind.VALUE, userData)
+                handleSymbolToken(UNKNOWN_SYMBOL_ID, it, SymbolKind.VALUE, userData)
             }
         } else {
             content ?: throw IonException("Cannot write null.symbol for tagless symbol")
@@ -351,11 +344,12 @@ internal class IonManagedWriter_1_1(
         if (content?.text != null) return writeSymbol(content.text)
         if (container.childIsTaggedValue()) {
             writeTaggedValueFieldNameAndAnnotations()
-            if (content == null) {
-                userData.writeNull(IonType.SYMBOL)
-            } else {
+            content.writeMaybeNull(IonType.SYMBOL) {
                 // TODO: Check to see if the SID refers to a user symbol with text that looks like an IVM
-                handleSymbolToken(content.sid, content.text, SymbolKind.VALUE, userData)
+                if (it.sid == SystemSymbols.ION_SYMBOL_TABLE_SID) {
+                    throw IonException("Can't write a top-level symbol that is the same as an IVM.")
+                }
+                handleSymbolToken(it.sid, it.text, SymbolKind.VALUE, userData)
             }
         } else {
             if (container.childType != OpCode.TE_SYMBOL_FS) {
@@ -384,11 +378,11 @@ internal class IonManagedWriter_1_1(
     /** Helper function that determines whether to write a symbol token as a SID or inline symbol */
     private fun handleSymbolToken(sid: Int, text: String?, kind: SymbolKind, rawWriter: IonRawWriter_1_1, preserveEncoding: Boolean = false) {
         if (text == null) {
-            // No text. Decide whether to write $0 or some other SID
             if (sid == UNKNOWN_SYMBOL_ID) {
                 // No (known) SID either.
                 throw UnknownSymbolException("Cannot write a symbol token with unknown text and unknown SID.")
             } else {
+                // TODO: Should we always write $0 here?
                 rawWriter.write(kind, sid)
             }
         } else if (preserveEncoding && sid < 0) {
@@ -578,7 +572,7 @@ internal class IonManagedWriter_1_1(
                 val includeLengthPrefix = if (definition.signature.isEmpty()) {
                     false
                 } else {
-                    options.writeLengthPrefix(ContainerType.EEXP, depth + 1)
+                    options.shouldWriteLengthPrefix(ContainerType.EEXP, depth + 1)
                 }
                 userData.stepInEExp(address, includeLengthPrefix)
             }

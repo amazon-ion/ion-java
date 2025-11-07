@@ -117,16 +117,16 @@ sealed interface LengthPrefixStrategy {
      * With more context, we could enable strategies like:
      *   - Write lists with annotation `X` as a delimited container.
      */
-    fun writeLengthPrefix(containerType: ContainerType, depth: Int): Boolean
+    fun shouldWriteLengthPrefix(containerType: ContainerType, depth: Int): Boolean
 
     private data object NeverPrefixed : LengthPrefixStrategy {
-        override fun writeLengthPrefix(containerType: ContainerType, depth: Int): Boolean = false
+        override fun shouldWriteLengthPrefix(containerType: ContainerType, depth: Int): Boolean = false
     }
     private data object AlwaysPrefixed : LengthPrefixStrategy {
-        override fun writeLengthPrefix(containerType: ContainerType, depth: Int): Boolean = true
+        override fun shouldWriteLengthPrefix(containerType: ContainerType, depth: Int): Boolean = true
     }
     private data object ContainersPrefixed : LengthPrefixStrategy {
-        override fun writeLengthPrefix(containerType: ContainerType, depth: Int): Boolean = containerType != ContainerType.EEXP
+        override fun shouldWriteLengthPrefix(containerType: ContainerType, depth: Int): Boolean = containerType != ContainerType.EEXP
     }
 
     companion object {
