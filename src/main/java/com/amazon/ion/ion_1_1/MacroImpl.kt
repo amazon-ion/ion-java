@@ -33,7 +33,7 @@ internal class MacroImpl private constructor(private val body: Array<TemplateExp
     }
 
     @get:[SuppressFBWarnings("EI_EXPOSE_REP", justification = "internal use only")]
-    val signature: List<Parameter> = mutableListOf<Parameter>().also { sig -> body.forEach { addPlaceholdersToSignature(it, sig) } }
+    val signature: Array<Parameter> = mutableListOf<Parameter>().also { sig -> body.forEach { addPlaceholdersToSignature(it, sig) } }.toTypedArray()
 
     @get:[SuppressFBWarnings("EI_EXPOSE_REP", justification = "internal use only")]
     val bodyExpressions: List<TemplateExpression> = Arrays.asList(*body)
