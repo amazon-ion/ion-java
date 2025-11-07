@@ -317,9 +317,10 @@ internal class IonManagedWriter_1_1(
     override fun writeSymbol(content: String?) {
         val container = containers.peek()
         if (container.childIsTaggedValue()) {
+            val numAnnotations = this.numAnnotations // Store before writeTaggedValueFieldNameAndAnnotations resets to 0
             writeTaggedValueFieldNameAndAnnotations()
             content.writeMaybeNull(IonType.SYMBOL) {
-                if (numAnnotations > 0 && depth == 0 && ION_VERSION_MARKER_REGEX.matches(it)) {
+                if (numAnnotations == 0 && depth == 0 && ION_VERSION_MARKER_REGEX.matches(it)) {
                     throw IonException("Can't write a top-level symbol that is the same as an IVM.")
                 }
                 handleSymbolToken(UNKNOWN_SYMBOL_ID, it, SymbolKind.VALUE, userData)
@@ -343,10 +344,11 @@ internal class IonManagedWriter_1_1(
         val container = containers.peek()
         if (content?.text != null) return writeSymbol(content.text)
         if (container.childIsTaggedValue()) {
+            val numAnnotations = this.numAnnotations // Store before writeTaggedValueFieldNameAndAnnotations resets to 0
             writeTaggedValueFieldNameAndAnnotations()
             content.writeMaybeNull(IonType.SYMBOL) {
                 // TODO: Check to see if the SID refers to a user symbol with text that looks like an IVM
-                if (it.sid == SystemSymbols.ION_SYMBOL_TABLE_SID) {
+                if (numAnnotations == 0 && depth == 0 && it.sid == SystemSymbols.ION_1_0_SID) {
                     throw IonException("Can't write a top-level symbol that is the same as an IVM.")
                 }
                 handleSymbolToken(it.sid, it.text, SymbolKind.VALUE, userData)
