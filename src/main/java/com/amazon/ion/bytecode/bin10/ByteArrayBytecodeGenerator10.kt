@@ -80,9 +80,9 @@ internal class ByteArrayBytecodeGenerator10(
     override fun readTimestampReference(position: Int, length: Int) = readTimestampReference(source, position, length)
 
     override fun readTextReference(position: Int, length: Int): String {
-        scratchBuffer.limit(position + length)
-        scratchBuffer.position(position)
-        return decoder.decode(scratchBuffer, length)
+        // TODO(perf): See if there's a way to do this without allocating new ByteBuffers, that is compatible with JDK 8.
+        val buffer = ByteBuffer.wrap(source, position, length)
+        return decoder.decode(buffer, length)
     }
 
     override fun readBytesReference(position: Int, length: Int): ByteSlice = ByteSlice(source, position, position + length)
