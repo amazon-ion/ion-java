@@ -43,7 +43,6 @@ internal class ByteArrayBytecodeGenerator10(
 ) : BytecodeGenerator {
 
     private val decoder = Utf8StringDecoderPool.getInstance().getOrCreate()
-    private val scratchBuffer = ByteBuffer.wrap(source)
     private var scratchArray = ByteArray(32)
     private val symbolTableHelper = SymbolTableHelper
 
