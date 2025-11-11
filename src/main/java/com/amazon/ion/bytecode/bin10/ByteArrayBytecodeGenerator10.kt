@@ -23,6 +23,7 @@ import com.amazon.ion.impl.bin.utf8.Utf8StringDecoderPool
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings
 import java.lang.IllegalStateException
 import java.math.BigInteger
+import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 import kotlin.math.min
@@ -43,6 +44,7 @@ internal class ByteArrayBytecodeGenerator10(
 ) : BytecodeGenerator {
 
     private val decoder = Utf8StringDecoderPool.getInstance().getOrCreate()
+    private val scratchBuffer = ByteBuffer.wrap(source)
     private var scratchArray = ByteArray(32)
     private val symbolTableHelper = SymbolTableHelper
 
@@ -79,9 +81,13 @@ internal class ByteArrayBytecodeGenerator10(
     override fun readTimestampReference(position: Int, length: Int) = readTimestampReference(source, position, length)
 
     override fun readTextReference(position: Int, length: Int): String {
-        // TODO(perf): See if there's a way to do this without allocating new ByteBuffers, that is compatible with JDK 8.
-        val buffer = ByteBuffer.wrap(source, position, length)
-        return decoder.decode(buffer, length)
+        val b = scratchBuffer
+        // We have to cast to `Buffer` here because JDK 17 added an override that returns `ByteBuffer`.
+        // The compiler seems to prefer that version, rather than the base method (which returns `Buffer`), and so
+        // running the tests with JDK 8 fails without this cast.
+        (b as Buffer).limit(position + length)
+        (b as Buffer).position(position)
+        return decoder.decode(b, length)
     }
 
     override fun readBytesReference(position: Int, length: Int): ByteSlice = ByteSlice(source, position, position + length)
