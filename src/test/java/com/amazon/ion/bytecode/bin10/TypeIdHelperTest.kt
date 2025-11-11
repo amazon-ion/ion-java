@@ -176,7 +176,6 @@ class TypeIdHelperTest {
         "0x20, INT",
         "0x2E, INT",
         "0x2F, INT",
-        "0x30, UNSET",
         "0x31, INT",
         "0x3E, INT",
         "0x3F, INT",
@@ -208,7 +207,7 @@ class TypeIdHelperTest {
         "0xCE, SEXP",
         "0xCF, SEXP",
         "0xD0, STRUCT",
-        "0xD1, UNSET",
+        "0xD1, STRUCT",
         "0xDE, STRUCT",
         "0xDF, STRUCT",
         "0xE0, IVM",
@@ -230,8 +229,8 @@ class TypeIdHelperTest {
         "0x0F, 0", // NULL (length 0)
         "0x10, 0", // BOOL false (length 0)
         "0x11, 0", // BOOL true (length 0)
-        "0x12, 2", // Length 2
-        "0x1E, -1", // VarUInt follows
+        "0x12, -2", // invalid
+        "0x1E, -2", // invalid
         "0x1F, 0", // NULL (length 0)
         "0x20, 0", // Length 0
         "0x21, 1", // Length 1
