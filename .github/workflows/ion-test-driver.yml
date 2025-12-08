@@ -13,14 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ion-java
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # master
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # master
         with:
           repository: amazon-ion/ion-java
           ref: master
           path: ion-java
 
       - name: Checkout ion-test-driver
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # master
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # master
         with:
           repository: amazon-ion/ion-test-driver
           ref: master
@@ -90,7 +90,7 @@ jobs:
     needs: ion-test-driver
     if: ${{ failure() }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # master
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # master
       - name: Open an issue
         uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 # v2.9.2
         env:
