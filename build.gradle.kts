@@ -82,6 +82,11 @@ dependencies {
     testImplementation("pl.pragmatists:JUnitParams:1.1.1")
     testImplementation("com.google.code.tempus-fugit:tempus-fugit:1.1")
     testImplementation("com.github.luben:zstd-jni:1.5.6-5")
+
+    if (project.hasProperty("fuzz")) {
+        testImplementation("com.code-intelligence:jazzer-api:0.22.1")
+        testImplementation("com.code-intelligence:jazzer-junit:0.22.1")
+    }
 }
 
 group = "com.amazon.ion"
@@ -508,6 +513,10 @@ tasks {
         applyCommonTestConfig()
         // report is always generated after tests run
         finalizedBy(jacocoTestReport)
+        
+        if (!project.hasProperty("fuzz")) {
+            exclude("**/fuzz/**")
+        }
     }
 
     /**
