@@ -53,8 +53,11 @@ public class IonWriterFuzzer {
                     case 12: try { writer.stepOut(); } catch (Exception e) {} break;
                 }
             }
-        } catch (Exception e) {
-            // Expected
+        } catch (Throwable e) {
+            if (e instanceof AssertionError) {
+                throw (AssertionError) e;
+            }
+            // Expected for other exceptions during fuzzing
         }
     }
 }

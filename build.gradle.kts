@@ -506,6 +506,7 @@ tasks {
         group = "verification"
         maxHeapSize = "1g" // When this line was added Xmx 512m was the default, and we saw OOMs
         maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)
+        enableAssertions = true
         useJUnitPlatform()
     }
 
