@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonConstants.makeUnicodeScalar;
@@ -81,12 +68,16 @@ final class OutputStreamFastAppendable
     public final void appendAscii(char c)
         throws IOException
     {
-        if (_pos == _byteBuffer.length) {
-            _out.write(_byteBuffer, 0, _pos);
-            _pos = 0;
+        int pos = _pos;
+        // Use compile-time constant MAX_BYTES_LEN so JIT can fold the check
+        // without loading the buffer's .length each call.
+        if (pos == MAX_BYTES_LEN) {
+            _out.write(_byteBuffer, 0, pos);
+            pos = 0;
         }
         assert c < 0x80;
-        _byteBuffer[_pos++] = (byte)c;
+        _byteBuffer[pos] = (byte)c;
+        _pos = pos + 1;
     }
 
     public final void appendAscii(CharSequence csq)
@@ -121,14 +112,22 @@ final class OutputStreamFastAppendable
                 } while (start < end);
             }
         } else {
-            for (int ii=start; ii < end; ii++) {
-                if (_pos == _byteBuffer.length) {
+            // Optimized path for non-String CharSequence: batch writes to reduce per-character buffer checks
+            while (start < end) {
+                // Calculate how many characters we can write before needing to flush
+                int available = _byteBuffer.length - _pos;
+                if (available == 0) {
                     _out.write(_byteBuffer, 0, _pos);
                     _pos = 0;
+                    available = _byteBuffer.length;
                 }
-                char c = csq.charAt(ii);
-                assert c < 0x80;
-                _byteBuffer[_pos++] = (byte)c;
+                // Write as many characters as possible in this batch
+                int batchEnd = start + Math.min(available, end - start);
+                while (start < batchEnd) {
+                    char c = csq.charAt(start++);
+                    assert c < 0x80;
+                    _byteBuffer[_pos++] = (byte)c;
+                }
             }
         }
     }

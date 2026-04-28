@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_IonConstants.MAX_LONG_TEXT_SIZE;
@@ -575,45 +562,50 @@ public final class _Private_IonTextAppender
         throws IOException
     {
         int len = text.length();
-        for (int i = 0; i < len; ++i)
+        int i = 0;
+
+        while (i < len)
         {
-            // Find a span of non-escaped ASCII code points so we can write
-            // them as quickly as possible.
-            char c = 0;
-            int j;
-            for (j = i; j < len; ++j) {
-                c = text.charAt(j);
-                // The escapes array always includes U+80 through U+FF.
-                if (c >= 0x100 || escapes[c] != null)
-                {
-                    // c is escaped and/or outside ASCII range.
-                    if (j > i) {
-                        appendAscii(text, i, j);
-                        i = j;
-                    }
+            // Fast path: find a span of characters that don't need escaping.
+            // escapes[] has entries for every code point that needs escaping (including
+            // U+80..U+FF), so a single lookup per character is sufficient; an extra
+            // lookup table ended up SLOWER than this (see CR-266045891 benchmark).
+            int spanStart = i;
+            while (i < len) {
+                char c = text.charAt(i);
+                if (c >= 0x100 || escapes[c] != null) {
                     break;
                 }
+                i++;
             }
-            if (j == len) {
-                // we've reached the end of sequence; append it and break
-                appendAscii(text, i, j);
+
+            // Write the safe span if any
+            if (i > spanStart) {
+                appendAscii(text, spanStart, i);
+            }
+
+            // Process any remaining characters that need special handling
+            if (i >= len) {
                 break;
             }
 
-            // We've found a code point that's escaped and/or non-ASCII.
+            char c = text.charAt(i);
 
             if (c < 0x80)
             {
-                // An escaped ASCII character.
-                assert escapes[c] != null;
-                appendAscii(escapes[c]);
+                // ASCII character that needs escaping
+                String escape = escapes[c];
+                if (escape != null) {
+                    appendAscii(escape);
+                } else {
+                    // Safe ASCII char that wasn't caught by fast path (shouldn't happen often)
+                    appendAscii(c);
+                }
             }
             else if (c < 0x100)
             {
                 // Non-ASCII LATIN-1; we will have an escape sequence but may
                 // not use it.
-                assert escapes[c] != null;
-
                 // Always escape the C1 control codes U+80 through U+9F.
                 if (escapeNonAscii || c <= 0x9F) {
                     appendAscii(escapes[c]);
@@ -624,8 +616,8 @@ public final class _Private_IonTextAppender
             else if (c < 0xD800 || c >= 0xE000)
             {
                 // Not LATIN-1, but still in the BMP.
-                String s = Integer.toHexString(c);
                 if (escapeNonAscii) {
+                    String s = Integer.toHexString(c);
                     appendAscii(HEX_4_PREFIX);
                     appendAscii(ZERO_PADDING[4 - s.length()]);
                     appendAscii(s);
@@ -657,14 +649,13 @@ public final class _Private_IonTextAppender
             else
             {
                 // unmatched low surrogate
-                assert isLowSurrogate(c);
-
                 String message =
                     "text is invalid UTF-16. It contains an unmatched " +
                     "trailing surrogate 0x" + Integer.toHexString(c) +
                     " at index " + i;
                 throw new IllegalArgumentException(message);
             }
+            i++;
         }
     }
 
