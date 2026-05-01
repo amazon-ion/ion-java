@@ -620,7 +620,18 @@ import java.util.ArrayList;
             }
             // index is now positioned on an ancestor container that has a patch point
             for (int i = index + 1; i <= containerIndex; i++) {
-                containers.get(i).patchIndex = patchPointsLength++;
+                int patchIndex = patchPointsLength++;
+                containers.get(i).patchIndex = patchIndex;
+                // Invalidate any stale patch point data from a previous segment.
+                // If the ancestor's content ultimately fits in preallocated space, this slot
+                // will never be overwritten, so we must ensure stale data with a positive length
+                // is not mistakenly applied during finish().
+                if (patchIndex < patchPoints.size()) {
+                    PatchPoint existing = patchPoints.get(patchIndex);
+                    if (existing != null) {
+                        existing.initialize(-1, -1, -1);
+                    }
+                }
             }
         }
 
