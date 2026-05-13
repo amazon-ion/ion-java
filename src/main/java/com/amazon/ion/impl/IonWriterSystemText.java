@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SystemSymbols.SYMBOLS;
@@ -69,6 +56,12 @@ class IonWriterSystemText
 
     CharSequence _separator_character;
 
+    /**
+     * Cached result of IonTextUtils.isAllWhitespace(_separator_character).
+     * Updated whenever _separator_character is set to avoid repeated computation.
+     */
+    private boolean _separator_is_whitespace;
+
     int         _top;
     int []      _stack_parent_type = new int[10];
     boolean[]   _stack_pending_comma = new boolean[10];
@@ -92,6 +85,7 @@ class IonWriterSystemText
         _options = options;
 
         _separator_character = _options.topLevelSeparator();
+        _separator_is_whitespace = IonTextUtils.isAllWhitespace(_separator_character);
 
         int threshold = _options.getLongStringThreshold();
         if (threshold < 1) threshold = Integer.MAX_VALUE;
@@ -149,13 +143,16 @@ class IonWriterSystemText
         switch (typeid) {
         case _Private_IonConstants.tidSexp:
             _separator_character = " ";
+            _separator_is_whitespace = true;
             break;
         case _Private_IonConstants.tidList:
         case _Private_IonConstants.tidStruct:
             _separator_character = ",";
+            _separator_is_whitespace = false;
             break;
         default:
             _separator_character = _options.lineSeparator();
+            _separator_is_whitespace = true; // line separators are whitespace
         break;
         }
         _top++;
@@ -181,21 +178,26 @@ class IonWriterSystemText
         case -1:
             _in_struct = false;
             _separator_character = _options.topLevelSeparator();
+            _separator_is_whitespace = IonTextUtils.isAllWhitespace(_separator_character);
             break;
         case _Private_IonConstants.tidSexp:
             _in_struct = false;
             _separator_character = " ";
+            _separator_is_whitespace = true;
             break;
         case _Private_IonConstants.tidList:
             _in_struct = false;
             _separator_character = ",";
+            _separator_is_whitespace = false;
             break;
         case _Private_IonConstants.tidStruct:
             _in_struct = true;
             _separator_character = ",";
+            _separator_is_whitespace = false;
             break;
         default:
             _separator_character = _options.lineSeparator();
+            _separator_is_whitespace = true; // line separators are whitespace
             break;
         }
 
@@ -337,7 +339,7 @@ class IonWriterSystemText
         throws IOException
     {
         if (_options.isPrettyPrintOn()) {
-            if (_pending_separator && !IonTextUtils.isAllWhitespace(_separator_character)) {
+            if (_pending_separator && !_separator_is_whitespace) {
                 // Only bother if the separator is non-whitespace.
                 _output.appendAscii(_separator_character);
                 followingLongString = false;
@@ -347,7 +349,7 @@ class IonWriterSystemText
         }
         else if (_pending_separator) {
             _output.appendAscii(_separator_character);
-            if (!IonTextUtils.isAllWhitespace(_separator_character)) followingLongString = false;
+            if (!_separator_is_whitespace) followingLongString = false;
         }
         return followingLongString;
     }

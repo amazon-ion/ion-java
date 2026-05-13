@@ -1841,10 +1841,23 @@ final class IonReaderTextRawTokensX
 
     private final int skip_over_symbol_identifier(SavePoint sp) throws IOException
     {
-        int c = read_char();
-
-        while(IonTokenConstsX.isValidSymbolCharacter(c)) {
-            c = read_char();
+        // Optimized: read directly from stream for symbol identifier characters.
+        // Valid symbol chars (a-z, A-Z, 0-9, $, _) never include newlines,
+        // so we can skip the newline check in read_char() for the common case.
+        int c;
+        for (;;) {
+            c = _stream.read();
+            // Fast path: check if it's a valid symbol character
+            // Valid symbol chars are all in the ASCII range and never newlines
+            if (c >= 0 && c <= 0x7F && IonTokenConstsX.isValidSymbolCharacter(c)) {
+                continue;
+            }
+            // Slow path: handle terminating characters
+            // Need to check for newlines for proper line counting
+            if (c == '\r' || c == '\n') {
+                c = line_count(c);
+            }
+            break;
         }
 
         if (sp != null) {
@@ -1855,10 +1868,25 @@ final class IonReaderTextRawTokensX
 
     protected void load_symbol_identifier(StringBuilder sb) throws IOException
     {
-        int c = read_char();
-        while(IonTokenConstsX.isValidSymbolCharacter(c)) {
-            sb.append((char)c);
-            c = read_char();
+        // Optimized: read directly from stream for symbol identifier characters.
+        // Valid symbol chars (a-z, A-Z, 0-9, $, _) never include newlines,
+        // so we can skip the newline check in read_char() for the common case.
+        int c;
+        for (;;) {
+            c = _stream.read();
+            // Fast path: check if it's a valid symbol character (ASCII only)
+            // Valid symbol chars are: a-z, A-Z, 0-9, $, _
+            // These are all in the 0x24-0x7A range (with gaps)
+            if (c >= 0 && c <= 0x7F && IonTokenConstsX.isValidSymbolCharacter(c)) {
+                sb.append((char)c);
+                continue;
+            }
+            // Slow path: handle terminating characters
+            // Need to check for newlines for proper line counting
+            if (c == '\r' || c == '\n') {
+                c = line_count(c);
+            }
+            break;
         }
         unread_char(c);
     }
@@ -1941,7 +1969,29 @@ final class IonReaderTextRawTokensX
         boolean expectLowSurrogate = false;
 
         for (;;) {
-            c = read_string_char(ProhibitedCharacters.NONE);
+            // Fast path: read directly from stream for common ASCII characters.
+            // ASCII printable chars (0x20-0x7E) excluding '\'' (0x27) and '\' (0x5C)
+            // don't need prohibited char checks, UTF-8 decoding, or surrogate handling.
+            c = _stream.read();
+            if (c > 0x27 && c != '\\' && c < 0x7F) {
+                // Common case: printable ASCII char (not '\'' or '\')
+                sb.append((char)c);
+                continue;
+            }
+            // Handle space, '!', '"', '#', '$', '%', '&' (0x20-0x26) which are also safe ASCII
+            if (c >= 0x20 && c < 0x27) {
+                sb.append((char)c);
+                continue;
+            }
+
+            // Slow path: handle special characters
+            // First, apply prohibited character check for control chars
+            // ProhibitedCharacters.NONE means no characters are prohibited
+            // Handle newlines and backslash for line counting
+            if (c == '\r' || c == '\n' || c == '\\') {
+                c = line_count(c);
+            }
+
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -2025,7 +2075,36 @@ final class IonReaderTextRawTokensX
         boolean expectLowSurrogate = false;
 
         for (;;) {
-            c = read_string_char(ProhibitedCharacters.SHORT_CHAR);
+            // Fast path: read directly from stream for common ASCII characters.
+            // ASCII printable chars (0x20-0x7E) excluding '"' (0x22) and '\' (0x5C)
+            // don't need prohibited char checks, UTF-8 decoding, or surrogate handling.
+            c = _stream.read();
+            if (c > 0x22 && c != '\\' && c < 0x7F) {
+                // Common case: printable ASCII char (not '"' or '\')
+                // No need for surrogate checks since ASCII chars can't be surrogates
+                sb.append((char)c);
+                continue;
+            }
+            // Handle space and '!' (0x20-0x21) which are also safe ASCII
+            if (c == 0x20 || c == 0x21) {
+                sb.append((char)c);
+                continue;
+            }
+
+            // Slow path: handle special characters
+            // First, apply prohibited character check for control chars
+            // SHORT_CHAR prohibits control chars except whitespace (tab, vtab, form feed)
+            // AND except '\r'/'\n' which fall through to line_count() below.
+            if (c >= 0 && c <= 0x1F
+                && c != 0x09 && c != 0x0A && c != 0x0B && c != 0x0C && c != 0x0D) {
+                // Control character that is not whitespace (tab, vtab, form feed, CR, LF)
+                error("invalid character [" + printCodePointAsString(c) + "]");
+            }
+            // Handle newlines and backslash for line counting
+            if (c == '\r' || c == '\n' || c == '\\') {
+                c = line_count(c);
+            }
+
             switch (c) {
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
             case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
@@ -2399,11 +2478,35 @@ final class IonReaderTextRawTokensX
 
     private void skip_over_blob(SavePoint sp) throws IOException
     {
-        int c = skip_over_blob_whitespace();
+        // Optimized blob skipping: directly read characters and skip whitespace inline.
+        // For blob data, most characters are base64 (A-Z, a-z, 0-9, +, /, =), not whitespace.
+        // This avoids the overhead of calling skip_over_blob_whitespace() for each character.
+        int c;
         for (;;) {
-            if (c == UnifiedInputStreamX.EOF) break;
-            if (c == '}') break;
-            c = skip_over_blob_whitespace();
+            c = _stream.read();
+            // Fast path: check for common non-whitespace characters first
+            // Base64 chars and most ASCII don't need special handling
+            if (c > ' ' && c != '}') {
+                // Not whitespace and not end of blob - continue scanning
+                // Handle newlines for line counting (rare in blob data)
+                // Note: '\r' is 13, '\n' is 10, both < ' ' (32), so already excluded
+                continue;
+            }
+            // Handle whitespace characters
+            if (c == ' ' || c == '\t') {
+                continue;
+            }
+            // Handle newlines (need line counting)
+            if (c == '\r' || c == '\n') {
+                line_count(c);
+                continue;
+            }
+            // Check for end conditions: EOF or '}'
+            if (c == UnifiedInputStreamX.EOF || c == '}') {
+                break;
+            }
+            // Handle other special negative values from line_count
+            // These are rare in blob data
         }
         if (sp != null) {
             // we don't care about these last 2 closing curly braces
@@ -2541,7 +2644,23 @@ final class IonReaderTextRawTokensX
         // will be 1 byte returned immediately and 0-2 bytes
         // put on the _binhex_stack to return later
 
-        int c = skip_over_blob_whitespace();
+        // Optimized: inline whitespace skipping for the first character
+        int c;
+        for (;;) {
+            c = _stream.read();
+            if (c > ' ') {
+                // Not whitespace - this is the common case
+                break;
+            }
+            if (c == ' ' || c == '\t') {
+                continue;
+            }
+            if (c == '\r' || c == '\n') {
+                line_count(c);
+                continue;
+            }
+            break;
+        }
         if (c == UnifiedInputStreamX.EOF || c == '}') {
             // we'll figure how which is which by check the stream for eof
             return UnifiedInputStreamX.EOF;
@@ -2587,7 +2706,29 @@ final class IonReaderTextRawTokensX
         return read_base64_getchar_helper2(c);
     }
     private final int read_base64_getchar_helper() throws IOException {
-        int c = skip_over_blob_whitespace();
+        // Optimized: inline whitespace skipping for better performance.
+        // Most base64 data has no whitespace between characters.
+        int c;
+        for (;;) {
+            c = _stream.read();
+            // Fast path: check for valid base64 characters (most common case)
+            // Base64 alphabet: A-Z (65-90), a-z (97-122), 0-9 (48-57), + (43), / (47), = (61)
+            if (c > ' ') {
+                // Not whitespace - this is the common case
+                break;
+            }
+            // Handle whitespace
+            if (c == ' ' || c == '\t') {
+                continue;
+            }
+            // Handle newlines (need line counting)
+            if (c == '\r' || c == '\n') {
+                line_count(c);
+                continue;
+            }
+            // EOF or other special character
+            break;
+        }
         if (c == UnifiedInputStreamX.EOF || c == '}') {
             error("invalid base64 image - too short");
         }

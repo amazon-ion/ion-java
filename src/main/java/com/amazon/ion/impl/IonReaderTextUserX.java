@@ -16,8 +16,6 @@ import com.amazon.ion.SymbolToken;
 import com.amazon.ion.TextSpan;
 import com.amazon.ion.UnknownSymbolException;
 import com.amazon.ion.UnsupportedIonVersionException;
-import java.util.regex.Pattern;
-
 /**
  *    The text user reader add support for symbols and recognizes,
  *    and consumes (and processes), the system values $ion_1_0 and
@@ -43,7 +41,8 @@ class IonReaderTextUserX
     extends IonReaderTextSystemX
     implements _Private_ReaderWriter
 {
-    private static final Pattern ION_VERSION_MARKER_REGEX = Pattern.compile("^\\$ion_[0-9]+_[0-9]+$");
+    // Prefix for Ion version markers: "$ion_"
+    private static final String ION_VERSION_MARKER_PREFIX = "$ion_";
 
     /**
      * This is the physical start-of-stream offset when this reader was created.
@@ -157,9 +156,54 @@ class IonReaderTextUserX
         return (!_eof);
     }
 
+    /**
+     * Checks if the given text matches the Ion version marker pattern: $ion_[0-9]+_[0-9]+
+     * This is an optimized implementation that avoids regex overhead by using direct
+     * character-by-character validation.
+     */
     private static boolean isIonVersionMarker(String text)
     {
-        return text != null && ION_VERSION_MARKER_REGEX.matcher(text).matches();
+        if (text == null) {
+            return false;
+        }
+        int len = text.length();
+        // Minimum valid marker is "$ion_X_Y" where X and Y are at least one digit each
+        // "$ion_" is 5 chars, plus at least 1 digit, underscore, and 1 digit = 8 chars minimum
+        if (len < 8) {
+            return false;
+        }
+        // Check prefix "$ion_"
+        if (!text.startsWith(ION_VERSION_MARKER_PREFIX)) {
+            return false;
+        }
+        // Parse first number (at least one digit required)
+        int i = 5; // Start after "$ion_"
+        if (!isDigit(text.charAt(i))) {
+            return false;
+        }
+        i++;
+        while (i < len && isDigit(text.charAt(i))) {
+            i++;
+        }
+        // Expect underscore separator
+        if (i >= len || text.charAt(i) != '_') {
+            return false;
+        }
+        i++;
+        // Parse second number (at least one digit required)
+        if (i >= len || !isDigit(text.charAt(i))) {
+            return false;
+        }
+        i++;
+        while (i < len && isDigit(text.charAt(i))) {
+            i++;
+        }
+        // Must have consumed entire string
+        return i == len;
+    }
+
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private final void symbol_table_reset()
