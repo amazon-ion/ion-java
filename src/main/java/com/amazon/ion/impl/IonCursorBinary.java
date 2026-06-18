@@ -517,7 +517,11 @@ class IonCursorBinary implements IonCursor {
         }
         long shortfall = minimumNumberOfBytesRequired - refillableState.capacity;
         if (shortfall > 0) {
-            int newSize = (int) Math.min(Math.max(refillableState.capacity * 2, nextPowerOfTwo((int) (refillableState.capacity + shortfall))), maximumFreeSpace);
+            // Grow by doubling rather than allocating the full declared length up front. This prevents a
+            // small malicious payload from triggering a disproportionately large allocation based on an
+            // attacker-declared VarUInt length. If the value is legitimately large, refill() will continue
+            // to grow the buffer as actual data is consumed from the stream.
+            int newSize = (int) Math.min(Math.max(refillableState.capacity * 2L, refillableState.capacity + 1L), maximumFreeSpace);
             byte[] newBuffer = new byte[newSize];
             moveBytesToStartOfBuffer(newBuffer, startOffset);
             refillableState.capacity = newSize;
@@ -672,11 +676,29 @@ class IonCursorBinary implements IonCursor {
      */
     private long refill(long minimumNumberOfBytesRequired) {
         int numberOfBytesFilled = -1;
-        long shortfall;
+        long shortfall = minimumNumberOfBytesRequired - availableAt(offset);
         // Sometimes an InputStream implementation will return fewer than the number of bytes requested even
         // if the stream is not at EOF. If this happens and there is still a shortfall, keep requesting bytes
         // until either the shortfall is filled or EOF is reached.
         do {
+            // If the buffer is full but more bytes are still required, grow it (by doubling) to make room.
+            // Growing here, after data has been read, ensures allocation is proportional to the data actually
+            // present in the stream rather than to an attacker-declared length. Because ensureCapacity() has
+            // already moved buffered bytes to the start of the buffer (offset == 0), growing only requires
+            // copying the existing bytes into a larger array; no parser indices need to be shifted.
+            if (freeSpaceAt(limit) == 0 && (minimumNumberOfBytesRequired - availableAt(offset)) > 0) {
+                if (refillableState.capacity >= refillableState.maximumBufferSize) {
+                    // Cannot grow further; the value exceeds the maximum buffer size.
+                    refillableState.isSkippingCurrentValue = true;
+                    break;
+                }
+                int newSize = (int) Math.min(Math.max(refillableState.capacity * 2L, refillableState.capacity + 1L), refillableState.maximumBufferSize);
+                byte[] newBuffer = new byte[newSize];
+                System.arraycopy(buffer, 0, newBuffer, 0, (int) limit);
+                refillableState.capacity = newSize;
+                buffer = newBuffer;
+                byteBuffer = ByteBuffer.wrap(buffer, (int) offset, (int) refillableState.capacity);
+            }
             try {
                 numberOfBytesFilled = refillableState.inputStream.read(buffer, (int) limit, (int) freeSpaceAt(limit));
             } catch (EOFException e) {

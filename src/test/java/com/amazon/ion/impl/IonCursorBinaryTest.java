@@ -429,6 +429,78 @@ public class IonCursorBinaryTest {
         cursor.close();
     }
 
+    /**
+     * Builds binary Ion for a string value of the given length, with the bytes prefixed by the IVM.
+     * Uses the VarUInt-length string encoding (type 0x8E) so that lengths greater than 13 are supported.
+     */
+    private static int[] stringValueWithLength(int contentLength) {
+        // Encode the content length as a VarUInt (single byte for lengths < 128).
+        if (contentLength >= 128) {
+            throw new IllegalArgumentException("This helper only supports content lengths < 128.");
+        }
+        int[] data = new int[4 + 1 + 1 + contentLength];
+        data[0] = 0xE0; data[1] = 0x01; data[2] = 0x00; data[3] = 0xEA; // IVM
+        data[4] = 0x8E; // String with VarUInt length
+        data[5] = 0x80 | contentLength; // VarUInt length with stop bit
+        for (int i = 0; i < contentLength; i++) {
+            data[6 + i] = 'a';
+        }
+        return data;
+    }
+
+    /**
+     * Verifies that a legitimate value larger than the initial buffer (and larger than a single doubling of it)
+     * is read correctly. This exercises the incremental buffer growth in refill(): the buffer must double
+     * multiple times as real data is consumed from the stream.
+     */
+    @Test
+    public void largeValueReadFromStreamGrowsBufferIncrementally() {
+        int contentLength = 100; // Far larger than the 8-byte initial buffer; requires several doublings.
+        int[] data = stringValueWithLength(contentLength);
+        ByteArrayInputStream in = new ByteArrayInputStream(bytes(data));
+        IonBufferConfiguration config = IonBufferConfiguration.Builder.standard()
+            .withInitialBufferSize(8)
+            .build();
+        IonCursorBinary cursor = new IonCursorBinary(config, in, null, 0, 0);
+        // After the IVM is consumed, buffered bytes are shifted to the start of the buffer, so the content
+        // begins at index 2 (after the type ID and VarUInt length bytes) and ends at 2 + contentLength.
+        assertSequence(
+            cursor,
+            fillScalar(2, 2 + contentLength),
+            endStream()
+        );
+        cursor.close();
+    }
+
+    /**
+     * Verifies that a value declaring a length far larger than the data actually present in the stream does not
+     * cause a disproportionate allocation. The buffer grows only in proportion to the data actually consumed.
+     * When a fixed-size stream is exhausted before the declared length is satisfied, the cursor fails cleanly
+     * with an IonException rather than allocating (or attempting to allocate) the full declared length.
+     */
+    @Test
+    public void lengthBombFromStreamDoesNotOverAllocate() {
+        int[] data = new int[]{
+            0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+            0x8E,                        // String with VarUInt length
+            0x07, 0x7f, 0x7f, 0x7f, 0xf9, // VarUInt length ~2 GB
+            'a', 'b', 'c'                // Only a few actual content bytes follow.
+        };
+        ByteArrayInputStream in = new ByteArrayInputStream(bytes(data));
+        IonBufferConfiguration config = IonBufferConfiguration.Builder.standard()
+            .withInitialBufferSize(8)
+            .build();
+        IonCursorBinary cursor = new IonCursorBinary(config, in, null, 0, 0);
+        // Positioning on the value succeeds; the declared length is not yet validated against available data.
+        assertEquals(START_SCALAR, cursor.nextValue());
+        // Filling the value cannot complete because the stream is exhausted long before the declared length is
+        // reached. The cursor must fail cleanly without over-allocating or hanging.
+        IonException ie = assertThrows(IonException.class, cursor::fillValue);
+        assertThat(ie.getMessage(),
+            containsString("An oversized value was found even though no maximum size was configured."));
+        cursor.close();
+    }
+
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
     public void expectUseAfterCloseToHaveNoEffect(boolean constructFromBytes) {
