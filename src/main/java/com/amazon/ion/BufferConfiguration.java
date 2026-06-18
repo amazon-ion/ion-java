@@ -3,8 +3,6 @@
 
 package com.amazon.ion;
 
-import com.amazon.ion.impl._Private_IonConstants;
-
 /**
  * Provides logic common to all BufferConfiguration implementations.
  * @param <Configuration> the type of the concrete subclass of this BufferConfiguration.
@@ -47,6 +45,12 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         Configuration extends BufferConfiguration<Configuration>,
         BuilderType extends BufferConfiguration.Builder<Configuration, BuilderType>
     > {
+        /**
+         * The default maximum buffer size: 100 MB. This provides protection against memory exhaustion
+         * from malicious inputs that declare excessively large lengths, while remaining large enough
+         * for any realistic well-formed Ion stream.
+         */
+        public static final int DEFAULT_MAXIMUM_BUFFER_SIZE = 100 * 1024 * 1024;
 
         /**
          * Large enough that most streams will never need to grow the buffer. NOTE: this only needs to be large
@@ -62,7 +66,13 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
         /**
          * The maximum number of bytes that will be buffered.
          */
-        private int maximumBufferSize = _Private_IonConstants.ARRAY_MAXIMUM_SIZE;
+        private int maximumBufferSize = DEFAULT_MAXIMUM_BUFFER_SIZE;
+
+        /**
+         * Tracks whether the user has explicitly set the maximum buffer size via
+         * {@link #withMaximumBufferSize(int)}.
+         */
+        private boolean maximumBufferSizeExplicitlySet = false;
 
         /**
          * The handler that will be notified when oversized values are encountered.
@@ -135,13 +145,14 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          * Set the maximum size of the buffer. For binary Ion, the minimum value is 5 because all valid binary Ion data
          * begins with a 4-byte Ion version marker and the smallest value is 1 byte. For text Ion, the minimum value is
          * 2 because the smallest text Ion value is 1 byte and the smallest delimiter is 1 byte.
-         * Default: Near to the maximum size of an array.
+         * Default: 100 MB ({@link #DEFAULT_MAXIMUM_BUFFER_SIZE}).
          *
          * @param maximumBufferSizeInBytes the value.
          * @return this builder.
          */
         public final BuilderType withMaximumBufferSize(final int maximumBufferSizeInBytes) {
             maximumBufferSize = maximumBufferSizeInBytes;
+            maximumBufferSizeExplicitlySet = true;
             return (BuilderType) this;
         }
 
@@ -150,6 +161,14 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
          */
         public int getMaximumBufferSize() {
             return maximumBufferSize;
+        }
+
+        /**
+         * @return true if the maximum buffer size was explicitly set by the user via
+         *         {@link #withMaximumBufferSize(int)}, false if using the default.
+         */
+        public boolean isMaximumBufferSizeExplicitlySet() {
+            return maximumBufferSizeExplicitlySet;
         }
 
         /**
@@ -216,7 +235,7 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
             ));
         }
         if (builder.getOversizedValueHandler() == null) {
-            requireMaximumBufferSize();
+            requireMaximumBufferSize(builder);
             oversizedValueHandler = builder.getThrowingOversizedValueHandler();
         } else {
             oversizedValueHandler = builder.getOversizedValueHandler();
@@ -229,10 +248,11 @@ public abstract class BufferConfiguration<Configuration extends BufferConfigurat
     }
 
     /**
-     * Requires that the maximum buffer size not be limited.
+     * Requires an OversizedValueHandler when the user explicitly sets a custom maximum buffer size.
+     * When using the default, a throwing handler is applied automatically.
      */
-    private void requireMaximumBufferSize() {
-        if (maximumBufferSize < _Private_IonConstants.ARRAY_MAXIMUM_SIZE) {
+    private void requireMaximumBufferSize(Builder<Configuration, ?> builder) {
+        if (builder.isMaximumBufferSizeExplicitlySet()) {
             throw new IllegalArgumentException(
                 "Must specify an OversizedValueHandler when a custom maximum buffer size is specified."
             );

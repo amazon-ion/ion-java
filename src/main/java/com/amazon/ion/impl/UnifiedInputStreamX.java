@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.impl.UnifiedSavePointManagerX.SavePoint;
 import java.io.Closeable;
 import java.io.IOException;
@@ -77,6 +78,16 @@ abstract class UnifiedInputStreamX
     UnifiedSavePointManagerX _save_points;
 
 
+    /**
+     * The maximum total bytes that may be loaded across all pages, or -1 for no limit.
+     */
+    long _maximumTotalBytes = -1;
+
+    /**
+     * Tracks the total bytes loaded across all pages.
+     */
+    long _totalBytesLoaded = 0;
+
     // factories to construct an appropriate input stream
     // based on the input source
     public static UnifiedInputStreamX makeStream(CharSequence chars) {
@@ -94,6 +105,9 @@ abstract class UnifiedInputStreamX
     public static UnifiedInputStreamX makeStream(Reader reader) throws IOException {
         return new FromCharStream(reader);
     }
+    public static UnifiedInputStreamX makeStream(Reader reader, long maximumTotalBytes) throws IOException {
+        return new FromCharStream(reader, maximumTotalBytes);
+    }
     public static UnifiedInputStreamX makeStream(byte[] buffer) {
         return new FromByteArray(buffer, 0, buffer.length);
     }
@@ -102,6 +116,9 @@ abstract class UnifiedInputStreamX
     }
     public static UnifiedInputStreamX makeStream(InputStream stream) throws IOException {
         return new FromByteStream(stream);
+    }
+    public static UnifiedInputStreamX makeStream(InputStream stream, long maximumTotalBytes) throws IOException {
+        return new FromByteStream(stream, maximumTotalBytes);
     }
     public final InputStream getInputStream() { return _stream; }
     public final Reader      getReader()      { return _reader; }
@@ -498,6 +515,14 @@ abstract class UnifiedInputStreamX
             else {
                 read = curr.load(_reader, start_pos, file_position);
             }
+            if (read > 0) {
+                _totalBytesLoaded += read;
+                if (_maximumTotalBytes > 0 && _totalBytesLoaded > _maximumTotalBytes) {
+                    throw new IonException(
+                        "Text stream exceeded maximum buffer size of " + _maximumTotalBytes + " bytes"
+                    );
+                }
+            }
         }
         return read;
     }
@@ -532,9 +557,15 @@ abstract class UnifiedInputStreamX
     {
         FromCharStream(Reader reader) throws IOException
         {
+            this(reader, -1);
+        }
+
+        FromCharStream(Reader reader, long maximumTotalBytes) throws IOException
+        {
             _is_byte_data = false;
             _is_stream = true;
             _reader = reader;
+            _maximumTotalBytes = maximumTotalBytes;
             // If this page size ever becomes configurable watch out for _Private_IonConstants.ARRAY_MAXIMUM_SIZE
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.CHARS, DEFAULT_PAGE_SIZE);
             super.init();
@@ -570,9 +601,15 @@ static class FromByteArray extends UnifiedInputStreamX
     {
         FromByteStream(InputStream stream) throws IOException
         {
+            this(stream, -1);
+        }
+
+        FromByteStream(InputStream stream, long maximumTotalBytes) throws IOException
+        {
             _is_byte_data = true;
             _is_stream = true;
             _stream = stream;
+            _maximumTotalBytes = maximumTotalBytes;
             // If this page size ever becomes configurable watch out for _Private_IonConstants.ARRAY_MAXIMUM_SIZE
             _buffer = UnifiedInputBufferX.makePageBuffer(UnifiedInputBufferX.BufferType.BYTES, DEFAULT_PAGE_SIZE);
             super.init();

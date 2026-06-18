@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
+import com.amazon.ion.IonBufferConfiguration;
 import com.amazon.ion.IonCatalog;
 import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonTextReader;
 import com.amazon.ion.IonValue;
 import com.amazon.ion.util.InputStreamInterceptor;
+import com.amazon.ion.util.LimitedInflaterInputStream;
 import com.amazon.ion.system.IonReaderBuilder;
 import com.amazon.ion.util.IonStreamUtils;
 
@@ -205,6 +207,24 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         }
     }
 
+    /**
+     * Wraps the given InputStream with a {@link LimitedInflaterInputStream} if the interceptor is for GZIP
+     * and a finite maximum buffer size is configured.
+     */
+    private static InputStream wrapWithInflationLimitIfNeeded(
+        _Private_IonReaderBuilder builder,
+        InputStreamInterceptor streamInterceptor,
+        InputStream interceptedStream
+    ) {
+        if ("gzip".equals(streamInterceptor.formatName())) {
+            long maxDecompressedBytes = builder.getBufferConfiguration().getMaximumBufferSize();
+            if (maxDecompressedBytes > 0) {
+                return new LimitedInflaterInputStream(interceptedStream, maxDecompressedBytes);
+            }
+        }
+        return interceptedStream;
+    }
+
     static IonReader buildReader(
         _Private_IonReaderBuilder builder,
         byte[] ionData,
@@ -222,9 +242,11 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
             }
             if (streamInterceptor.isMatch(ionData, offset, length)) {
                 try {
+                    InputStream decompressedStream = streamInterceptor.newInputStream(new ByteArrayInputStream(ionData, offset, length));
+                    decompressedStream = wrapWithInflationLimitIfNeeded(builder, streamInterceptor, decompressedStream);
                     return buildReader(
                         builder,
-                        streamInterceptor.newInputStream(new ByteArrayInputStream(ionData, offset, length)),
+                        decompressedStream,
                         _Private_IonReaderFactory::makeReaderBinary,
                         _Private_IonReaderFactory::makeReaderText,
                         // The builder provides only one level of detection, e.g. GZIP-compressed binary Ion *or*
@@ -275,7 +297,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
 
     @FunctionalInterface
     interface IonReaderFromInputStreamFactoryText {
-        IonReader makeReader(IonCatalog catalog, InputStream source, _Private_LocalSymbolTableFactory lstFactory);
+        IonReader makeReader(IonCatalog catalog, InputStream source, _Private_LocalSymbolTableFactory lstFactory, long maximumTotalBytes);
     }
 
     @FunctionalInterface
@@ -357,6 +379,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
                     ionData = streamInterceptor.newInputStream(
                         new TwoElementInputStream(new ByteArrayInputStream(possibleIVM, 0, bytesRead), ionData)
                     );
+                    ionData = wrapWithInflationLimitIfNeeded(builder, streamInterceptor, ionData);
                 } catch (IOException e) {
                     throw new IonException(e);
                 }
@@ -376,7 +399,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
         } else {
             wrapper = ionData;
         }
-        return text.makeReader(builder.validateCatalog(), wrapper, builder.lstFactory);
+        return text.makeReader(builder.validateCatalog(), wrapper, builder.lstFactory, builder.getBufferConfiguration().getMaximumBufferSize());
     }
 
     @Override
@@ -393,7 +416,7 @@ public class _Private_IonReaderBuilder extends IonReaderBuilder {
 
     @Override
     public IonReader build(Reader ionText) {
-        return makeReaderText(validateCatalog(), ionText, lstFactory);
+        return makeReaderText(validateCatalog(), ionText, lstFactory, getBufferConfiguration().getMaximumBufferSize());
     }
 
     @Override

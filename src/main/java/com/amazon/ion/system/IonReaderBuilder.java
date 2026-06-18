@@ -101,6 +101,7 @@ public abstract class IonReaderBuilder
     private boolean isIncrementalReadingEnabled = false;
     private IonBufferConfiguration bufferConfiguration = IonBufferConfiguration.DEFAULT;
     private List<InputStreamInterceptor> streamInterceptors = null;
+    private boolean gzipDecompressionEnabled = true;
 
     protected IonReaderBuilder()
     {
@@ -112,6 +113,7 @@ public abstract class IonReaderBuilder
         this.isIncrementalReadingEnabled = that.isIncrementalReadingEnabled;
         this.bufferConfiguration = that.bufferConfiguration;
         this.streamInterceptors = that.streamInterceptors == null ? null : new ArrayList<>(that.streamInterceptors);
+        this.gzipDecompressionEnabled = that.gzipDecompressionEnabled;
     }
 
     /**
@@ -385,10 +387,67 @@ public abstract class IonReaderBuilder
      * @return an unmodifiable view of the stream interceptors currently configured.
      */
     public List<InputStreamInterceptor> getInputStreamInterceptors() {
+        if (!gzipDecompressionEnabled) {
+            if (streamInterceptors == null) {
+                // Filter out GzipStreamInterceptor from the detected list
+                List<InputStreamInterceptor> filtered = new ArrayList<>();
+                for (InputStreamInterceptor interceptor : DETECTED_STREAM_INTERCEPTORS) {
+                    if (!(interceptor instanceof GzipStreamInterceptor)) {
+                        filtered.add(interceptor);
+                    }
+                }
+                return Collections.unmodifiableList(filtered);
+            }
+            // Filter out GzipStreamInterceptor from the custom list
+            List<InputStreamInterceptor> filtered = new ArrayList<>();
+            for (InputStreamInterceptor interceptor : streamInterceptors) {
+                if (!(interceptor instanceof GzipStreamInterceptor)) {
+                    filtered.add(interceptor);
+                }
+            }
+            return Collections.unmodifiableList(filtered);
+        }
         if (streamInterceptors == null) {
             return DETECTED_STREAM_INTERCEPTORS;
         }
         return Collections.unmodifiableList(streamInterceptors);
+    }
+
+    /**
+     * Declares whether GZIP auto-decompression is enabled when building an {@link IonReader},
+     * returning a new mutable builder if the current one is immutable.
+     *
+     * When enabled (the default), GZIP-compressed Ion data is automatically detected and decompressed.
+     * When disabled, GZIP-compressed data is not auto-decompressed.
+     *
+     * @param enabled true to enable GZIP auto-decompression (default), false to disable.
+     * @return this builder instance, if mutable; otherwise a mutable copy of this builder.
+     */
+    public IonReaderBuilder withGzipDecompressionEnabled(boolean enabled) {
+        IonReaderBuilder b = mutable();
+        b.gzipDecompressionEnabled = enabled;
+        return b;
+    }
+
+    /**
+     * Sets whether GZIP auto-decompression is enabled.
+     *
+     * @param enabled true to enable GZIP auto-decompression (default), false to disable.
+     *
+     * @see #withGzipDecompressionEnabled(boolean)
+     *
+     * @throws UnsupportedOperationException if this builder is immutable.
+     */
+    public void setGzipDecompressionEnabled(boolean enabled) {
+        mutationCheck();
+        this.gzipDecompressionEnabled = enabled;
+    }
+
+    /**
+     * @return true if GZIP auto-decompression is enabled (the default).
+     */
+    public boolean isGzipDecompressionEnabled() {
+        return gzipDecompressionEnabled;
     }
 
     /**

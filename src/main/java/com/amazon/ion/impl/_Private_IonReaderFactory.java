@@ -81,9 +81,17 @@ public final class _Private_IonReaderFactory
                                                  InputStream is,
                                                  _Private_LocalSymbolTableFactory lstFactory)
     {
+        return makeReaderText(catalog, is, lstFactory, -1);
+    }
+
+    public static final IonReader makeReaderText(IonCatalog catalog,
+                                                 InputStream is,
+                                                 _Private_LocalSymbolTableFactory lstFactory,
+                                                 long maximumTotalBytes)
+    {
         UnifiedInputStreamX uis;
         try {
-            uis = makeUnifiedStream(is);
+            uis = makeUnifiedStream(is, maximumTotalBytes);
         } catch (IOException e) {
             throw new IonException(e);
         }
@@ -104,12 +112,13 @@ public final class _Private_IonReaderFactory
 
     private static IonReader makeSystemReaderText(IonCatalog catalog,
                                                   InputStream is,
-                                                  _Private_LocalSymbolTableFactory lstFactory)
+                                                  _Private_LocalSymbolTableFactory lstFactory,
+                                                  long maximumTotalBytes)
     {
         UnifiedInputStreamX uis;
         try
         {
-            uis = makeUnifiedStream(is);
+            uis = makeUnifiedStream(is, maximumTotalBytes);
         }
         catch (IOException e)
         {
@@ -139,8 +148,21 @@ public final class _Private_IonReaderFactory
                                                      Reader chars,
                                                      _Private_LocalSymbolTableFactory lstFactory)
     {
+        return makeReaderText(catalog, chars, lstFactory, -1);
+    }
+
+    public static final IonTextReader makeReaderText(IonCatalog catalog,
+                                                     Reader chars,
+                                                     _Private_LocalSymbolTableFactory lstFactory,
+                                                     long maximumTotalBytes)
+    {
         try {
-            UnifiedInputStreamX in = makeStream(chars);
+            UnifiedInputStreamX in;
+            if (maximumTotalBytes > 0) {
+                in = makeStream(chars, maximumTotalBytes);
+            } else {
+                in = makeStream(chars);
+            }
             return new IonReaderTextUserX(catalog, lstFactory, in);
         }
         catch (IOException e) {
@@ -225,14 +247,19 @@ public final class _Private_IonReaderFactory
         return uis;
     }
 
-    private static UnifiedInputStreamX makeUnifiedStream(InputStream in)
+    private static UnifiedInputStreamX makeUnifiedStream(InputStream in, long maximumTotalBytes)
         throws IOException
     {
         in.getClass(); // Force NPE
 
         // TODO avoid multiple wrapping streams, use the UIS for the pushback
         in = IonStreamUtils.unGzip(in);
-        UnifiedInputStreamX uis = UnifiedInputStreamX.makeStream(in);
+        UnifiedInputStreamX uis;
+        if (maximumTotalBytes > 0) {
+            uis = UnifiedInputStreamX.makeStream(in, maximumTotalBytes);
+        } else {
+            uis = UnifiedInputStreamX.makeStream(in);
+        }
         return uis;
     }
 }
