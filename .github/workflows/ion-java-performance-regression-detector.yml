@@ -146,5 +146,5 @@ jobs:
       - name: Detect regression
         working-directory: ion-java-benchmark-cli
         run: |
-          a=$(java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion --benchmark-result-new /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion)
+          a=$(java -jar target/ion-java-benchmark-cli-0.0.1-SNAPSHOT-jar-with-dependencies.jar compare --benchmark-result-previous /home/runner/work/ion-java/ion-java/benchmarkresults/before.ion --benchmark-result-new /home/runner/work/ion-java/ion-java/benchmarkresults/after.ion || true)
           if [ ! -z "$a" ]; then echo "${a}" >> $GITHUB_STEP_SUMMARY; exit 1; fi
