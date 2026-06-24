@@ -325,7 +325,7 @@ public abstract class IonReaderBuilder
     /**
      * Adds an {@link InputStreamInterceptor} to the end of the list that the builder will attempt
      * to apply to a stream before creating {@link IonReader} instances over that stream.
-     * {@link GzipStreamInterceptor} is always consulted first, and need not be added. The first
+     * {@link GzipStreamInterceptor} is normally consulted first, and need not be added. The first
      * interceptor in the list that matches the stream will be used; if any chaining of interceptors
      * is required, it is up to the caller to provide a custom interceptor implementation to
      * achieve this.
@@ -333,13 +333,16 @@ public abstract class IonReaderBuilder
      * Users may also or instead register implementations as service providers on the classpath.
      * See {@link ServiceLoader} for details about how to do this.
      * <p>
-     * The list of stream interceptors available to the reader always begins with
+     * The list of stream interceptors available to the reader normally begins with
      * {@link GzipStreamInterceptor} and is followed by:
      * <ol>
      *     <li>any stream interceptors detected on the classpath using
      *     {@link ServiceLoader#load(Class)}, then</li>
      *     <li>any stream interceptor(s) added by calling this method.</li>
      * </ol>
+     * If GZIP auto-decompression has been disabled via {@link #withGzipDecompressionEnabled(boolean)},
+     * {@link GzipStreamInterceptor} is omitted from the list and any {@link GzipStreamInterceptor}
+     * added by calling this method is filtered out.
      *
      * @param streamInterceptor the stream interceptor to add.
      *
@@ -380,27 +383,22 @@ public abstract class IonReaderBuilder
     }
 
     /**
-     * Gets the {@link InputStreamInterceptor} instances available to this builder. The returned list will always begin
-     * with the default stream interceptor, which detects GZIP. Any stream interceptor(s) detected on the classpath
-     * by {@link ServiceLoader#load(Class)} will immediately follow. Any stream interceptor(s) manually added using
-     * {@link #addInputStreamInterceptor(InputStreamInterceptor)} will occur at the end of the list.
+     * Gets the {@link InputStreamInterceptor} instances available to this builder. Unless GZIP
+     * auto-decompression has been disabled via {@link #withGzipDecompressionEnabled(boolean)}, the returned
+     * list will begin with the default stream interceptor, which detects GZIP. Any stream interceptor(s)
+     * detected on the classpath by {@link ServiceLoader#load(Class)} will immediately follow. Any stream
+     * interceptor(s) manually added using {@link #addInputStreamInterceptor(InputStreamInterceptor)} will occur
+     * at the end of the list. If GZIP auto-decompression has been disabled, {@link GzipStreamInterceptor} is
+     * omitted from the returned list.
      * @return an unmodifiable view of the stream interceptors currently configured.
      */
     public List<InputStreamInterceptor> getInputStreamInterceptors() {
+        List<InputStreamInterceptor> interceptors =
+            streamInterceptors == null ? DETECTED_STREAM_INTERCEPTORS : streamInterceptors;
         if (!gzipDecompressionEnabled) {
-            if (streamInterceptors == null) {
-                // Filter out GzipStreamInterceptor from the detected list
-                List<InputStreamInterceptor> filtered = new ArrayList<>();
-                for (InputStreamInterceptor interceptor : DETECTED_STREAM_INTERCEPTORS) {
-                    if (!(interceptor instanceof GzipStreamInterceptor)) {
-                        filtered.add(interceptor);
-                    }
-                }
-                return Collections.unmodifiableList(filtered);
-            }
-            // Filter out GzipStreamInterceptor from the custom list
+            // Filter out GzipStreamInterceptor so GZIP-compressed data is not auto-decompressed.
             List<InputStreamInterceptor> filtered = new ArrayList<>();
-            for (InputStreamInterceptor interceptor : streamInterceptors) {
+            for (InputStreamInterceptor interceptor : interceptors) {
                 if (!(interceptor instanceof GzipStreamInterceptor)) {
                     filtered.add(interceptor);
                 }
@@ -455,7 +453,8 @@ public abstract class IonReaderBuilder
      * instance over the given block of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data.
+     * This method will auto-detect and uncompress GZIPped Ion data, unless GZIP auto-decompression has been
+     * disabled via {@link #withGzipDecompressionEnabled(boolean)}.
      *
      * @param ionData the source of the Ion data, which may be either Ion binary
      * data or UTF-8 Ion text. The reader retains a reference to the array, so
@@ -476,7 +475,8 @@ public abstract class IonReaderBuilder
      * instance over the given block of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data.
+     * This method will auto-detect and uncompress GZIPped Ion data, unless GZIP auto-decompression has been
+     * disabled via {@link #withGzipDecompressionEnabled(boolean)}.
      *
      * @param ionData the source of the Ion data, which is used only within the
      * range of bytes starting at {@code offset} for {@code len} bytes.
@@ -496,7 +496,8 @@ public abstract class IonReaderBuilder
      * instance over the given stream of Ion data, detecting whether it's text or
      * binary data.
      * <p>
-     * This method will auto-detect and uncompress GZIPped Ion data.
+     * This method will auto-detect and uncompress GZIPped Ion data, unless GZIP auto-decompression has been
+     * disabled via {@link #withGzipDecompressionEnabled(boolean)}.
      * <p>
      * Because this library performs its own buffering, it's recommended that
      * users avoid adding additional buffering to the given stream.

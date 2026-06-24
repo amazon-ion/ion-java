@@ -517,11 +517,13 @@ class IonCursorBinary implements IonCursor {
         }
         long shortfall = minimumNumberOfBytesRequired - refillableState.capacity;
         if (shortfall > 0) {
-            // Grow by doubling rather than allocating the full declared length up front. This prevents a
-            // small malicious payload from triggering a disproportionately large allocation based on an
-            // attacker-declared VarUInt length. If the value is legitimately large, refill() will continue
-            // to grow the buffer as actual data is consumed from the stream.
-            int newSize = (int) Math.min(Math.max(refillableState.capacity * 2L, refillableState.capacity + 1L), maximumFreeSpace);
+            // Grow to the next power of two beyond the current capacity rather than allocating the full declared
+            // length up front. This prevents a small malicious payload from triggering a disproportionately large
+            // allocation based on an attacker-declared VarUInt length: the new size depends only on the current
+            // capacity, never on the requested length. If the value is legitimately large, refill() will continue
+            // to grow the buffer (by doubling) as actual data is consumed from the stream. Because that growth
+            // starts from this power-of-two capacity, doubling keeps the buffer a power of two.
+            int newSize = (int) Math.min(nextPowerOfTwo((int) (refillableState.capacity + 1)), maximumFreeSpace);
             byte[] newBuffer = new byte[newSize];
             moveBytesToStartOfBuffer(newBuffer, startOffset);
             refillableState.capacity = newSize;
@@ -681,11 +683,14 @@ class IonCursorBinary implements IonCursor {
         // if the stream is not at EOF. If this happens and there is still a shortfall, keep requesting bytes
         // until either the shortfall is filled or EOF is reached.
         do {
-            // If the buffer is full but more bytes are still required, grow it (by doubling) to make room.
-            // Growing here, after data has been read, ensures allocation is proportional to the data actually
-            // present in the stream rather than to an attacker-declared length. Because ensureCapacity() has
-            // already moved buffered bytes to the start of the buffer (offset == 0), growing only requires
-            // copying the existing bytes into a larger array; no parser indices need to be shifted.
+            // If the buffer is full but more bytes are still required, grow it (by doubling) to make room before
+            // reading more. The buffer is only grown once it has filled with data actually read from the stream,
+            // so allocation stays proportional to the data present in the stream rather than to an
+            // attacker-declared length. Doubling here (rather than calling nextPowerOfTwo() again) keeps this hot
+            // path cheap; ensureCapacity() always grows first and rounds the capacity up to a power of two, so
+            // doubling from that base keeps the buffer a power of two. Because ensureCapacity() has also already
+            // moved buffered bytes to the start of the buffer (offset == 0), growing only requires copying the
+            // existing bytes into a larger array; no parser indices need to be shifted.
             if (freeSpaceAt(limit) == 0 && (minimumNumberOfBytesRequired - availableAt(offset)) > 0) {
                 if (refillableState.capacity >= refillableState.maximumBufferSize) {
                     // Cannot grow further; the value exceeds the maximum buffer size.
