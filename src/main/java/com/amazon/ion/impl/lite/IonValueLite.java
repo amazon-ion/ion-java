@@ -421,45 +421,45 @@ abstract class IonValueLite
     private static final int nameHashSalt  = 16777619; // prime to salt field names
     private static final int valueHashSalt = 8191; // prime to salt values
 
-    private static class HashHolder {
-        int valueHash = 0;
-        IonContainerLite parent = null;
-        IonContainerLite.SequenceContentIterator iterator = null;
+    /**
+     * Computes the hash contribution of a single struct field, incorporating both the field name and value hash.
+     */
+    private static int hashStructField(int partial, IonValueLite value, IonContainerLite parent) {
+        // If the field name's text is unknown, use its sid instead
+        String text = value._fieldName;
 
-        private int hashStructField(int partial, IonValueLite value) {
-            // If the field name's text is unknown, use its sid instead
-            String text = value._fieldName;
+        int nameHashCode = text == null
+            ? value._fieldId * sidHashSalt
+            : text.hashCode() * textHashSalt;
 
-            int nameHashCode = text == null
-                ? value._fieldId * sidHashSalt
-                : text.hashCode() * textHashSalt;
+        // mixing to account for small text and sid deltas
+        nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
 
-            // mixing to account for small text and sid deltas
-            nameHashCode ^= (nameHashCode << 17) ^ (nameHashCode >> 15);
+        int fieldHashCode = parent.hashSignature();
+        fieldHashCode = valueHashSalt * fieldHashCode + partial;
+        fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
 
-            int fieldHashCode = parent.hashSignature();
-            fieldHashCode = valueHashSalt * fieldHashCode + partial;
-            fieldHashCode = nameHashSalt  * fieldHashCode + nameHashCode;
+        // another mix step for each Field of the struct
+        fieldHashCode ^= (fieldHashCode << 19) ^ (fieldHashCode >> 13);
+        return fieldHashCode;
+    }
 
-            // another mix step for each Field of the struct
-            fieldHashCode ^= (fieldHashCode << 19) ^ (fieldHashCode >> 13);
-            return fieldHashCode;
-        }
-
-        void update(int partial, IonValueLite value) {
-            if (parent == null) {
-                valueHash = partial;
-            } else {
-                if (parent instanceof IonStructLite) {
-                    // Additive hash is used to ensure insensitivity to order of
-                    // fields, and will not lose data on value hash codes
-                    valueHash += hashStructField(partial, value);
-                } else {
-                    valueHash = valueHashSalt * valueHash + partial;
-                    // mixing at each step to make the hash code order-dependent
-                    valueHash ^= (valueHash << 29) ^ (valueHash >> 3);
-                }
-            }
+    /**
+     * Folds a child value's hash into the running container hash. For structs, uses an order-independent additive
+     * scheme; for sequences, uses an order-dependent mixing scheme.
+     */
+    private static int updateHash(int valueHash, int partial, IonValueLite value, IonContainerLite parent) {
+        if (parent == null) {
+            return partial;
+        } else if (parent instanceof IonStructLite) {
+            // Additive hash is used to ensure insensitivity to order of
+            // fields, and will not lose data on value hash codes
+            return valueHash + hashStructField(partial, value, parent);
+        } else {
+            valueHash = valueHashSalt * valueHash + partial;
+            // mixing at each step to make the hash code order-dependent
+            valueHash ^= (valueHash << 29) ^ (valueHash >> 3);
+            return valueHash;
         }
     }
 
@@ -480,47 +480,68 @@ abstract class IonValueLite
         return scalarHashCode();
     }
 
+    /**
+     * Iteratively computes the hash code for a container and all its descendants. Uses an explicit stack
+     * (parallel arrays) rather than recursion or per-frame objects to avoid stack overflow on deeply nested
+     * structures and to eliminate per-frame object allocation. Empirically, the JVM's escape analysis fails
+     * to scalar-replace frame objects here, so using parallel arrays avoids ~28% overhead from heap allocation
+     * and indirection.
+     * <p>
+     * The explicit {@code getClass()} checks on scalar values are intentional: they give the JIT a monomorphic
+     * receiver at each call site, enabling inlining of {@code scalarHashCode()} regardless of global call-site
+     * pollution from other Ion types (see <a href="https://bugs.openjdk.org/browse/JDK-8368292">JDK-8368292</a>).
+     */
     private int containerHashCode() {
-        HashHolder[] hashStack = new HashHolder[CONTAINER_STACK_INITIAL_CAPACITY];
-        int hashStackIndex = 0;
-        hashStack[hashStackIndex] = new HashHolder();
+        int[] valueHashes = new int[CONTAINER_STACK_INITIAL_CAPACITY];
+        IonContainerLite[] parents = new IonContainerLite[CONTAINER_STACK_INITIAL_CAPACITY];
+        IonContainerLite.SequenceContentIterator[] iterators = new IonContainerLite.SequenceContentIterator[CONTAINER_STACK_INITIAL_CAPACITY];
+        int stackIndex = 0;
+        IonContainerLite parent = null;
+        IonContainerLite.SequenceContentIterator iterator = null;
+        int valueHash = 0;
         IonValueLite value = this;
         do {
-            HashHolder hashHolder = hashStack[hashStackIndex];
             if ((value._flags & IS_NULL_VALUE) != 0) {
-                // Null values are hashed using a constant signature unique to the type.
-                hashHolder.update(value.hashTypeAnnotations(value.hashSignature()), value);
+                valueHash = updateHash(valueHash, value.hashTypeAnnotations(value.hashSignature()), value, parent);
             } else if (!(value instanceof IonContainerLite)) {
-                hashHolder.update(value.scalarHashCode(), value);
+                // Type checks devirtualize scalarHashCode() for the two most common scalar types.
+                if (value.getClass() == IonStringLite.class) {
+                    valueHash = updateHash(valueHash, value.scalarHashCode(), value, parent);
+                } else if (value.getClass() == IonSymbolLite.class) {
+                    valueHash = updateHash(valueHash, value.scalarHashCode(), value, parent);
+                } else {
+                    valueHash = updateHash(valueHash, value.scalarHashCode(), value, parent);
+                }
             } else {
-                // Step into the container by pushing a HashHolder for the container onto the stack.
-                if (++hashStackIndex >= hashStack.length) {
-                    hashStack = Arrays.copyOf(hashStack, hashStack.length * 2);
+                // Step into the container by pushing state onto the stack.
+                if (++stackIndex >= valueHashes.length) {
+                    valueHashes = Arrays.copyOf(valueHashes, valueHashes.length * 2);
+                    parents = Arrays.copyOf(parents, parents.length * 2);
+                    iterators = Arrays.copyOf(iterators, iterators.length * 2);
                 }
-                hashHolder = hashStack[hashStackIndex];
-                if (hashHolder == null) {
-                    hashHolder = new HashHolder();
-                    hashStack[hashStackIndex] = hashHolder;
-                }
-                hashHolder.parent = (IonContainerLite) value;
-                hashHolder.iterator = hashHolder.parent.new SequenceContentIterator(0, true);
-                hashHolder.valueHash = value.hashSignature();
+                valueHashes[stackIndex] = valueHash;
+                parents[stackIndex] = parent;
+                iterators[stackIndex] = iterator;
+                parent = (IonContainerLite) value;
+                iterator = parent.new SequenceContentIterator(0, true);
+                valueHash = value.hashSignature();
             }
             do {
-                if (hashHolder.parent == null) {
-                    // Iteration has returned to the top level; return the top-level value's hash code.
-                    return hashHolder.valueHash;
+                if (parent == null) {
+                    return valueHash;
                 }
-                value = hashHolder.iterator.nextOrNull();
+                value = iterator.nextOrNull();
                 if (value == null) {
                     // The end of the container has been reached. Pop from the stack and update the parent's hash.
-                    hashHolder = hashStack[hashStackIndex--];
-                    IonValueLite container = hashHolder.parent;
-                    int containerHash = container.hashTypeAnnotations(hashHolder.valueHash);
-                    hashHolder.parent = null;
-                    hashHolder.iterator = null;
-                    hashHolder = hashStack[hashStackIndex];
-                    hashHolder.update(containerHash, container);
+                    IonValueLite container = parent;
+                    int containerHash = container.hashTypeAnnotations(valueHash);
+                    valueHash = valueHashes[stackIndex];
+                    parent = parents[stackIndex];
+                    iterator = iterators[stackIndex];
+                    parents[stackIndex] = null;
+                    iterators[stackIndex] = null;
+                    stackIndex--;
+                    valueHash = updateHash(valueHash, containerHash, container, parent);
                 }
             } while (value == null);
         } while (true);
