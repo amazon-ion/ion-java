@@ -7,10 +7,13 @@ import com.amazon.ion.IonCursor;
 import com.amazon.ion.IonException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.amazon.ion.BitUtils.bytes;
 import static com.amazon.ion.IonCursor.Event.NEEDS_DATA;
@@ -30,6 +33,7 @@ import static com.amazon.ion.impl.IonCursorTestUtilities.scalar;
 import static com.amazon.ion.impl.IonCursorTestUtilities.startContainer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -426,6 +430,131 @@ public class IonCursorBinaryTest {
         assertThat(ie.getMessage(),
                 containsString("An oversized value was found even though no maximum size was configured."));
 
+        cursor.close();
+    }
+
+    /**
+     * Creates a cursor that reads the given data from an InputStream (i.e. in refillable/streaming mode) using a
+     * buffer configuration with an 8-byte initial buffer and an unbounded maximum buffer size.
+     */
+    private static IonCursorBinary newStreamingCursor(int[] data) {
+        IonBufferConfiguration config = IonBufferConfiguration.Builder.standard()
+            .withInitialBufferSize(8)
+            .build();
+        return new IonCursorBinary(config, new ByteArrayInputStream(bytes(data)), null, 0, 0);
+    }
+
+    // A legitimate string value with 100 content bytes, far larger than the 8-byte initial buffer. After the IVM is
+    // consumed, buffered bytes are shifted to the start of the buffer, so the content begins immediately after the
+    // value's header bytes: index 2 for the top-level string (type ID + 1-byte VarUInt length).
+    private static final int[] LARGE_STRING = new int[]{
+        0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+        0x8E,                        // String with VarUInt length
+        0x80 | 100,                  // VarUInt length 100 with stop bit
+    };
+
+    // The same value wrapped in a single annotation. The content begins at index 6 (wrapper type ID, wrapper length,
+    // annotations length, annotation SID, wrapped type ID, wrapped length).
+    private static final int[] LARGE_ANNOTATED_STRING = new int[]{
+        0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+        0xEE,                        // Annotation wrapper with VarUInt length
+        0x80 | 104,                  // VarUInt wrapper length 104 with stop bit
+        0x81,                        // VarUInt annotations length 1 with stop bit
+        0x84,                        // Annotation SID 4
+        0x8E,                        // Wrapped string with VarUInt length
+        0x80 | 100,                  // VarUInt length 100 with stop bit
+    };
+
+    private static int[] withContent(int[] header, int contentLength) {
+        int[] content = new int[contentLength];
+        for (int i = 0; i < contentLength; i++) {
+            content[i] = 'a';
+        }
+        int[] data = new int[header.length + contentLength];
+        System.arraycopy(header, 0, data, 0, header.length);
+        System.arraycopy(content, 0, data, header.length, contentLength);
+        return data;
+    }
+
+    private static Stream<Arguments> largeValues() {
+        return Stream.of(
+            // data, expected buffer index at which the content begins after the IVM is shifted out.
+            Arguments.of("unwrapped", withContent(LARGE_STRING, 100), 2),
+            Arguments.of("annotation-wrapped", withContent(LARGE_ANNOTATED_STRING, 100), 6)
+        );
+    }
+
+    /**
+     * Verifies that a legitimate value larger than the initial buffer (and larger than a single doubling of it)
+     * is read correctly. This exercises the incremental buffer growth in refill(): the buffer must double
+     * multiple times as real data is consumed from the stream.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("largeValues")
+    public void largeValueReadFromStreamGrowsBufferIncrementally(String name, int[] data, int contentStartIndex) {
+        IonCursorBinary cursor = newStreamingCursor(data);
+        assertSequence(
+            cursor,
+            fillScalar(contentStartIndex, contentStartIndex + 100),
+            endStream()
+        );
+        // The buffer grew purely by doubling from a power-of-two start: 8 -> 16 -> 32 -> 64 -> 128, just large
+        // enough to hold the value.
+        assertEquals(128, cursor.buffer.length);
+        cursor.close();
+    }
+
+    // A top-level string whose header declares 1,000,000 content bytes but is followed by only 3. The declared
+    // length is well below the maximum buffer size, so it is not rejected as oversized.
+    private static final int[] LENGTH_BOMB_STRING = new int[]{
+        0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+        0x8E,                        // String with VarUInt length
+        0x3D, 0x04, 0xC0,            // VarUInt length 1,000,000 (well below the max buffer size)
+        'a', 'b', 'c'                // Only a few actual content bytes follow.
+    };
+
+    // The same length bomb declared inside an annotation wrapper. The wrapper length and the wrapped value length
+    // are internally consistent so the structural length check passes and the allocation path is reached.
+    private static final int[] LENGTH_BOMB_ANNOTATED_STRING = new int[]{
+        0xE0, 0x01, 0x00, 0xEA,      // Ion 1.0 IVM
+        0xEE,                        // Annotation wrapper with VarUInt length
+        0x3D, 0x04, 0xC6,            // VarUInt wrapper length 1,000,006 (well below the max buffer size)
+        0x81,                        // VarUInt annotations length 1 with stop bit
+        0x84,                        // Annotation SID 4
+        0x8E,                        // Wrapped string with VarUInt length
+        0x3D, 0x04, 0xC0,            // VarUInt wrapped length 1,000,000 (consistent with the wrapper length)
+        'a', 'b', 'c'                // Only a few actual content bytes follow.
+    };
+
+    private static Stream<Arguments> lengthBombs() {
+        return Stream.of(
+            Arguments.of("unwrapped", LENGTH_BOMB_STRING),
+            Arguments.of("annotation-wrapped", LENGTH_BOMB_ANNOTATED_STRING)
+        );
+    }
+
+    /**
+     * Verifies that a value declaring a length far larger than the data actually present in the stream does not
+     * cause a disproportionate allocation. The declared length (1,000,000) is well below the maximum buffer size,
+     * so it is not rejected as oversized; instead the buffer grows incrementally as data is consumed. Because the
+     * stream is exhausted after only a few bytes, the cursor cleanly reports NEEDS_DATA while the buffer remains
+     * tiny. (Note: the non-continuable IonReader wrapper will then throw an exception for an incomplete value;
+     * the continuable IonReader wrapper will wait for more data, but will not allocate more buffer space.)
+     * Before the fix, the buffer would have been allocated to nextPowerOfTwo(1,000,000) up front.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("lengthBombs")
+    public void lengthBombFromStreamDoesNotOverAllocateAndReportsNeedsData(String name, int[] data) {
+        IonCursorBinary cursor = newStreamingCursor(data);
+        // Positioning on the value succeeds; the declared length is not yet validated against available data.
+        assertEquals(START_SCALAR, cursor.nextValue());
+        // Filling cannot complete because the stream is exhausted long before the declared length is reached. The
+        // cursor reports NEEDS_DATA rather than allocating (or attempting to allocate) the full declared length.
+        assertEquals(NEEDS_DATA, cursor.fillValue());
+        // The 1,000,000-byte declared length must not have driven allocation. Only a few bytes of real data were
+        // present, so the 8-byte buffer should have grown by doubling just past the available data, not toward the
+        // declared length.
+        assertThat(cursor.buffer.length, lessThanOrEqualTo(32));
         cursor.close();
     }
 
