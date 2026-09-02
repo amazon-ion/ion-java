@@ -1,23 +1,10 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.system;
 
 import static com.amazon.ion.impl.lite._Private_LiteDomTrampoline.isLiteSystem;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -201,5 +188,30 @@ public class IonSystemBuilderTest
         assertNotSame(b1, b2);
         assertSame(b1.getCatalog(),     b2.getCatalog());
         assertSame(b1.isStreamCopyOptimized(), b2.isStreamCopyOptimized());
+        assertSame(b1.getIonTextWriterBuilder(),   b2.getIonTextWriterBuilder());
+        assertSame(b1.getIonBinaryWriterBuilder(), b2.getIonBinaryWriterBuilder());
+        assertSame(b1.getReaderBuilder(),          b2.getReaderBuilder());
+    }
+
+    @Test
+    public void testStandardHasDefaultSubBuilders()
+    {
+        IonSystemBuilder b = IonSystemBuilder.standard();
+        assertNotNull(b.getIonTextWriterBuilder());
+        assertNotNull(b.getIonBinaryWriterBuilder());
+        assertNotNull(b.getReaderBuilder());
+        assertSame(IonTextWriterBuilder.ASCII, b.getIonTextWriterBuilder().getCharset());
+    }
+
+    @Test
+    public void testCopyCarriesTheSameDefaultSubBuilders()
+    {
+        IonSystemBuilder standard = IonSystemBuilder.standard();
+        IonSystemBuilder copy = standard.copy().mutable().copy().immutable().mutable();
+        assertNotSame(standard, copy);
+        assertSame(standard.getIonTextWriterBuilder(),   copy.getIonTextWriterBuilder());
+        assertSame(standard.getIonBinaryWriterBuilder(), copy.getIonBinaryWriterBuilder());
+        assertSame(standard.getReaderBuilder(),          copy.getReaderBuilder());
+        assertSame(IonTextWriterBuilder.ASCII, copy.getIonTextWriterBuilder().getCharset());
     }
 }

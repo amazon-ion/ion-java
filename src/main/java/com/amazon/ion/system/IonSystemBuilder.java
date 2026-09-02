@@ -91,15 +91,25 @@ public class IonSystemBuilder
     IonCatalog myCatalog;
     boolean myStreamCopyOptimized = false;
 
-    IonTextWriterBuilder textWriterBuilder = IonTextWriterBuilder.standard().withCharsetAscii();
-    IonBinaryWriterBuilder binaryWriterBuilder = IonBinaryWriterBuilder.standard();
-    IonReaderBuilder readerBuilder = IonReaderBuilder.standard();
+    // These are deliberately declared without initializers; their defaults are
+    // assigned by the no-argument constructor. See the note there.
+    IonTextWriterBuilder textWriterBuilder;
+    IonBinaryWriterBuilder binaryWriterBuilder;
+    IonReaderBuilder readerBuilder;
 
 
     /** You no touchy. */
     private IonSystemBuilder()
     {
-        // empty
+        // The defaults are assigned here rather than in field initializers
+        // because Java runs field initializers as part of *every* constructor,
+        // including the copy constructor below, whose body then overwrites all
+        // three fields. That made copy() -- and therefore mutable(),
+        // immutable(), and every withXxx() -- allocate a full set of default
+        // writer/reader builders only to immediately discard them.
+        textWriterBuilder = IonTextWriterBuilder.standard().withCharsetAscii();
+        binaryWriterBuilder = IonBinaryWriterBuilder.standard();
+        readerBuilder = IonReaderBuilder.standard();
     }
 
     private IonSystemBuilder(IonSystemBuilder that)
