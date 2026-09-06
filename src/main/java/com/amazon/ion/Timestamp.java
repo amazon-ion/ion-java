@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 import static com.amazon.ion.impl._Private_Utils.safeEquals;
@@ -90,7 +77,7 @@ public final class Timestamp
     /**
      * 0001-01-01T00:00:00.0Z in millis.
      */
-    static final long MINIMUM_TIMESTAMP_IN_MILLIS = -62135769600000L;
+    static final long MINIMUM_TIMESTAMP_IN_MILLIS = -62135596800000L;
 
     /**
      * 0001-01-01T00:00:00.0Z in millis.
@@ -336,48 +323,80 @@ public final class Timestamp
     }
 
     /**
-     * This method uses deprecated methods from {@link java.util.Date}
-     * instead of {@link Calendar} so that this code can be used (more easily)
-     * on the mobile Java platform (which has Date but does not have Calendar).
+     * Days from 1970-01-01 to the given proleptic Gregorian date.
      */
-    @SuppressWarnings("deprecation")
+    private static long epochDayFromCivil(int year, int month, int day)
+    {
+        long y = year - (month <= 2 ? 1 : 0);
+        long era = (y >= 0 ? y : y - 399) / 400;
+        long yearOfEra = y - era * 400;                                             // [0, 399]
+        long dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;  // [0, 365]
+        long dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+        return era * 146097 + dayOfEra - 719468;
+    }
+
+    /**
+     * Inverse of {@link #epochDayFromCivil(int, int, int)}; fills year, month and day.
+     */
+    private static void civilFromEpochDay(long epochDay, int[] yearMonthDay)
+    {
+        long z = epochDay + 719468;
+        long era = (z >= 0 ? z : z - 146096) / 146097;
+        long dayOfEra = z - era * 146097;                                           // [0, 146096]
+        long yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096) / 365;
+        long y = yearOfEra + era * 400;
+        long dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100);
+        long monthPrime = (5 * dayOfYear + 2) / 153;                                // [0, 11]
+        long day = dayOfYear - (153 * monthPrime + 2) / 5 + 1;                      // [1, 31]
+        long month = monthPrime + (monthPrime < 10 ? 3 : -9);                       // [1, 12]
+        yearMonthDay[0] = (int) (y + (month <= 2 ? 1 : 0));
+        yearMonthDay[1] = (int) month;
+        yearMonthDay[2] = (int) day;
+    }
+
+    /**
+     * Milliseconds from the epoch for the given UTC fields.
+     */
+    private static long utcMillisFromCivil(int year, int month, int day, int hour, int minute, int second)
+    {
+        long epochDay = epochDayFromCivil(year, month, day);
+        return (((epochDay * 24L + hour) * 60L + minute) * 60L + second) * 1000L;
+    }
+
+    /**
+     * Sets this Timestamp's UTC fields from a millisecond offset from the epoch.
+     */
     private void set_fields_from_millis(long millis)
     {
         if(millis < MINIMUM_TIMESTAMP_IN_MILLIS){
             throw new IllegalArgumentException("year is less than 1");
         }
 
-        Date date = new Date(millis);
+        long totalSeconds = floorDiv(millis, 1000L);
+        long epochDay = floorDiv(totalSeconds, 86400L);
+        int secondOfDay = (int) (totalSeconds - epochDay * 86400L);
 
-        // The Date getters return values in the Date's time zone (i.e. the system time zone).
-        // The components need to be converted to UTC before being validated for exact ranges, because the offset
-        // conversion can affect which values are considered valid. Simply verify that the values can fit in the
-        // destination type here. If they do not, they would be out of range no matter the offset.
-        _minute = requireByte(date.getMinutes(), "Minute");
-        _second = requireByte(date.getSeconds(), "Second");
-        _hour = requireByte(date.getHours(), "Hour");
-        _day = requireByte(date.getDate(), "Day");
-        _month = requireByte(date.getMonth() + 1, "Month");
+        int[] yearMonthDay = new int[3];
+        civilFromEpochDay(epochDay, yearMonthDay);
 
-        // Date does not correctly handle year values that represent year 0 or earlier in the system time zone through
-        // getYear(). This case is detected and forced to zero.
-        int offset = -date.getTimezoneOffset();
-        if(offset < 0 && MINIMUM_TIMESTAMP_IN_MILLIS - offset > millis) {
-            _year = 0;
-        } else {
-            _year = requireShort(date.getYear() + 1900, "Year");
+        this._year    = checkAndCastYear(requireShort(yearMonthDay[0], "Year"));
+        this._month   = checkAndCastMonth(requireByte(yearMonthDay[1], "Month"));
+        this._day     = checkAndCastDay(requireByte(yearMonthDay[2], "Day"), _year, _month);
+        this._hour    = checkAndCastHour(secondOfDay / 3600);
+        this._minute  = checkAndCastMinute((secondOfDay / 60) % 60);
+        this._second  = checkAndCastSecond(secondOfDay % 60);
+    }
+
+    /**
+     * {@code Math.floorDiv} for platforms whose java.lang.Math predates Java 8.
+     */
+    private static long floorDiv(long dividend, long divisor)
+    {
+        long quotient = dividend / divisor;
+        if ((dividend % divisor != 0) && ((dividend ^ divisor) < 0)) {
+            quotient--;
         }
-
-        // Now apply the offset to convert the components to UTC.
-        apply_offset(offset);
-
-        // Now that all components are in UTC, they may be validated for exact ranges.
-        this._year    = checkAndCastYear(_year);
-        this._month   = checkAndCastMonth(_month);
-        this._day     = checkAndCastDay(_day, _year, _month);
-        this._hour    = checkAndCastHour(_hour);
-        this._minute  = checkAndCastMinute(_minute);
-        this._second  = checkAndCastSecond(_second);
+        return quotient;
     }
 
     /**
@@ -1565,6 +1584,9 @@ public final class Timestamp
      * <p>
      * Because {@link Date} instances are mutable, this method returns a
      * new instance from each call.
+     * <p>
+     * Uses the proleptic Gregorian calendar, so before 1582-10-15 it differs from a default
+     * {@link GregorianCalendar}.
      *
      * @return a new {@code Date} instance, in UTC
      */
@@ -1581,6 +1603,9 @@ public final class Timestamp
      * <p>
      * Because {@link Calendar} instances are mutable, this method returns a
      * new instance from each call.
+     * <p>
+     * The returned {@code Calendar} is proleptic Gregorian, so its fields agree with this
+     * Timestamp before 1582-10-15.
      *
      * @return a new {@code Calendar} instance, in its local time.
      *
@@ -1588,7 +1613,8 @@ public final class Timestamp
      */
     public Calendar calendarValue()
     {
-        Calendar cal = new GregorianCalendar(_Private_Utils.UTC);
+        GregorianCalendar cal = new GregorianCalendar(_Private_Utils.UTC);
+        cal.setGregorianChange(new Date(Long.MIN_VALUE));
 
         long millis = getMillis();
         Integer offset = _offset;
@@ -1632,16 +1658,17 @@ public final class Timestamp
      * <p>
      * This method will return the same result for all Timestamps representing
      * the same point in time, regardless of the local offset.
+     * <p>
+     * Uses the proleptic Gregorian calendar, so before 1582-10-15 it differs from a default
+     * {@link GregorianCalendar}.
      *
      * @return
      *          number of milliseconds (<em>ignoring</em> any fractional
      *          milliseconds) from the epoch (1970-01-01T00:00:00.000Z)
      */
-    @SuppressWarnings("deprecation")
     public long getMillis()
     {
-        //                                        month is 0 based for Date
-        long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+        long millis = utcMillisFromCivil(this._year, this._month, this._day, this._hour, this._minute, this._second);
         if (this._fraction != null) {
             BigDecimal fracAsDecimal = this._fraction.movePointRight(3);
             int frac = isIntegralZero(fracAsDecimal) ? 0 : fracAsDecimal.intValue();
@@ -1658,12 +1685,14 @@ public final class Timestamp
      * <p>
      * This method will return the same result for all Timestamps representing
      * the same point in time, regardless of the local offset.
+     * <p>
+     * Uses the proleptic Gregorian calendar, so before 1582-10-15 it differs from a default
+     * {@link GregorianCalendar}.
      *
      * @return
      *          number of milliseconds (<em>including</em> any fractional
      *          milliseconds) from the epoch (1970-01-01T00:00:00.000Z)
      */
-    @SuppressWarnings("deprecation")
     public BigDecimal getDecimalMillis()
     {
         switch (this._precision) {
@@ -1673,7 +1702,7 @@ public final class Timestamp
         case MINUTE:
         case SECOND:
         case FRACTION:
-            long millis = Date.UTC(this._year - 1900, this._month - 1, this._day, this._hour, this._minute, this._second);
+            long millis = utcMillisFromCivil(this._year, this._month, this._day, this._hour, this._minute, this._second);
             BigDecimal dec = BigDecimal.valueOf(millis);
             if (_fraction != null) {
                 dec = dec.add(this._fraction.movePointRight(3));
