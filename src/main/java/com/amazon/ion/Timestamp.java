@@ -11,6 +11,8 @@ import com.amazon.ion.util.IonTextUtils;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -308,13 +310,6 @@ public final class Timestamp
         }
     }
 
-    private static byte requireByte(int value, String location) {
-        if (value > Byte.MAX_VALUE || value < Byte.MIN_VALUE) {
-            throw new IllegalArgumentException(String.format("%s of %d is out of range.", location, value));
-        }
-        return (byte) value;
-    }
-
     private static short requireShort(int value, String location) {
         if (value > Short.MAX_VALUE || value < Short.MIN_VALUE) {
             throw new IllegalArgumentException(String.format("%s of %d is out of range.", location, value));
@@ -323,48 +318,18 @@ public final class Timestamp
     }
 
     /**
-     * Days from 1970-01-01 to the given proleptic Gregorian date.
-     */
-    private static long epochDayFromCivil(int year, int month, int day)
-    {
-        long y = year - (month <= 2 ? 1 : 0);
-        long era = (y >= 0 ? y : y - 399) / 400;
-        long yearOfEra = y - era * 400;                                             // [0, 399]
-        long dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;  // [0, 365]
-        long dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
-        return era * 146097 + dayOfEra - 719468;
-    }
-
-    /**
-     * Inverse of {@link #epochDayFromCivil(int, int, int)}; fills year, month and day.
-     */
-    private static void civilFromEpochDay(long epochDay, int[] yearMonthDay)
-    {
-        long z = epochDay + 719468;
-        long era = (z >= 0 ? z : z - 146096) / 146097;
-        long dayOfEra = z - era * 146097;                                           // [0, 146096]
-        long yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096) / 365;
-        long y = yearOfEra + era * 400;
-        long dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100);
-        long monthPrime = (5 * dayOfYear + 2) / 153;                                // [0, 11]
-        long day = dayOfYear - (153 * monthPrime + 2) / 5 + 1;                      // [1, 31]
-        long month = monthPrime + (monthPrime < 10 ? 3 : -9);                       // [1, 12]
-        yearMonthDay[0] = (int) (y + (month <= 2 ? 1 : 0));
-        yearMonthDay[1] = (int) month;
-        yearMonthDay[2] = (int) day;
-    }
-
-    /**
-     * Milliseconds from the epoch for the given UTC fields.
+     * Milliseconds from the epoch for the given UTC fields, in the proleptic Gregorian calendar.
+     *
+     * @see java.time.chrono.IsoChronology
      */
     private static long utcMillisFromCivil(int year, int month, int day, int hour, int minute, int second)
     {
-        long epochDay = epochDayFromCivil(year, month, day);
-        return (((epochDay * 24L + hour) * 60L + minute) * 60L + second) * 1000L;
+        return LocalDateTime.of(year, month, day, hour, minute, second).toEpochSecond(ZoneOffset.UTC) * 1000L;
     }
 
     /**
-     * Sets this Timestamp's UTC fields from a millisecond offset from the epoch.
+     * Sets this Timestamp's UTC fields from a millisecond offset from the epoch, in the proleptic
+     * Gregorian calendar.
      */
     private void set_fields_from_millis(long millis)
     {
@@ -372,31 +337,14 @@ public final class Timestamp
             throw new IllegalArgumentException("year is less than 1");
         }
 
-        long totalSeconds = floorDiv(millis, 1000L);
-        long epochDay = floorDiv(totalSeconds, 86400L);
-        int secondOfDay = (int) (totalSeconds - epochDay * 86400L);
+        LocalDateTime utc = LocalDateTime.ofEpochSecond(Math.floorDiv(millis, 1000L), 0, ZoneOffset.UTC);
 
-        int[] yearMonthDay = new int[3];
-        civilFromEpochDay(epochDay, yearMonthDay);
-
-        this._year    = checkAndCastYear(requireShort(yearMonthDay[0], "Year"));
-        this._month   = checkAndCastMonth(requireByte(yearMonthDay[1], "Month"));
-        this._day     = checkAndCastDay(requireByte(yearMonthDay[2], "Day"), _year, _month);
-        this._hour    = checkAndCastHour(secondOfDay / 3600);
-        this._minute  = checkAndCastMinute((secondOfDay / 60) % 60);
-        this._second  = checkAndCastSecond(secondOfDay % 60);
-    }
-
-    /**
-     * {@code Math.floorDiv} for platforms whose java.lang.Math predates Java 8.
-     */
-    private static long floorDiv(long dividend, long divisor)
-    {
-        long quotient = dividend / divisor;
-        if ((dividend % divisor != 0) && ((dividend ^ divisor) < 0)) {
-            quotient--;
-        }
-        return quotient;
+        this._year    = checkAndCastYear(requireShort(utc.getYear(), "Year"));
+        this._month   = checkAndCastMonth(utc.getMonthValue());
+        this._day     = checkAndCastDay(utc.getDayOfMonth(), _year, _month);
+        this._hour    = checkAndCastHour(utc.getHour());
+        this._minute  = checkAndCastMinute(utc.getMinute());
+        this._second  = checkAndCastSecond(utc.getSecond());
     }
 
     /**
