@@ -76,6 +76,10 @@ abstract class UnifiedInputStreamX
 
     UnifiedSavePointManagerX _save_points;
 
+    // An upper bound of the current page's starting offset: unread() can step back without a page
+    // lookup while _pos is above it. See make_page_current().
+    private int             _unread_floor = Integer.MAX_VALUE;
+
 
     // factories to construct an appropriate input stream
     // based on the input source
@@ -119,6 +123,7 @@ abstract class UnifiedInputStreamX
         throws IOException
     {
         _eof = true;
+        _unread_floor = Integer.MAX_VALUE;
         _buffer.clear();
     }
 
@@ -176,6 +181,11 @@ abstract class UnifiedInputStreamX
         _limit = limit;
         _pos = pos;
         _eof = false;
+        // While a page is current its starting offset can only decrease (unreading before its first
+        // character lowers it), and a page is only reloaded by refill(), which makes it current again
+        // through this method. So this value stays an upper bound of the starting offset, and a
+        // position above it is inside the page, until the next call.
+        _unread_floor = curr.getStartingOffset();
         if (is_byte_data()) {
             _bytes = curr.getByteBuffer();
         }
@@ -194,6 +204,12 @@ abstract class UnifiedInputStreamX
     }
     public final void unread(int c)
     {
+        // Fast path: stepping back over the character just read, within the current page.
+        if (_pos > _unread_floor && !_eof && c >= 0 && c <= _max_char_value) {
+            _pos--;
+            verify_matched_unread(c);
+            return;
+        }
         if (c == -1) {
             return;
         }
