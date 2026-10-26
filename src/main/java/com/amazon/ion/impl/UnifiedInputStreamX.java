@@ -79,7 +79,8 @@ abstract class UnifiedInputStreamX
     // An upper bound of the current page's starting offset: unread() can step back without a page
     // lookup while _pos is above it. See make_page_current().
     private int             _unread_floor = Integer.MAX_VALUE;
-
+    // staging for appendAsciiRun()
+    private final char[]    _scratch = new char[256];
 
     // factories to construct an appropriate input stream
     // based on the input source
@@ -125,6 +126,72 @@ abstract class UnifiedInputStreamX
         _eof = true;
         _unread_floor = Integer.MAX_VALUE;
         _buffer.clear();
+    }
+
+    /**
+     * Appends to {@code sb} the characters at the read position, up to the end of the
+     * current page, that are ASCII and accepted by {@code accept} (indexed by character).
+     * Consumes them. Never refills, so callers continue with {@link #read()}.
+     */
+    final void appendAsciiRun(StringBuilder sb, boolean[] accept)
+    {
+        final int start = _pos;
+        int pos = start;
+        final int limit = _limit;
+        if (pos >= limit || _eof) return;
+        if (_is_byte_data) {
+            final byte[] bytes = _bytes;
+            final char[] scratch = _scratch;
+            int n = 0;
+            while (pos < limit) {
+                int c = bytes[pos];           // negative for >= 0x80
+                if (c < 0 || !accept[c]) break;
+                if (n == scratch.length) { sb.append(scratch, 0, n); n = 0; }
+                scratch[n++] = (char) c;
+                pos++;
+            }
+            if (n > 0) sb.append(scratch, 0, n);
+        }
+        else {
+            final char[] chars = _chars;
+            while (pos < limit) {
+                int c = chars[pos];
+                if (c >= 128 || !accept[c]) break;
+                pos++;
+            }
+            sb.append(chars, start, pos - start);
+        }
+        _pos += pos - start;
+    }
+
+    /**
+     * Consumes the characters at the read position, up to the end of the current page,
+     * that are not in {@code stop} (indexed by character; characters >= 128 never stop).
+     * Never refills, so callers continue with {@link #read()}.
+     */
+    final void skipRun(boolean[] stop)
+    {
+        final int start = _pos;
+        int pos = start;
+        final int limit = _limit;
+        if (pos >= limit || _eof) return;
+        if (_is_byte_data) {
+            final byte[] bytes = _bytes;
+            while (pos < limit) {
+                int c = bytes[pos];
+                if (c >= 0 && stop[c]) break;
+                pos++;
+            }
+        }
+        else {
+            final char[] chars = _chars;
+            while (pos < limit) {
+                int c = chars[pos];
+                if (c < 128 && stop[c]) break;
+                pos++;
+            }
+        }
+        _pos += pos - start;
     }
 
     public final boolean isEOF() {
