@@ -194,6 +194,59 @@ abstract class UnifiedInputStreamX
         _pos += pos - start;
     }
 
+    /**
+     * Decodes base64 groups of four alphabet characters (no whitespace, no padding) at the
+     * read position into {@code dst}, up to {@code maxGroups} groups and the end of the current
+     * page; consumes them. Returns the number of groups decoded (3 bytes each). Anything else
+     * (whitespace, '=', a closing brace, an invalid character) is left to the caller's
+     * character-at-a-time decoding. {@code charToBin} maps a character below 256 to its 6-bit
+     * value, and every other character, '=' included, to -1.
+     */
+    final int decodeBase64Groups(byte[] dst, int off, int maxGroups, int[] charToBin)
+    {
+        if (_eof) return 0;
+        final int start = _pos;
+        int pos = start;
+        final int limit = _limit;
+        int groups = 0;
+        if (_is_byte_data) {
+            final byte[] bytes = _bytes;
+            while (groups < maxGroups && pos + 4 <= limit) {
+                int c1 = bytes[pos], c2 = bytes[pos + 1], c3 = bytes[pos + 2], c4 = bytes[pos + 3];
+                if ((c1 | c2 | c3 | c4) < 0) break;    // non-ASCII
+                int b1 = charToBin[c1], b2 = charToBin[c2], b3 = charToBin[c3], b4 = charToBin[c4];
+                if ((b1 | b2 | b3 | b4) < 0) break;    // not in the alphabet
+                putBase64Group(dst, off, b1, b2, b3, b4);
+                off += 3;
+                pos += 4;
+                groups++;
+            }
+        }
+        else {
+            final char[] chars = _chars;
+            while (groups < maxGroups && pos + 4 <= limit) {
+                int c1 = chars[pos], c2 = chars[pos + 1], c3 = chars[pos + 2], c4 = chars[pos + 3];
+                if ((c1 | c2 | c3 | c4) >= 128) break; // non-ASCII
+                int b1 = charToBin[c1], b2 = charToBin[c2], b3 = charToBin[c3], b4 = charToBin[c4];
+                if ((b1 | b2 | b3 | b4) < 0) break;    // not in the alphabet
+                putBase64Group(dst, off, b1, b2, b3, b4);
+                off += 3;
+                pos += 4;
+                groups++;
+            }
+        }
+        _pos += pos - start;
+        return groups;
+    }
+
+    /** The 3 bytes four 6-bit base64 values decode to. */
+    private static void putBase64Group(byte[] dst, int off, int b1, int b2, int b3, int b4)
+    {
+        dst[off] = (byte) ((b1 << 2) | (b2 >> 4));
+        dst[off + 1] = (byte) ((b2 << 4) | (b3 >> 2));
+        dst[off + 2] = (byte) ((b3 << 6) | b4);
+    }
+
     public final boolean isEOF() {
         return _eof; // (_state == UIS_STATE.STATE_EOF);
     }

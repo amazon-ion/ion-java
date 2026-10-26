@@ -2670,6 +2670,17 @@ final class IonReaderTextRawTokensX
         return hexchar;
     }
 
+    /**
+     * Decodes as many whole base64 groups as the input allows without any of the special cases
+     * read_base64_byte() handles, into {@code dst}; returns the bytes written (a multiple of 3,
+     * at most {@code len}). Callers continue with read_base64_byte().
+     */
+    final int read_base64_bytes_bulk(byte[] dst, int off, int len)
+    {
+        if (_base64_prefetch_count > 0) return 0;
+        return 3 * _stream.decodeBase64Groups(dst, off, len / 3, BASE64_CHAR_TO_BIN);
+    }
+
     public final int read_base64_byte() throws IOException
     {
         int b;
