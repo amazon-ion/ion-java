@@ -100,6 +100,34 @@ final class IonReaderTextRawTokensX
     // Used for tracking terminator characters when skipping a container
     private final ArrayList<Integer> containerSkipTerminatorStack = new ArrayList<>(CONTAINER_STACK_INITIAL_CAPACITY);
 
+    // Tables for the UnifiedInputStreamX run helpers, indexed by ASCII character.
+    /** Symbol identifier characters: a-z, A-Z, 0-9, '$', '_'. */
+    private static final boolean[] SYMBOL_CHARS = new boolean[128];
+    /** Characters a double-quoted string takes as they are: printable ASCII other than '"' and '\'. */
+    private static final boolean[] DOUBLE_QUOTED_PLAIN = new boolean[128];
+    /** Characters skipping a double-quoted string must look at: the quote, backslash and line ends. */
+    private static final boolean[] DOUBLE_QUOTED_SKIP_STOP = new boolean[128];
+    /**
+     * Characters skip_over_container() must look at: line ends (for line counting), comments,
+     * quotes and brackets. Spaces and tabs mean nothing to it, so they are skipped with the rest.
+     */
+    private static final boolean[] CONTAINER_SKIP_STOP = new boolean[128];
+    /** Characters skip_over_blob() must look at: the closing brace and line ends. */
+    private static final boolean[] BLOB_SKIP_STOP = new boolean[128];
+    static {
+        BLOB_SKIP_STOP['}'] = BLOB_SKIP_STOP['\r'] = BLOB_SKIP_STOP['\n'] = true;
+        for (int c = 0; c < 128; c++) {
+            SYMBOL_CHARS[c] = IonTokenConstsX.isValidSymbolCharacter(c);
+            DOUBLE_QUOTED_PLAIN[c] = c >= 0x20 && c < 0x7F && c != '"' && c != '\\';
+        }
+        for (char c : "\"\\\r\n".toCharArray()) {
+            DOUBLE_QUOTED_SKIP_STOP[c] = true;
+        }
+        for (char c : "\r\n/\"'(){}[]".toCharArray()) {
+            CONTAINER_SKIP_STOP[c] = true;
+        }
+    }
+
     /**
      * IonTokenReader constructor requires a UnifiedInputStream
      * as the source of bytes/chars that serve as the basic input
@@ -1229,6 +1257,8 @@ final class IonReaderTextRawTokensX
         int c;
 
         for (;;) {
+            // Characters with no meaning to the scan below.
+            _stream.skipRun(CONTAINER_SKIP_STOP);
             c = skip_over_whitespace();
             switch (c) {
             case -1:
@@ -1891,6 +1921,7 @@ final class IonReaderTextRawTokensX
         // Valid symbol chars (a-z, A-Z, 0-9, $, _) are all ASCII and never newlines.
         int c;
         for (;;) {
+            _stream.appendAsciiRun(sb, SYMBOL_CHARS);
             c = _stream.read();
             if (c >= 0 && c <= 0x7F && IonTokenConstsX.isValidSymbolCharacter(c)) {
                 sb.append((char)c);
@@ -2062,6 +2093,7 @@ final class IonReaderTextRawTokensX
     {
         int c;
         for (;;) {
+            _stream.skipRun(DOUBLE_QUOTED_SKIP_STOP);
             c = read_string_char(ProhibitedCharacters.NONE);
             switch (c) {
             case -1:
@@ -2087,6 +2119,9 @@ final class IonReaderTextRawTokensX
         boolean expectLowSurrogate = false;
 
         for (;;) {
+            // Bulk copy of plain printable ASCII (not '"' or '\'), the same characters the
+            // per-character fast path below accepts; a clob takes them unchanged too.
+            _stream.appendAsciiRun(sb, DOUBLE_QUOTED_PLAIN);
             // Fast path: read directly from stream for common ASCII characters.
             // ASCII printable chars (0x20-0x7E) excluding '"' (0x22) and '\' (0x5C)
             // don't need prohibited char checks, UTF-8 decoding, or surrogate handling.
@@ -2497,6 +2532,7 @@ final class IonReaderTextRawTokensX
     {
         int c;
         for (;;) {
+            _stream.skipRun(BLOB_SKIP_STOP);
             c = _stream.read();
             // Fast path: base64 chars (> ' ' and not '}') are the common case
             if (c > ' ' && c != '}') {
