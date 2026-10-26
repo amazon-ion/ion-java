@@ -852,9 +852,22 @@ abstract class IonReaderTextRawX
                     throw new IllegalStateException("field names have to be in structs");
                 }
                 //finish_value(_current_value_save_point);
-                finish_and_save_value();
-
-                sb = token_contents_load(t);
+                if (t == IonTokenConstsX.TOKEN_SYMBOL_IDENTIFIER
+                        && !_current_value_save_point_loaded
+                        && !_current_value_buffer_loaded
+                        && _scanner.isUnfinishedToken()) {
+                    // Load the name in one pass, instead of skipping it to a save point
+                    // and then reading it back from there (finish_and_save_value() below).
+                    // The state changes are the ones finish_value() makes; token_contents_load()
+                    // records the save point and marks the token finished.
+                    set_state(get_state_after_value());
+                    _has_next_called = false;
+                    sb = token_contents_load(t);
+                }
+                else {
+                    finish_and_save_value();
+                    sb = token_contents_load(t);
+                }
 
                 SymbolToken sym = parseSymbolToken("a field name", sb, t);
                 set_fieldname(sym);
