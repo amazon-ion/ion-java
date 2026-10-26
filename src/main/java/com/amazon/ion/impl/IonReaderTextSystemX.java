@@ -856,10 +856,19 @@ class IonReaderTextSystemX
         switch (_lob_token) {
         // BLOB
         case IonTokenConstsX.TOKEN_OPEN_DOUBLE_BRACE:
-            while (len-- > 0) {
+            while (len > 0) {
+                // Whole base64 groups straight from the page, when no decoded bytes are pending.
+                int bulk = _scanner.read_base64_bytes_bulk(buffer, offset, len);
+                if (bulk > 0) {
+                    offset += bulk;
+                    len -= bulk;
+                    c = 0; // bytes were read, so the end of the lob was not reached
+                    continue;
+                }
                 c = _scanner.read_base64_byte();
                 if (c < 0) break;
                 buffer[offset++] = (byte)c;
+                len--;
             }
             break;
         // CLOB
