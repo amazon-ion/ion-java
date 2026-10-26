@@ -807,8 +807,31 @@ final class IonReaderTextRawTokensX
      */
     private final int skip_over_whitespace(CommentStrategy commentStrategy) throws IOException
     {
-        skip_whitespace(commentStrategy);
-        return read_char();
+        // Same as skip_whitespace(commentStrategy) then read_char(), without unreading and
+        // re-reading the character that ends the whitespace.
+        int c;
+        for (;;) {
+            c = read_char();
+            switch (c) {
+            case ' ':
+            case '\t':
+            // new line normalization and counting is handled in read_char
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_NEWLINE_SEQUENCE_3:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_1:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_2:
+            case CharacterSequence.CHAR_SEQ_ESCAPED_NEWLINE_SEQUENCE_3:
+                continue;
+            case '/':
+                if (commentStrategy.onComment(this)) {
+                    continue;
+                }
+                return c;
+            default:
+                return c;
+            }
+        }
     }
 
     /**
