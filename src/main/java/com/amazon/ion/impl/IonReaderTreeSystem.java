@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.impl._Private_Utils.readFully;
@@ -57,6 +44,8 @@ class IonReaderTreeSystem
     protected _Private_IonValue   _next;
     protected _Private_IonValue   _curr;
     protected boolean             _eof;
+    // Number of bytes of the current lob already copied out by getBytes().
+    protected int                 _lob_bytes_read;
 
     /** Holds pairs: IonValue parent, Iterator<IonValue> cursor */
     private   Object[]           _stack = new Object[10];
@@ -100,6 +89,7 @@ class IonReaderTreeSystem
     void re_init(IonValue value, boolean hoisted)
     {
         _curr = null;
+        _lob_bytes_read = 0;
         _eof = false;
         _top = 0;
         if (value instanceof IonDatagram) {
@@ -164,6 +154,7 @@ class IonReaderTreeSystem
         }
         this._curr = this._next;
         this._next = null;
+        this._lob_bytes_read = 0;
 
         return this._curr.getType();
     }
@@ -420,21 +411,32 @@ class IonReaderTreeSystem
     public int getBytes(byte[] buffer, int offset, int len)
     {
         if (_curr instanceof IonLob) {
-            IonLob lob = (IonLob)_curr;
-            int loblen = lob.byteSize();
-            if (loblen > len) {
-                throw new IllegalArgumentException("insufficient space in buffer for this value");
+            // len is not bounded by the buffer here: like the other readers, only the
+            // bytes actually copied must fit, and readFully rejects an overrun before
+            // copying anything or advancing _lob_bytes_read.
+            if (offset < 0 || len < 0 || offset > buffer.length) {
+                throw new IndexOutOfBoundsException();
             }
+            IonLob lob = (IonLob)_curr;
+            int len_read = Math.min(len, lob.byteSize() - _lob_bytes_read);
             InputStream is = lob.newInputStream();
             int retlen;
             try {
-                retlen = readFully(is, buffer, 0, loblen);
+                long skipped = 0;
+                while (skipped < _lob_bytes_read) {
+                    long n = is.skip(_lob_bytes_read - skipped);
+                    if (n <= 0) {
+                        throw new IonException("unable to resume reading lob at offset " + _lob_bytes_read);
+                    }
+                    skipped += n;
+                }
+                retlen = readFully(is, buffer, offset, len_read);
                 is.close();
             }
             catch (IOException e) {
                 throw new IonException(e);
             }
-            assert retlen == loblen;
+            _lob_bytes_read += retlen;
             return retlen;
         }
         throw new IllegalStateException("current value is not an ion blob or clob");

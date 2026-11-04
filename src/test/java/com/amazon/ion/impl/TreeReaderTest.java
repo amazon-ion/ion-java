@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.junit.IonAssert.assertTopLevel;
@@ -23,6 +10,7 @@ import com.amazon.ion.IonList;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonStruct;
 import com.amazon.ion.IonType;
+import com.amazon.ion.IonValue;
 import com.amazon.ion.TestUtils;
 import com.amazon.ion.streaming.ReaderTestCase;
 import org.junit.Test;
@@ -108,5 +96,57 @@ public class TreeReaderTest
         // Since the value was modified while it was being written, the result of the following is undefined. But
         // one thing is for sure: it should not cause an infinite loop.
         in.next();
+    }
+
+    @Test
+    public void testSystemReaderGetBytesProgressResetsOnNext() throws Exception
+    {
+        IonValue list = oneValue("[{{\"abcdef\"}}, {{\"ghi\"}}]");
+        in = system().newSystemReader(list);
+        assertEquals(IonReaderTreeSystem.class, in.getClass());
+        byte[] buffer = new byte[5];
+
+        assertEquals(IonType.LIST, in.next());
+        in.stepIn();
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals(2, in.getBytes(buffer, 1, 2));
+        assertEquals("ab", new String(buffer, 1, 2, "UTF-8"));
+        assertEquals(2, in.getBytes(buffer, 2, 2));
+        assertEquals("cd", new String(buffer, 2, 2, "UTF-8"));
+
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals(3, in.getBytes(buffer, 2, 3));
+        assertEquals("ghi", new String(buffer, 2, 3, "UTF-8"));
+        assertEquals(0, in.getBytes(buffer, 2, 3));
+    }
+
+    @Test
+    public void testGetBytesRejectsOutOfRangeArguments() throws Exception
+    {
+        in = system().newReader(oneValue("{{\"abcdef\"}}"));
+        byte[] buffer = new byte[4];
+        assertEquals(IonType.CLOB, in.next());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> in.getBytes(buffer, 0, -1));
+        assertThrows(IndexOutOfBoundsException.class, () -> in.getBytes(buffer, -1, 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> in.getBytes(buffer, 2, 3));
+
+        assertEquals(4, in.getBytes(buffer, 0, 4));
+        assertEquals("abcd", new String(buffer, 0, 4, "UTF-8"));
+        assertEquals(2, in.getBytes(buffer, 0, 4));
+        assertEquals("ef", new String(buffer, 0, 2, "UTF-8"));
+        assertThrows(IndexOutOfBoundsException.class, () -> in.getBytes(buffer, 5, 0));
+    }
+
+    @Test
+    public void testGetBytesAcceptsLenBeyondBufferWhenRemainingBytesFit() throws Exception
+    {
+        in = system().newReader(oneValue("{{\"abcdef\"}}"));
+        byte[] buffer = new byte[6];
+        assertEquals(IonType.CLOB, in.next());
+
+        assertEquals(6, in.getBytes(buffer, 0, 1000));
+        assertEquals("abcdef", new String(buffer, 0, 6, "UTF-8"));
+        assertEquals(0, in.getBytes(buffer, 0, 1000));
     }
 }

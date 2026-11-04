@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
-
 package com.amazon.ion.impl;
 
 import com.amazon.ion.Decimal;
@@ -214,16 +213,26 @@ interface IonReaderContinuableCore extends IonCursor {
     byte[] newBytes();
 
     /**
-     * Copies the current value into the passed in a byte array.
+     * Copies bytes of the current value into the passed in byte array.
      * This is only valid when {@link #getType()} returns {@link IonType#BLOB}
      * or {@link IonType#CLOB}.
+     * <p>
+     * Successive calls on the same value continue where the previous call
+     * left off, so a lob may be read incrementally into a buffer smaller than
+     * the lob. Each call copies {@code min(len, remaining)} bytes, where
+     * {@code remaining} is the number of bytes of the lob not yet copied by
+     * previous calls; once the whole lob has been copied, calls return
+     * {@code 0}. Positioning the reader on another value resets this progress.
+     * Calls to {@link #byteSize()} and {@link #newBytes()} neither affect nor
+     * are affected by this progress.
      *
      * @param buffer destination to copy the value into, this must not be null.
-     * @param offset the first position to copy into, this must be non null and
-     *  less than the length of buffer.
+     * @param offset the first position to copy into, this must be non-negative.
      * @param len the number of bytes available in the buffer to copy into,
-     *  this must be long enough to hold the whole value and not extend outside
-     *  of buffer.
+     *  this must be non-negative and {@code offset + len} must not exceed
+     *  {@code buffer.length}.
+     *
+     * @return the number of bytes copied into {@code buffer}.
      */
     int getBytes(byte[] buffer, int offset, int len);
 

@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
@@ -289,12 +276,12 @@ abstract class IonReaderTextRawX
     IonType             _nesting_parent;
 
     enum LOB_STATE { EMPTY, READ, FINISHED }
-    boolean             _lob_value_set;
     int                 _lob_token;
-    long                _lob_value_position;
     LOB_STATE           _lob_loaded;
     byte[]              _lob_bytes;
     int                 _lob_actual_len;
+    // Number of bytes of the current lob already copied out by getBytes().
+    int                 _lob_bytes_read;
 
 
     protected IonReaderTextRawX() {
@@ -360,11 +347,10 @@ abstract class IonReaderTextRawX
         _current_value_save_point_loaded = false;
         _current_value_buffer_loaded = false;
         _value_start_offset = 0;
-        _lob_value_set = false;
         _lob_token = 0;
-        _lob_value_position = 0;
         _lob_bytes = null;
         _lob_actual_len = 0;
+        _lob_bytes_read = 0;
 
         init(iis, parent, start_line, start_column);
 
@@ -531,10 +517,7 @@ abstract class IonReaderTextRawX
     {
         _value_type = null;
         _null_type = null;
-        if (_lob_value_set) {
-            _lob_value_set = false;
-            _lob_value_position = 0;
-        }
+        _lob_bytes_read = 0;
         if (!LOB_STATE.EMPTY.equals(_lob_loaded)) {
             _lob_actual_len = -1;
             _lob_bytes = null;
