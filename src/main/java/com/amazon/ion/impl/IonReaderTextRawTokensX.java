@@ -2450,24 +2450,50 @@ final class IonReaderTextRawTokensX
         case 1:
             break;
         case 2:
-            b2 = read_char();
+            b2 = read_ut8_continuation_byte();
             c = IonUTF8.twoByteScalar(c, b2);
+            if (c < 0x80) {
+                error("overlong UTF8 sequence");
+            }
             break;
         case 3:
-            b2 = read_char();
-            b3 = read_char();
+            b2 = read_ut8_continuation_byte();
+            b3 = read_ut8_continuation_byte();
             c = IonUTF8.threeByteScalar(c, b2, b3);
+            if (c < 0x800) {
+                error("overlong UTF8 sequence");
+            }
             break;
         case 4:
-            b2 = read_char();
-            b3 = read_char();
-            b4 = read_char();
+            b2 = read_ut8_continuation_byte();
+            b3 = read_ut8_continuation_byte();
+            b4 = read_ut8_continuation_byte();
             c = IonUTF8.fourByteScalar(c, b2, b3, b4);
+            if (c < 0x10000) {
+                error("overlong UTF8 sequence");
+            }
             break;
         default:
             error("invalid UTF8 starting byte");
         }
         return c;
+    }
+
+    /**
+     * Reads the next byte of a multi-byte UTF8 sequence, which must be a
+     * continuation byte. Without this check a truncated sequence silently
+     * consumes whatever follows it, including a token terminator.
+     */
+    private final int read_ut8_continuation_byte() throws IOException
+    {
+        int b = read_char();
+        if (b == UnifiedInputStreamX.EOF) {
+            unexpected_eof();
+        }
+        if (!IonUTF8.isContinueByteUTF8(b)) {
+            error("invalid UTF8 continuation byte");
+        }
+        return b;
     }
 
     private void skip_over_blob(SavePoint sp) throws IOException
