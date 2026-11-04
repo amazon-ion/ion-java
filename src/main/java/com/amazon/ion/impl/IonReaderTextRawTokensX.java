@@ -2582,6 +2582,13 @@ final class IonReaderTextRawTokensX
                 bad_escape_sequence(c2);
             }
             c2 = read_hex_escape_sequence_value(8);
+            // Eight hex digits can set the sign bit, wrapping the assembled
+            // value negative. A negative result is always out of the Unicode
+            // range and would otherwise slip past the downstream
+            // Character.MAX_CODE_POINT check, decoding to an unrelated char.
+            if (c2 < 0) {
+                error("invalid code point in \\U escape sequence");
+            }
             break;
         case IonTokenConstsX.ESCAPE_HEX:
             c2 = read_hex_escape_sequence_value(2);

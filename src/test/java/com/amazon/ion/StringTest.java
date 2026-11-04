@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 import org.junit.Test;
@@ -213,6 +200,22 @@ public class StringTest
 
         value = (IonString) oneValue("'''\\0 \\a \\b \\t \\n \\f \\r \\v \\\" \\' \\? \\\\\\\\\\/'''");
         checkString(expected, value);
+    }
+
+    @Test
+    public void testBigUEscapeOutOfRange()
+    {
+        // Eight hex digits with the high bit set wrap the assembled value
+        // negative, which must still be rejected rather than decoded to a
+        // stray character (previously \\U80000000..\\UFFFFFFFF yielded U+FFFF).
+        badValue("\"\\U80000000\"");
+        badValue("\"\\UFFFFFFFF\"");
+        // Positive values beyond the Unicode range stay rejected.
+        badValue("\"\\U00110000\"");
+        // The maximum valid scalar is still accepted.
+        IonString value = (IonString) oneValue("\"\\U0010FFFF\"");
+        assertEquals(new StringBuilder().appendCodePoint(0x10FFFF).toString(),
+                     value.stringValue());
     }
 
     @Test
