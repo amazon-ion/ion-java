@@ -61,6 +61,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     // The second-most significant bit in the most significant byte of a VarInt is the sign.
     private static final int VAR_INT_SIGN_BITMASK = 0x40;
 
+    // The largest VarInt magnitude that can be decoded. This allows -2^31 (Integer.MIN_VALUE) as well as the
+    // exponent 2^31, which corresponds to a BigDecimal scale of Integer.MIN_VALUE.
+    private static final long MAXIMUM_VAR_INT_MAGNITUDE = -(long) Integer.MIN_VALUE;
+
     // 32-bit floats must declare length 4.
     private static final int FLOAT_32_BYTE_LENGTH = 4;
 
@@ -160,6 +164,9 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
                 throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
             }
             currentByte = buffer[(int)(peekIndex++)];
+            if (result > (Integer.MAX_VALUE >>> VALUE_BITS_PER_VARUINT_BYTE)) {
+                throw new IonException("Found a VarUInt that was too large to fit in an `int`.");
+            }
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
         }
         return result;
@@ -168,31 +175,49 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
     /**
      * Reads a 2+ byte VarInt, given the first byte. When called, `peekIndex` must point at the second byte in the
      * VarInt. at `peekIndex`.When this method returns, `peekIndex` will point at the first byte that follows the
-     * VarInt. NOTE: the VarInt must fit in an `int`.
+     * VarInt. NOTE: the magnitude of the VarInt must not exceed `MAXIMUM_VAR_INT_MAGNITUDE`; callers must check that
+     * the value fits in an `int` before narrowing it.
      * @param firstByte the first byte of the VarInt representation, which has already been retrieved from the buffer.
      * @return the value.
      */
-    private int readVarInt_1_0(int firstByte) {
+    private long readVarInt_1_0(int firstByte) {
         int currentByte = firstByte;
         int sign = (currentByte & VAR_INT_SIGN_BITMASK) == 0 ? 1 : -1;
-        int result = currentByte & LOWER_SIX_BITS_BITMASK;
+        long result = currentByte & LOWER_SIX_BITS_BITMASK;
         while ((currentByte & HIGHEST_BIT_BITMASK) == 0) {
             if (peekIndex >= limit) {
                 throw new IonException("Malformed data: declared length exceeds the number of bytes remaining in the stream.");
             }
             currentByte = buffer[(int)(peekIndex++)];
             result = (result << VALUE_BITS_PER_VARUINT_BYTE) | (currentByte & LOWER_SEVEN_BITS_BITMASK);
+            if (result > MAXIMUM_VAR_INT_MAGNITUDE) {
+                throw new IonException("Found a VarInt that was too large to fit in an `int`.");
+            }
         }
         return result * sign;
     }
 
     /**
      * Reads the VarInt starting at `peekIndex`. When this method returns, `peekIndex` will point at the first byte
-     * that follows the VarUInt. NOTE: the VarInt must fit in an `int`.
+     * that follows the VarUInt. NOTE: the magnitude of the VarInt must not exceed `MAXIMUM_VAR_INT_MAGNITUDE`;
+     * callers must check that the value fits in an `int` before narrowing it.
      * @return the value.
      */
-    private int readVarInt_1_0() {
+    private long readVarInt_1_0() {
         return readVarInt_1_0(buffer[(int)(peekIndex++)]);
+    }
+
+    /**
+     * Reads the VarInt exponent of the decimal that begins at `peekIndex` and negates it to produce the scale of the
+     * decimal. When this method returns, `peekIndex` will point at the first byte of the decimal's coefficient.
+     * @return the scale.
+     */
+    private int readDecimalScale_1_0() {
+        long scale = -readVarInt_1_0();
+        if (scale < Integer.MIN_VALUE || scale > Integer.MAX_VALUE) {
+            throw new IonException("Found a decimal exponent that was too large to fit in an `int`.");
+        }
+        return (int) scale;
     }
 
     /**
@@ -250,7 +275,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private BigDecimal readBigDecimal_1_0() {
-        int scale = -readVarInt_1_0();
+        int scale = readDecimalScale_1_0();
         BigDecimal value;
         int length = (int) (valueMarker.endIndex - peekIndex);
         if (length < LONG_SIZE_IN_BYTES) {
@@ -278,7 +303,7 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
      * @return the value.
      */
     private Decimal readDecimal_1_0() {
-        int scale = -readVarInt_1_0();
+        int scale = readDecimalScale_1_0();
         BigInteger coefficient;
         int length = (int) (valueMarker.endIndex - peekIndex);
         if (length > 0) {
@@ -338,7 +363,11 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
         int firstByte = buffer[(int)(peekIndex++)] & SINGLE_BYTE_MASK;
         Integer offset = null;
         if (firstByte != VAR_INT_NEGATIVE_ZERO) {
-            offset = readVarInt_1_0(firstByte);
+            long offsetMinutes = readVarInt_1_0(firstByte);
+            if (offsetMinutes < Integer.MIN_VALUE || offsetMinutes > Integer.MAX_VALUE) {
+                throw new IonException("Found a timestamp offset that was too large to fit in an `int`.");
+            }
+            offset = (int) offsetMinutes;
         }
         int year = readVarUInt_1_0();
         int month = 0;
@@ -796,7 +825,10 @@ class IonReaderContinuableCoreBinary extends IonCursorBinary implements IonReade
             return -1;
         }
         prepareScalar();
-        return (int) readUInt(valueMarker.startIndex, valueMarker.endIndex);
+        if (valueMarker.endIndex - valueMarker.startIndex > Long.BYTES) {
+            throw new IonException("Found a symbol ID that was too large to fit in an `int`.");
+        }
+        return symbolIdToInt(readUInt(valueMarker.startIndex, valueMarker.endIndex));
     }
 
     /**

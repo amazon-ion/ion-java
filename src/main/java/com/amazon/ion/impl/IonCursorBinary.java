@@ -811,6 +811,19 @@ class IonCursorBinary implements IonCursor {
     }
 
     /**
+     * Narrows the given symbol ID to an `int`, throwing if it does not fit. A symbol ID that does not fit in an `int`
+     * can never be mapped by a symbol table; wrapping it around would silently resolve it to a different symbol.
+     * @param sid the symbol ID.
+     * @return the symbol ID as an `int`.
+     */
+    static int symbolIdToInt(long sid) {
+        if (sid < 0 || sid > Integer.MAX_VALUE) {
+            throw new IonException("Found a symbol ID that was too large to fit in an `int`.");
+        }
+        return (int) sid;
+    }
+
+    /**
      * Reads the header of an annotation wrapper. This must only be called when it is known that the buffer already
      * contains all the bytes in the header. Sets `valueMarker` with the start and end indices of the wrapped value.
      * Sets `annotationSequenceMarker` with the start and end indices of the sequence of annotation SIDs. After
@@ -976,8 +989,12 @@ class IonCursorBinary implements IonCursor {
         if (!fillAt(peekIndex, 2)) {
             return true;
         }
-        fieldSid = (int) slowReadVarUInt_1_0();
-        return fieldSid < 0;
+        long sid = slowReadVarUInt_1_0();
+        if (sid < 0) {
+            return true;
+        }
+        fieldSid = symbolIdToInt(sid);
+        return false;
     }
 
     /* ---- Ion 1.1 ---- */
@@ -1571,7 +1588,7 @@ class IonCursorBinary implements IonCursor {
                 if (b < 0) {
                     fieldSid = (b & LOWER_SEVEN_BITS_BITMASK);
                 } else {
-                    fieldSid = (int) uncheckedReadVarUInt_1_0(b);
+                    fieldSid = symbolIdToInt(uncheckedReadVarUInt_1_0(b));
                 }
             } else {
                 uncheckedReadFieldName_1_1();
