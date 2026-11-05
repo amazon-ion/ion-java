@@ -17,6 +17,7 @@ import com.amazon.ion.IonSystem;
 import com.amazon.ion.IonTimestamp;
 import com.amazon.ion.IonType;
 import com.amazon.ion.IonValue;
+import com.amazon.ion.NullValueException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import com.amazon.ion.Timestamp;
@@ -797,53 +798,23 @@ class IonReaderTextSystemX
     public int getBytes(byte[] buffer, int offset, int len)
     {
         ensureLob("getBytes");
-
-        if (_lob_loaded == LOB_STATE.READ) {
-            // if we've already read through the lob
-            // (and therefore have it's length and the
-            // bytes cached in our input buffer) anyway
-            // just finish the job of converting the
-            // data to something useful
-            try {
-                load_lob_contents();
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
+        if (isNullValue()) {
+            throw new NullValueException();
         }
 
-        int len_read;
-        if (_lob_loaded == LOB_STATE.FINISHED) {
-            // if we have loaded data, just copy it
-            len_read = len;
-            if (len_read > _lob_actual_len) {
-                len_read = _lob_actual_len;
-            }
-            System.arraycopy(_lob_bytes, 0, buffer, offset, len_read);
+        // The lob is decoded fully on the first call so that successive calls
+        // can resume where the previous one stopped.
+        int lob_len;
+        try {
+            lob_len = load_lob_contents();
         }
-        else {
-            // if we haven't loaded it, the we also haven't
-            // even read over the data - so we'll read if from
-            // the input source
-            try {
-                if (_current_value_save_point_loaded && _lob_value_position > 0) {
-                    if (_current_value_save_point.isActive()) {
-                        _scanner.save_point_deactivate(_current_value_save_point);
-                    }
-                    _scanner.save_point_activate(_current_value_save_point);
-                    _lob_value_position = 0;
-                }
-
-                _scanner.save_point_activate(_current_value_save_point);
-
-                len_read = readBytes(buffer, offset, len);
-                _scanner.save_point_deactivate(_current_value_save_point);
-
-            }
-            catch (IOException e) {
-                throw new IonException(e);
-            }
+        catch (IOException e) {
+            throw new IonException(e);
         }
+
+        int len_read = Math.min(len, lob_len - _lob_bytes_read);
+        System.arraycopy(_lob_bytes, _lob_bytes_read, buffer, offset, len_read);
+        _lob_bytes_read += len_read;
         return len_read;
     }
 
@@ -920,9 +891,7 @@ class IonReaderTextSystemX
         if (c == -1) {
             _scanner.tokenIsFinished();
         }
-        int read = offset - starting_offset;
-        _lob_value_position += read;   // TODO: is _lob_value_position really needed?
-        return read;
+        return offset - starting_offset;
     }
 
     public IonValue getIonValue(IonSystem sys)

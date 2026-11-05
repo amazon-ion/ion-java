@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.streaming;
 
 import static com.amazon.ion.impl.Symtabs.printLocalSymtab;
@@ -20,6 +7,7 @@ import static com.amazon.ion.junit.IonAssert.checkNullSymbol;
 
 import com.amazon.ion.BinaryTest;
 import com.amazon.ion.Decimal;
+import com.amazon.ion.IonException;
 import com.amazon.ion.IonReader;
 import com.amazon.ion.IonType;
 import com.amazon.ion.ReaderMaker;
@@ -101,7 +89,7 @@ public class ReaderTest
         assertEquals(type, in.next());
         assertTrue(in.isNullValue());
         assertThrows(Exception.class, () -> in.newBytes());
-        assertThrows(Exception.class, () -> in.getBytes(new byte[0], 0, 0));
+        assertThrows(IonException.class, () -> in.getBytes(new byte[4], 0, 4));
     }
 
     @Test
@@ -475,10 +463,6 @@ public class ReaderTest
     @Test
     public void testReadLobUsingGetBytes() throws Exception
     {
-        if (!myReaderMaker.sourceIsBinary()) {
-            // TODO text implements getBytes() differently: https://github.com/amazon-ion/ion-java/issues/319
-            return;
-        }
         String data = "{{\"abcdefghijklmnopqrstuvwxyz\"}}";
         byte[] partialBuffer = new byte[10];
         read(data);
@@ -488,10 +472,107 @@ public class ReaderTest
         StringBuilder value = new StringBuilder();
         while (remaining > 0) {
             int bytesRead = in.getBytes(partialBuffer, 0, partialBuffer.length);
+            assertEquals(Math.min(partialBuffer.length, remaining), bytesRead);
             remaining -= bytesRead;
             value.append(new String(partialBuffer, 0, bytesRead, "UTF-8"));
         }
         assertEquals("abcdefghijklmnopqrstuvwxyz", value.toString());
+    }
+
+    /**
+     * Reads the current lob, which must be {@code expectedLength} bytes long,
+     * with successive getBytes calls of at most {@code chunkSize} bytes, each
+     * written at a non-zero offset. Asserts that each call copies
+     * {@code min(chunkSize, remaining)} bytes and that a further call after
+     * the lob is exhausted copies nothing.
+     */
+    private String readLobInChunks(int expectedLength, int chunkSize) throws Exception
+    {
+        int offset = 3;
+        byte[] partialBuffer = new byte[offset + chunkSize];
+        StringBuilder value = new StringBuilder();
+        int totalRead = 0;
+        while (totalRead < expectedLength) {
+            int bytesRead = in.getBytes(partialBuffer, offset, chunkSize);
+            assertEquals(Math.min(chunkSize, expectedLength - totalRead), bytesRead);
+            value.append(new String(partialBuffer, offset, bytesRead, "UTF-8"));
+            totalRead += bytesRead;
+        }
+        assertEquals(0, in.getBytes(partialBuffer, offset, chunkSize));
+        return value.toString();
+    }
+
+    @Test
+    public void testReadBlobUsingGetBytes() throws Exception
+    {
+        read("{{YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=}}");
+        assertEquals(IonType.BLOB, in.next());
+        assertEquals("abcdefghijklmnopqrstuvwxyz", readLobInChunks(26, 7));
+    }
+
+    @Test
+    public void testReadMultiPartClobUsingGetBytes() throws Exception
+    {
+        read("{{'''abcdefghijklm''' '''nopqrstuvwxyz'''}}");
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals("abcdefghijklmnopqrstuvwxyz", readLobInChunks(26, 5));
+    }
+
+    @Test
+    public void testGetBytesWithBufferLargerThanLob() throws Exception
+    {
+        read("{{\"abc\"}}");
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals("abc", readLobInChunks(3, 10));
+    }
+
+    @Test
+    public void testGetBytesOnEmptyLob() throws Exception
+    {
+        read("{{}}");
+        assertEquals(IonType.BLOB, in.next());
+        assertEquals("", readLobInChunks(0, 4));
+    }
+
+    @Test
+    public void testGetBytesProgressResetsOnNextValue() throws Exception
+    {
+        read("[{{\"abc\"}}, {{\"def\"}}] {{\"ghi\"}}");
+        byte[] buffer = new byte[3];
+
+        assertEquals(IonType.LIST, in.next());
+        in.stepIn();
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals(2, in.getBytes(buffer, 0, 2));
+        assertEquals("ab", new String(buffer, 0, 2, "UTF-8"));
+
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals(3, in.getBytes(buffer, 0, 3));
+        assertEquals("def", new String(buffer, 0, 3, "UTF-8"));
+        in.stepOut();
+
+        assertEquals(IonType.CLOB, in.next());
+        assertEquals(3, in.getBytes(buffer, 0, 3));
+        assertEquals("ghi", new String(buffer, 0, 3, "UTF-8"));
+    }
+
+    @Test
+    public void testGetBytesProgressIndependentOfNewBytesAndByteSize() throws Exception
+    {
+        read("{{\"abcdef\"}}");
+        assertEquals(IonType.CLOB, in.next());
+        byte[] buffer = new byte[3];
+
+        assertEquals("abcdef", new String(in.newBytes(), "UTF-8"));
+        assertEquals(3, in.getBytes(buffer, 0, 3));
+        assertEquals("abc", new String(buffer, "UTF-8"));
+
+        assertEquals(6, in.byteSize());
+        assertEquals("abcdef", new String(in.newBytes(), "UTF-8"));
+
+        assertEquals(3, in.getBytes(buffer, 0, 3));
+        assertEquals("def", new String(buffer, "UTF-8"));
+        assertEquals(0, in.getBytes(buffer, 0, 3));
     }
 
     @Test
