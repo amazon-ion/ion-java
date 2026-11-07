@@ -1,18 +1,5 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion;
 
 import static com.amazon.ion.Decimal.NEGATIVE_ZERO;
@@ -80,7 +67,10 @@ public class TimestampTest
 
     public static Calendar makeUtcCalendar()
     {
-        Calendar cal = Calendar.getInstance(UTC);
+        GregorianCalendar cal = new GregorianCalendar(UTC);
+        // Proleptic Gregorian, as Ion timestamps are; the default cutover would make this oracle
+        // disagree with the values under test before 1582-10-15.
+        cal.setGregorianChange(new Date(Long.MIN_VALUE));
         cal.setTimeInMillis(0);        // clear all fields, else they are "now"
         return cal;
     }
@@ -363,12 +353,31 @@ public class TimestampTest
      * assumptions declared here.
      */
     @Test
+    public void testDatesAcrossTheGregorianCutoverAreDistinctInstants()
+    {
+        // Under the Julian cutover both of these mapped to the same epoch millisecond, so
+        // compareTo called them equal while equals did not.
+        Timestamp before = Timestamp.valueOf("1582-10-05T00:00:00Z");
+        Timestamp after = Timestamp.valueOf("1582-10-15T00:00:00Z");
+        assertEquals(10L * 24 * 60 * 60 * 1000, after.getMillis() - before.getMillis());
+        assertTrue(before.compareTo(after) < 0);
+        assertEquals("1582-10-05T00:00:00.000Z", Timestamp.forMillis(before.getMillis(), 0).toString());
+    }
+
+    @Test
     public void testTimestampConstants()
     {
         checkFields(1, 1, 1, 0, 0, 0, null, null, DAY, EARLIEST_ION_TIMESTAMP);
         assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toZString());
         assertEquals("0001-01-01", EARLIEST_ION_TIMESTAMP.toString());
-        assertEquals(-62135769600000L, EARLIEST_ION_TIMESTAMP.getMillis());
+        // 0001-01-01T00:00:00Z, proleptic Gregorian, cross-checked against a Calendar with the
+        // cutover moved out of range.
+        GregorianCalendar earliest = new GregorianCalendar(UTC);
+        earliest.setGregorianChange(new Date(Long.MIN_VALUE));
+        earliest.clear();
+        earliest.set(1, Calendar.JANUARY, 1, 0, 0, 0);
+        assertEquals(-62135596800000L, earliest.getTimeInMillis());
+        assertEquals(-62135596800000L, EARLIEST_ION_TIMESTAMP.getMillis());
 
         checkFields(1970, 1, 1, 0, 0, 0, new BigDecimal("0.000"), 0, FRACTION, UNIX_EPOCH_TIMESTAMP);
         assertEquals("1970-01-01T00:00:00.000Z", UNIX_EPOCH_TIMESTAMP.toZString());
