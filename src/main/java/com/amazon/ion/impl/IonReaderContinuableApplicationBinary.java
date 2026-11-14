@@ -20,6 +20,7 @@ import com.amazon.ion.system.SimpleCatalog;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -869,7 +870,11 @@ class IonReaderContinuableApplicationBinary extends IonReaderContinuableCoreBina
 
         private void readImportMaxId() {
             if (IonReaderContinuableApplicationBinary.super.getType() == IonType.INT && !IonReaderContinuableApplicationBinary.super.isNullValue()) {
-                maxId = intValue();
+                BigInteger value = bigIntegerValue();
+                if (value.bitLength() > 31) {
+                    throw new IonException("Found a max_id that was too large to fit in an int.");
+                }
+                maxId = value.intValue();
             }
             state = State.READING_SYMBOL_TABLE_IMPORT_STRUCT;
         }

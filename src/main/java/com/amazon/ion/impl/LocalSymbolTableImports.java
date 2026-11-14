@@ -1,22 +1,10 @@
-/*
- * Copyright 2007-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 package com.amazon.ion.impl;
 
 import static com.amazon.ion.SymbolTable.UNKNOWN_SYMBOL_ID;
 
+import com.amazon.ion.IonException;
 import com.amazon.ion.SymbolTable;
 import com.amazon.ion.SymbolToken;
 import java.util.Arrays;
@@ -158,7 +146,14 @@ final class LocalSymbolTableImports
             }
 
             baseSids[i] = total;
-            total += imports[i].getMaxId();
+            int maxId = importedTable.getMaxId();
+            // The first local symbol ID (total + 1) must also fit in an int.
+            if (maxId >= Integer.MAX_VALUE - total)
+            {
+                String message = "Symbol table imports have a combined max_id that is too large to fit in an int";
+                throw new IonException(message);
+            }
+            total += maxId;
         }
 
         return total;
