@@ -26,6 +26,12 @@ jobs:
           ref: master
           path: ion-test-driver
 
+      - name: Set up JDK
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v4.3.0
+        with:
+          distribution: corretto
+          java-version: 21
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
