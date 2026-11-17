@@ -255,6 +255,7 @@ abstract class IonReaderTextRawX
     boolean             _container_prohibits_commas;    // frequently during state transitions actions
 
     boolean             _has_next_called;
+    boolean             _closed;
     IonType             _value_type;
     int                 _value_keyword;
     IonType             _null_type;
@@ -363,6 +364,8 @@ abstract class IonReaderTextRawX
     public void close()
         throws IOException
     {
+        _closed = true;
+        clear_value();
         _scanner.close();
     }
 
@@ -444,6 +447,12 @@ abstract class IonReaderTextRawX
         return has_next;
     }
     protected final boolean has_next_raw_value() {
+        if (_closed) {
+            // IonReaderTextUserX.has_next_user_value() loops until _has_next_called is set.
+            _eof = true;
+            _has_next_called = true;
+            return false;
+        }
         if (!_has_next_called && !_eof) {
             try {
                 finish_value(null);

@@ -16,6 +16,7 @@
 package com.amazon.ion;
 
 import com.amazon.ion.system.IonReaderBuilder;
+import com.amazon.ion.system.IonSystemBuilder;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -127,4 +128,38 @@ public class IonReaderCloseableTest {
         
         assertTrue("Underlying InputStream should be closed", trackingStream.isClosed());
     }
+
+    private static void assertAtEndAfterClose(IonReader reader) throws IOException {
+        reader.close();
+        assertNull("next() after close() should report end of stream", reader.next());
+        assertNull("no current value after close()", reader.getType());
+    }
+
+    @Test
+    public void testTextReaderIsAtEndAfterClose() throws IOException {
+        for (String ion : new String[] {"{name:\"test\"}", "{\"name\":\"test\"}", "{'name':\"test\"}", "hello"}) {
+            IonReader fromString = IonReaderBuilder.standard().build(ion);
+            assertAtEndAfterClose(fromString);
+
+            IonReader fromBytes = IonReaderBuilder.standard().build(ion.getBytes("UTF-8"));
+            assertAtEndAfterClose(fromBytes);
+        }
+    }
+
+    @Test
+    public void testTextReaderInsideStructIsAtEndAfterClose() throws IOException {
+        IonReader reader = IonReaderBuilder.standard().build("{name:\"test\", other:1}");
+        assertEquals(IonType.STRUCT, reader.next());
+        reader.stepIn();
+        assertEquals(IonType.STRING, reader.next());
+        assertAtEndAfterClose(reader);
+    }
+
+    @Test
+    public void testBinaryReaderIsAtEndAfterClose() throws IOException {
+        byte[] binary = IonSystemBuilder.standard().build().getLoader().load("{name:\"test\"}").getBytes();
+        IonReader reader = IonReaderBuilder.standard().build(binary);
+        assertAtEndAfterClose(reader);
+    }
 }
+
