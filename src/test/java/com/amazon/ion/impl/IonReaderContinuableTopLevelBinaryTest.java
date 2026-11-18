@@ -2097,6 +2097,79 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void symbolTableImportsWithCombinedMaxIdLargerThanIntFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt(Integer.MAX_VALUE);
+                writer.stepOut();
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("bar");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                // With the 9 system symbols, the total is 2^32, which wraps to 0 in an int.
+                writer.writeInt(Integer.MAX_VALUE - 7);
+                writer.stepOut();
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abc");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(1); // $ion, which would otherwise read as abc
+            },
+            constructFromBytes
+        );
+        assertThrows(IonException.class, () -> reader.next());
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolTableImportWithMaxIdLargerThanIntFails(boolean constructFromBytes) throws Exception {
+        reader = readerFor(
+            (writer, out) -> {
+                SymbolTable systemTable = SharedSymbolTable.getSystemSymbolTable(1);
+                writer.addTypeAnnotationSymbol(systemTable.findSymbol("$ion_symbol_table"));
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("imports"));
+                writer.stepIn(IonType.LIST);
+                writer.stepIn(IonType.STRUCT);
+                writer.setFieldNameSymbol(systemTable.findSymbol("name"));
+                writer.writeString("foo");
+                writer.setFieldNameSymbol(systemTable.findSymbol("version"));
+                writer.writeInt(1);
+                writer.setFieldNameSymbol(systemTable.findSymbol("max_id"));
+                writer.writeInt((1L << 32) + 9); // Would be narrowed to 9.
+                writer.stepOut();
+                writer.stepOut();
+                writer.setFieldNameSymbol(systemTable.findSymbol("symbols"));
+                writer.stepIn(IonType.LIST);
+                writer.writeString("abc");
+                writer.stepOut();
+                writer.stepOut();
+                writer.writeSymbolToken(19); // Within the import's range, but would read as abc
+            },
+            constructFromBytes
+        );
+        assertThrows(IonException.class, () -> reader.next());
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void symbolTableSnapshotImplementsBasicMethods(boolean constructFromBytes) throws Exception {
         reader = readerFor("'abc'", constructFromBytes);
         reader.next();
