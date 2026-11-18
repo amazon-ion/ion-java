@@ -664,4 +664,136 @@ public class IonReaderContinuableCoreBinaryTest {
             assertThrows(IonException.class, reader::timestampValue);
         }
     }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void fieldSidThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xD7, // Struct, length 7
+                0x10, 0x00, 0x00, 0x00, 0x84, // Field name VarUInt 2^32 + 4, which wraps to 4 if narrowed to an int
+                0x21, 0x01 // Int 1
+            )
+        ) {
+            assertEquals(IonCursor.Event.START_CONTAINER, reader.nextValue());
+            reader.stepIntoContainer();
+            assertThrows(IonException.class, reader::nextValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationSidThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0xE8, // Annotation wrapper, length 8
+                0x85, // Annotations length 5
+                0x10, 0x00, 0x00, 0x00, 0x84, // Annotation VarUInt 2^32 + 4, which wraps to 4 if narrowed to an int
+                0x21, 0x01 // Int 1
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::getAnnotationIds);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolValueIdThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x75, // Symbol, length 5
+                0x01, 0x00, 0x00, 0x00, 0x04 // UInt 2^32 + 4, which wraps to 4 if narrowed to an int
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::symbolValueId);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void timestampYearThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x66, // Timestamp, length 6
+                0x80, // VarInt 0 (UTC offset)
+                0x10, 0x00, 0x00, 0x0F, 0xD0 // Year VarUInt 2^32 + 2000, which wraps to 2000 if narrowed to an int
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::timestampValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void timestampOffsetThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x67, // Timestamp, length 7
+                0x08, 0x00, 0x00, 0x00, 0x80, // Offset VarInt 2^31
+                0x0F, 0xD0 // Year VarUInt 2000
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::timestampValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void decimalExponentThatDoesNotFitInIntFailsCleanly(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x56, // Decimal, length 6
+                0x08, 0x00, 0x00, 0x00, 0x81, // Exponent VarInt 2^31 + 1, which becomes -(2^31 - 1) if narrowed to an int
+                0x01, // Coefficient 1
+                0x56, // Decimal, length 6
+                0x48, 0x00, 0x00, 0x00, 0x80, // Exponent VarInt -2^31, whose scale 2^31 does not fit in an int
+                0x01 // Coefficient 1
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::decimalValue);
+            assertThrows(IonException.class, reader::bigDecimalValue);
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertThrows(IonException.class, reader::decimalValue);
+            assertThrows(IonException.class, reader::bigDecimalValue);
+        }
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void decimalExponentAtIntBoundariesSucceeds(boolean constructFromBytes) {
+        try (
+            IonReaderContinuableCoreBinary reader = initializeReader(
+                constructFromBytes,
+                0xE0, 0x01, 0x00, 0xEA, // IVM
+                0x56, // Decimal, length 6
+                0x08, 0x00, 0x00, 0x00, 0x80, // Exponent VarInt 2^31, i.e. scale Integer.MIN_VALUE
+                0x01, // Coefficient 1
+                0x56, // Decimal, length 6
+                0x47, 0x7F, 0x7F, 0x7F, 0xFF, // Exponent VarInt -(2^31 - 1), i.e. scale Integer.MAX_VALUE
+                0x01 // Coefficient 1
+            )
+        ) {
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(Integer.MIN_VALUE, reader.bigDecimalValue().scale());
+            assertEquals(START_SCALAR, reader.nextValue());
+            assertEquals(Integer.MAX_VALUE, reader.bigDecimalValue().scale());
+        }
+    }
 }

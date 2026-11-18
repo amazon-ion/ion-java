@@ -798,6 +798,39 @@ public class IonReaderContinuableTopLevelBinaryTest {
 
     @ParameterizedTest(name = "constructFromBytes={0}")
     @ValueSource(booleans = {true, false})
+    public void fieldNameSidThatDoesNotFitInIntIsNotWrapped(boolean constructFromBytes) throws Exception {
+        // The field name SID is 2^32 + 4, which would resolve to $4 ('name') if it were narrowed to an int.
+        reader = readerFor(constructFromBytes, 0xD7, 0x10, 0x00, 0x00, 0x00, 0x84, 0x21, 0x01);
+        assertSequence(next(IonType.STRUCT), STEP_IN);
+        assertThrows(IonException.class, reader::next);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void annotationSidThatDoesNotFitInIntIsNotWrapped(boolean constructFromBytes) throws Exception {
+        // The annotation SID is 2^32 + 4, which would resolve to $4 ('name') if it were narrowed to an int.
+        reader = readerFor(constructFromBytes, 0xE8, 0x85, 0x10, 0x00, 0x00, 0x00, 0x84, 0x21, 0x01);
+        assertThrows(IonException.class, () -> {
+            reader.next();
+            reader.getTypeAnnotations();
+        });
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
+    public void symbolValueSidThatDoesNotFitInIntIsNotWrapped(boolean constructFromBytes) throws Exception {
+        // The symbol value SID is 2^32 + 4, which would resolve to $4 ('name') if it were narrowed to an int.
+        reader = readerFor(constructFromBytes, 0x75, 0x01, 0x00, 0x00, 0x00, 0x04);
+        assertSequence(next(IonType.SYMBOL));
+        assertThrows(IonException.class, reader::symbolValue);
+        assertThrows(IonException.class, reader::stringValue);
+        reader.close();
+    }
+
+    @ParameterizedTest(name = "constructFromBytes={0}")
+    @ValueSource(booleans = {true, false})
     public void unknownSymbolInValue(boolean constructFromBytes) throws Exception {
         reader = readerFor(constructFromBytes, 0x71, 0x0A);
         assertSequence(next(IonType.SYMBOL));
