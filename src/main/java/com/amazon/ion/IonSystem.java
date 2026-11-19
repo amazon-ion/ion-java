@@ -15,12 +15,14 @@
 
 package com.amazon.ion;
 
+import com.amazon.ion.impl._Private_ByteBufferUtils;
 import com.amazon.ion.system.IonSystemBuilder;
 import com.amazon.ion.system.IonTextWriterBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -320,6 +322,36 @@ public interface IonSystem
     public Iterator<IonValue> iterate(byte[] ionData);
 
     /**
+     * Creates an iterator over the Ion data in the given {@link ByteBuffer}.
+     * Values returned by the iterator have no container.
+     * <p>
+     * The iterator will automatically consume Ion system IDs and local symbol
+     * tables; they will not be returned by the iterator.
+     * <p>
+     * This method reads the buffer's <em>remaining</em> bytes (from its current
+     * {@code position} up to its {@code limit}) and will auto-detect and
+     * uncompress GZIPped Ion data. It works for all kinds of {@link ByteBuffer},
+     * including array-backed, direct (off-heap), and read-only buffers.
+     * <p>
+     * On return, the buffer's {@code position} has been advanced to its
+     * {@code limit} (its remaining bytes have been consumed); the buffer's
+     * {@code limit}, {@code capacity}, and contents are otherwise unchanged.
+     * The returned iterator operates over a private copy of the bytes, so later
+     * modifications to the buffer do not affect iteration.
+     *
+     * @param ionData may be either Ion binary data, or (UTF-8) Ion text, or
+     * GZIPped Ion data. Must not be null.
+     *
+     * @return a new iterator instance.
+     *
+     * @throws NullPointerException if {@code ionData} is null.
+     */
+    default Iterator<IonValue> iterate(ByteBuffer ionData)
+    {
+        return iterate(_Private_ByteBufferUtils.toByteArrayConsuming(ionData));
+    }
+
+    /**
      * <p>
      * Creates an iterator over Ion data.
      * Values returned by the iterator have no container.
@@ -394,6 +426,34 @@ public interface IonSystem
      */
     public IonValue singleValue(byte[] ionData, int offset, int len);
 
+    /**
+     * Extracts a single value from the Ion data in the given {@link ByteBuffer}.
+     * <p>
+     * This method reads the buffer's <em>remaining</em> bytes (from its current
+     * {@code position} up to its {@code limit}) and will auto-detect and
+     * uncompress GZIPped Ion data. It works for all kinds of {@link ByteBuffer},
+     * including array-backed, direct (off-heap), and read-only buffers.
+     * <p>
+     * On return, the buffer's {@code position} has been advanced to its
+     * {@code limit} (its remaining bytes have been consumed); the buffer's
+     * {@code limit}, {@code capacity}, and contents are otherwise unchanged.
+     *
+     * @param ionData may be either Ion binary data, or (UTF-8) Ion text, or
+     * GZIPped Ion data. Must not be null.
+     *
+     * @return the first (and only) user value in the data; not null.
+     *
+     * @throws NullPointerException if {@code ionData} is null.
+     * @throws UnexpectedEofException if the data doesn't contain any user
+     * values.
+     * @throws IonException if the data does not contain exactly one user
+     * value.
+     */
+    default IonValue singleValue(ByteBuffer ionData)
+    {
+        return singleValue(_Private_ByteBufferUtils.toByteArrayConsuming(ionData));
+    }
+
 
     //-------------------------------------------------------------------------
     // IonReader creation
@@ -447,6 +507,33 @@ public interface IonSystem
      * {@code ionData.length}.
      */
     public IonReader newReader(byte[] ionData, int offset, int len);
+
+    /**
+     * Creates a new {@link IonReader} instance over the Ion data in the given
+     * {@link ByteBuffer}, detecting whether it's text or binary data.
+     * <p>
+     * This method reads the buffer's <em>remaining</em> bytes (from its current
+     * {@code position} up to its {@code limit}) and will auto-detect and
+     * uncompress GZIPped Ion data. It works for all kinds of {@link ByteBuffer},
+     * including array-backed, direct (off-heap), and read-only buffers.
+     * <p>
+     * On return, the buffer's {@code position} has been advanced to its
+     * {@code limit} (its remaining bytes have been consumed); the buffer's
+     * {@code limit}, {@code capacity}, and contents are otherwise unchanged.
+     * The returned reader operates over a private copy of the bytes, so later
+     * modifications to the buffer do not affect reading.
+     *
+     * @param ionData may be either Ion binary data, or (UTF-8) Ion text, or
+     * GZIPped Ion data. Must not be null.
+     *
+     * @return a new reader instance.
+     *
+     * @throws NullPointerException if {@code ionData} is null.
+     */
+    default IonReader newReader(ByteBuffer ionData)
+    {
+        return newReader(_Private_ByteBufferUtils.toByteArrayConsuming(ionData));
+    }
 
     /**
      * Creates a new {@link IonReader} instance over a stream of Ion data,

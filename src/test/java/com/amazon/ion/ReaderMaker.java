@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -130,6 +131,122 @@ public enum ReaderMaker
             byte[] padded = new byte[ionData.length + 70];
             System.arraycopy(ionData, 0, padded, 37, ionData.length);
             return system.newReader(padded, 37, ionData.length);
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with an
+     * array-backed {@link ByteBuffer} over Ion binary.
+     */
+    FROM_BYTE_BUFFER_BINARY(Feature.BINARY)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureBinary(system, ionData);
+            return system.newReader(ByteBuffer.wrap(ionData));
+        }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(ByteBuffer.wrap(convertToBinaryVerbatim(system, ionText)));
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with an
+     * array-backed {@link ByteBuffer} over Ion text.
+     */
+    FROM_BYTE_BUFFER_TEXT(Feature.TEXT)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureText(system, ionData);
+            return system.newReader(ByteBuffer.wrap(ionData));
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with a direct
+     * (off-heap) {@link ByteBuffer} over Ion binary, exercising the non-array
+     * code path.
+     */
+    FROM_BYTE_BUFFER_DIRECT_BINARY(Feature.BINARY)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureBinary(system, ionData);
+            return system.newReader(directBuffer(ionData));
+        }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(directBuffer(convertToBinaryVerbatim(system, ionText)));
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with a read-only
+     * {@link ByteBuffer} over Ion binary, exercising the read-only code path.
+     */
+    FROM_BYTE_BUFFER_READ_ONLY_BINARY(Feature.BINARY)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureBinary(system, ionData);
+            return system.newReader(ByteBuffer.wrap(ionData).asReadOnlyBuffer());
+        }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(ByteBuffer.wrap(convertToBinaryVerbatim(system, ionText)).asReadOnlyBuffer());
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with a sliced
+     * {@link ByteBuffer} whose readable region is a sub-range of a larger
+     * backing array (non-zero {@code position} and {@code arrayOffset}),
+     * over Ion binary. Note: the resulting reader is created over a zero-based
+     * copy of the sub-range, so its octet offsets are stable at 0 (like
+     * {@link #FROM_BYTE_BUFFER_BINARY}); this maker verifies that sub-range
+     * extraction reads exactly the intended bytes.
+     */
+    FROM_BYTE_BUFFER_OFFSET_BINARY(Feature.BINARY)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureBinary(system, ionData);
+            return system.newReader(slicedBuffer(ionData, 37, 70));
+        }
+
+        @Override
+        public IonReader newReaderVerbatim(IonSystem system, String ionText) {
+            return system.newReader(slicedBuffer(convertToBinaryVerbatim(system, ionText), 37, 70));
+        }
+    },
+
+
+    /**
+     * Invokes {@link IonSystem#newReader(java.nio.ByteBuffer)} with an
+     * array-backed {@link ByteBuffer} over Ion text (via a sliced sub-range).
+     */
+    FROM_BYTE_BUFFER_OFFSET_TEXT(Feature.TEXT)
+    {
+        @Override
+        public IonReader newReader(IonSystem system, byte[] ionData)
+        {
+            ionData = ensureText(system, ionData);
+            return system.newReader(slicedBuffer(ionData, 37, 70));
         }
     },
 
@@ -308,6 +425,40 @@ public enum ReaderMaker
             throw new IllegalStateException(e);
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Copies the given bytes into a direct (off-heap) {@link ByteBuffer} whose
+     * readable region is exactly {@code data}.
+     */
+    private static ByteBuffer directBuffer(byte[] data) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(data.length);
+        buffer.put(data);
+        buffer.flip();
+        return buffer;
+    }
+
+    /**
+     * Places the given bytes into a larger array-backed buffer at
+     * {@code offset}, then returns a {@link ByteBuffer#slice()} whose readable
+     * region is exactly {@code data}. The slice has a non-zero
+     * {@code arrayOffset}, exercising sub-range extraction.
+     *
+     * @param data the payload bytes.
+     * @param offset the offset within the padded backing array at which the
+     * payload is placed.
+     * @param extraPadding total extra capacity (split before/after the payload)
+     * of the backing array.
+     */
+    private static ByteBuffer slicedBuffer(byte[] data, int offset, int extraPadding) {
+        byte[] padded = new byte[data.length + extraPadding];
+        System.arraycopy(data, 0, padded, offset, data.length);
+        ByteBuffer backing = ByteBuffer.wrap(padded);
+        backing.position(offset);
+        backing.limit(offset + data.length);
+        // slice() yields a buffer whose position is 0, limit/capacity are the
+        // payload length, and arrayOffset() reflects the sub-range start.
+        return backing.slice();
     }
 
     public IonReader newReader(IonSystem system, byte[] ionData)
