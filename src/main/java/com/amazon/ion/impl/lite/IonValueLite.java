@@ -302,24 +302,26 @@ abstract class IonValueLite
             this._annotations = null;
         } else {
             int size = existing._annotations.length;
-            this._annotations = new SymbolToken[size];
-            for (int i = 0; i < size; i++) {
-                SymbolToken existingToken = existing._annotations[i];
-                if (existingToken == null) {
-                    // The annotation array grows by doubling; null indicates the actual end.
-                    break;
-                }
-                String text = existingToken.getText();
-                int sid = existingToken.getSid();
-                if (text == null || sid == UNKNOWN_SYMBOL_ID) {
-                    // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
-                    _annotations[i] = existingToken;
-                    if (sid > UNKNOWN_SYMBOL_ID) {
-                        _flags |= IS_SYMBOL_ID_PRESENT;
+            // Cleared arrays can retain capacity without containing any annotations.
+            SymbolToken existingToken = size == 0 ? null : existing._annotations[0];
+            if (existingToken == null) {
+                this._annotations = SymbolToken.EMPTY_ARRAY;
+            } else {
+                this._annotations = new SymbolToken[size];
+                int i = 0;
+                do {
+                    String text = existingToken.getText();
+                    int sid = existingToken.getSid();
+                    if (text == null || sid == UNKNOWN_SYMBOL_ID) {
+                        // TODO - amazon-ion/ion-java/issues/223 needs consistent handling, should attempt to resolve and if it cant; fail
+                        _annotations[i] = existingToken;
+                        if (sid > UNKNOWN_SYMBOL_ID) {
+                            _flags |= IS_SYMBOL_ID_PRESENT;
+                        }
+                    } else {
+                        this._annotations[i] = _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
                     }
-                } else {
-                    this._annotations[i] = _Private_Utils.newSymbolToken(text, UNKNOWN_SYMBOL_ID);
-                }
+                } while (++i < size && (existingToken = existing._annotations[i]) != null);
             }
         }
         // Note: the field name is copied in IonStruct.clone.
