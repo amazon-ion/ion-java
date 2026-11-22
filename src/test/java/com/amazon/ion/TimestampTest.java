@@ -926,6 +926,31 @@ public class TimestampTest
     }
 
     @Test
+    public void testForMillisWithNegativeFractionalMillis()
+    {
+        assertEquals("1969-12-31T23:59:59.9995Z",
+                     Timestamp.forMillis(new BigDecimal("-0.5"), 0).toZString());
+        assertEquals("1969-12-31T23:59:58.9995Z",
+                     Timestamp.forMillis(new BigDecimal("-1000.5"), 0).toZString());
+        assertEquals("1969-12-31T23:58:59.99975Z",
+                     Timestamp.forMillis(new BigDecimal("-60000.25"), 0).toZString());
+        assertEquals("1969-12-31T23:59:59.9985Z",
+                     Timestamp.forMillis(new BigDecimal("-1.5"), 0).toZString());
+
+        BigDecimal millis = new BigDecimal("-1000.5");
+        assertEquals(0, millis.compareTo(Timestamp.forMillis(millis, 0).getDecimalMillis()));
+    }
+
+    @Test
+    public void testAddToTimestampBeforeEpochWithSubMillisecondFraction()
+    {
+        Timestamp ts = Timestamp.valueOf("1969-12-31T23:59:58.9995Z");
+        assertEquals(Timestamp.valueOf("1969-12-31T23:59:59.9995Z"), ts.addSecond(1));
+        assertEquals(Timestamp.valueOf("1969-12-31T23:59:57.9995Z"), ts.addSecond(-1));
+        assertEquals(Timestamp.valueOf("1969-12-31T23:59:58.9995Z"), ts.addMinute(0));
+    }
+
+    @Test
     public void testNewTimestampFromMinimumAllowedMillis()
     {
         Timestamp ts = Timestamp.forMillis(MINIMUM_TIMESTAMP_IN_MILLIS, PST_OFFSET);

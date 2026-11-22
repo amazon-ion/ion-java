@@ -760,8 +760,9 @@ public final class Timestamp
                 MAXIMUM_ALLOWED_TIMESTAMP_IN_MILLIS_DECIMAL.compareTo(millis) <= 0) {
             throwTimestampOutOfRangeError(millis);
         }
-        // quick handle integral zero
-        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
+        // Floor, not truncate: the fraction below is taken relative to the floor of the
+        // seconds, so negative non-integral millis must round down as well.
+        long ms = fastRoundZeroFloor(millis).longValue();
         set_fields_from_millis(ms);
 
         switch (precision)
@@ -841,8 +842,9 @@ public final class Timestamp
             throwTimestampOutOfRangeError(millis);
         }
 
-        // quick handle integral zero
-        long ms = isIntegralZero(millis) ? 0 : millis.longValue();
+        // Floor, not truncate: the fraction below is taken relative to the floor of the
+        // seconds, so negative non-integral millis must round down as well.
+        long ms = fastRoundZeroFloor(millis).longValue();
 
         set_fields_from_millis(ms);
 
