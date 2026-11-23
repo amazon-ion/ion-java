@@ -84,6 +84,34 @@ public class ListTest
     // Test cases
 
     @Test
+    public void testCannotAddContainerToItself()
+    {
+        IonList list = system().newEmptyList();
+        assertThrows(IllegalArgumentException.class, () -> list.add(list));
+        assertEquals(0, list.size());
+        assertNull(list.getContainer());
+    }
+
+    @Test
+    public void testCannotReplaceChildWithAncestor()
+    {
+        IonList root = system().newEmptyList();
+        IonSexp sequence = root.add().newEmptySexp();
+        IonStruct leaf = sequence.add().newEmptyStruct();
+        IonInt original = leaf.add("value").newInt(1);
+
+        assertThrows(IllegalArgumentException.class, () -> sequence.set(0, root));
+        assertThrows(IllegalArgumentException.class, () -> leaf.put("value", root));
+        assertSame(leaf, sequence.get(0));
+        assertSame(original, leaf.get("value"));
+        assertNull(root.getContainer());
+
+        leaf.removeFromContainer();
+        leaf.put("value", root);
+        assertSame(leaf, root.getContainer());
+    }
+
+    @Test
     public void testFactoryNullList()
     {
         IonList value = system().newNullList();

@@ -601,7 +601,7 @@ abstract class IonContainerLite
 
     /**
      * Ensures that a potential new child is non-null, has no container,
-     * is not read-only, and is not a datagram.
+     * is not read-only, and can be inserted without creating a cycle.
      *
      * @throws NullPointerException
      *   if {@code child} is {@code null}.
@@ -610,7 +610,7 @@ abstract class IonContainerLite
      * @throws ReadOnlyValueException
      *   if {@code child} is read only.
      * @throws IllegalArgumentException
-     *   if {@code child} is an {@link IonDatagram}.
+     *   if {@code child} is a datagram, this container, or one of its ancestors.
      */
     void validateNewChild(IonValue child)
         throws ContainedValueException, NullPointerException,
@@ -628,6 +628,14 @@ abstract class IonContainerLite
             String message =
                 "IonDatagram can not be inserted into another IonContainer.";
             throw new IllegalArgumentException(message);
+        }
+
+        // A detached ancestor must be the root. Skip the walk for scalars and empty children.
+        if (child == this || (child instanceof IonContainerLite
+            && ((IonContainerLite) child)._child_count != 0
+            && !(this instanceof IonDatagram) && topLevelValue() == child))
+        {
+            throw new IllegalArgumentException("A container cannot contain itself or an ancestor.");
         }
 
         assert child instanceof IonValueLite
