@@ -22,6 +22,8 @@ import java.util.Iterator;
  * Common functionality of Ion <code>struct</code>, <code>list</code>, and
  * <code>sexp</code> types.
  * <p>
+ * A container cannot be inserted into itself or one of its descendants.
+ * <p>
  * <b>WARNING:</b> This interface should not be implemented or extended by
  * code outside of this library.
  */
